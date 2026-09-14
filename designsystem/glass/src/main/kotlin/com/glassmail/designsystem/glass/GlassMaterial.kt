@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.material3.MaterialTheme
 import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
 import android.graphics.Shader
@@ -26,14 +27,22 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 
 /** Public quality contract. The renderer is deliberately isolated from feature modules. */
-enum class GlassQuality { LIQUID, BLUR, TRANSPARENT }
+enum class GlassQuality { AUTOMATIC, LIQUID, BLUR, TRANSPARENT }
+
+data class GlassPreferences(
+    val reduceTransparency: Boolean = false,
+    val reduceMotion: Boolean = false,
+)
+
+val LocalGlassPreferences = androidx.compose.runtime.staticCompositionLocalOf { GlassPreferences() }
 
 /** Applies tactile press compression outside the shader so interaction remains cheap and predictable. */
 @Composable
 fun Modifier.glassPress(interactionSource: MutableInteractionSource): Modifier {
+    val preferences = LocalGlassPreferences.current
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) .975f else 1f,
+        targetValue = if (pressed && !preferences.reduceMotion) .975f else 1f,
         animationSpec = spring(stiffness = 700f, dampingRatio = .72f),
         label = "glassPressScale",
     )
@@ -51,10 +60,13 @@ fun GlassSurface(
     shape: Shape = RectangleShape,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val preferences = LocalGlassPreferences.current
+    val requestedQuality = if (preferences.reduceTransparency) GlassQuality.TRANSPARENT else quality
+    val actualQuality = if (requestedQuality == GlassQuality.AUTOMATIC) GlassQuality.BLUR else requestedQuality
     // RuntimeShader compilation is device/driver-dependent. A material failure must never
     // take down the application route using it; null selects the transparent fallback.
-    val shader = androidx.compose.runtime.remember(quality) {
-        if (quality != GlassQuality.LIQUID) {
+    val shader = androidx.compose.runtime.remember(actualQuality) {
+        if (actualQuality != GlassQuality.LIQUID) {
             null
         } else {
             runCatching { RuntimeShader(LENS_SHADER) }
@@ -65,23 +77,25 @@ fun GlassSurface(
         }
     }
     var size by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
-    val tint = when (quality) {
-        GlassQuality.LIQUID -> Color.White.copy(alpha = .18f)
-        GlassQuality.BLUR -> Color.White.copy(alpha = .14f)
-        GlassQuality.TRANSPARENT -> Color.White.copy(alpha = .08f)
+    val tint = when {
+        preferences.reduceTransparency -> MaterialTheme.colorScheme.surface.copy(alpha = .98f)
+        actualQuality == GlassQuality.LIQUID -> MaterialTheme.colorScheme.surface.copy(alpha = .78f)
+        actualQuality == GlassQuality.BLUR -> MaterialTheme.colorScheme.surface.copy(alpha = .82f)
+        else -> MaterialTheme.colorScheme.surface.copy(alpha = .92f)
     }
-    val effect = androidx.compose.runtime.remember(quality, size, shader) {
-        runCatching {
-            when (quality) {
-                GlassQuality.LIQUID -> if (size == IntSize.Zero || shader == null) null else {
-                    shader.setFloatUniform("resolution", size.width.toFloat(), size.height.toFloat())
-                    RenderEffect.createRuntimeShaderEffect(shader, "content").asComposeRenderEffect()
+    val effect = androidx.compose.runtime.remember(actualQuality, size, shader) {
+        runCatching<androidx.compose.ui.graphics.RenderEffect?> {
+            when (actualQuality) {
+                GlassQuality.LIQUID -> if (size == IntSize.Zero) null else shader?.let {
+                    it.setFloatUniform("resolution", size.width.toFloat(), size.height.toFloat())
+                    RenderEffect.createRuntimeShaderEffect(it, "content").asComposeRenderEffect()
                 }
                 GlassQuality.BLUR -> RenderEffect.createBlurEffect(18f, 18f, Shader.TileMode.CLAMP).asComposeRenderEffect()
                 GlassQuality.TRANSPARENT -> null
+                GlassQuality.AUTOMATIC -> null
             }
         }.onFailure { error ->
-            Log.w(GLASS_LOG_TAG, "$quality effect unavailable; using transparent material", error)
+            Log.w(GLASS_LOG_TAG, "$actualQuality effect unavailable; using transparent material", error)
         }.getOrNull()
     }
     Box(

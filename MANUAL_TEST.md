@@ -14,7 +14,9 @@
 10. Enable airplane mode and repeat star/read/archive; local state should remain responsive.
 11. Seed 10,000 messages, continuously scroll the Inbox, and watch for visual stalls.
 12. In Settings switch LIQUID, BLUR, and TRANSPARENT and inspect the glass preview and touch targets.
-13. Clear/reseed the dataset before trying another size.
+13. Verify Theme (System/Light/Dark), Reduce Transparency, and Reduce Motion survive force-stop and relaunch. Open the command palette from the `⌘` action and execute Inbox, Search, Settings, and Refresh; in Reader verify real message actions appear.
+14. Clear/reseed the dataset before trying another size.
+15. Tap Compose, enter a controlled test recipient, subject, and body, leave and reopen the saved draft from the command palette, then Send only with a dedicated Gmail test account. Verify delivery before testing Reply, Reply all, or Forward.
 
 ## B. Gmail — dedicated test account only
 

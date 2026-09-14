@@ -10,5 +10,8 @@
 | AndroidX Compose / Material 3 / Lifecycle | catalog-managed | Native UI and lifecycle state collection | Apache-2.0 |
 | KSP | 2.0.21-1.0.28 | Room Kotlin code generation | Apache-2.0 |
 | kotlinx.coroutines | 1.9.0 | Structured asynchronous work | Apache-2.0 |
+| Android JavaMail / Activation | 1.6.7 | SMTP submission over authenticated STARTTLS | CDDL-1.1 / GPL-2.0 with Classpath Exception |
 
-No Gmail SDK, mail SDK, Square application code, or third-party liquid-glass implementation is included. The AGSL effect is independently authored. This file records dependency intent and is not a substitute for reviewing upstream notices before release.
+The JavaMail jars duplicate `META-INF/NOTICE.md`; the app packaging configuration excludes that duplicate metadata resource while retaining the runtime classes. Review the upstream license and notices before release.
+
+No Gmail SDK, Square application code, or third-party liquid-glass implementation is included. The AGSL effect is independently authored. This file records dependency intent and is not a substitute for reviewing upstream notices before release.

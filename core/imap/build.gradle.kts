@@ -8,6 +8,9 @@ kotlin {
 
 dependencies {
     implementation(project(":core:model"))
+    implementation(project(":domain:mail"))
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.android.mail)
+    implementation(libs.android.activation)
     testImplementation(libs.junit)
 }

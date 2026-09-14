@@ -100,6 +100,18 @@ class GmailImapClient(
             )
         }
     }
+
+    suspend fun fetchAttachment(email: String, password: CharArray, mailbox: String, uid: Long, partId: String): ByteArray =
+        withContext(Dispatchers.IO.limitedParallelism(1)) {
+            require(uid > 0 && partId.matches(Regex("[0-9.]+"))) { "Invalid attachment reference" }
+            TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+                val client = ImapCommandClient(connection)
+                client.requireGreeting()
+                client.login(email, password)
+                client.selectMailbox(mailbox)
+                client.fetchBodyPart(uid, partId)
+            }
+        }
 }
 
 data class ImapMutation(
@@ -221,7 +233,11 @@ private class ImapCommandClient(private val connection: TlsImapConnection) {
     }
 
     fun selectInbox(): ImapSelectedMailbox {
-        val responses = execute("SELECT INBOX")
+        return selectMailbox("INBOX")
+    }
+
+    fun selectMailbox(mailbox: String): ImapSelectedMailbox {
+        val responses = execute("SELECT ${quote(mailbox)}")
         val uidValidity = responses.firstNotNullOfOrNull { response ->
             (response as? ImapResponse.Untagged)?.values?.uidResponse("UIDVALIDITY")
         }?.toLongOrNull() ?: throw ImapException.Protocol("SELECT response missing UIDVALIDITY")
@@ -239,13 +255,23 @@ private class ImapCommandClient(private val connection: TlsImapConnection) {
         "UID FETCH $uidRange (UID FLAGS ENVELOPE INTERNALDATE RFC822.SIZE X-GM-MSGID X-GM-THRID X-GM-LABELS)",
     ).mapNotNull { response -> GmailFetchMapper.map(response) }
 
+    fun fetchBodyPart(uid: Long, partId: String): ByteArray {
+        val response = execute("UID FETCH $uid (BODY.PEEK[$partId])")
+            .asSequence().filterIsInstance<ImapResponse.Untagged>().firstOrNull { item ->
+                item.values.getOrNull(1)?.atomValue()?.equals("FETCH", ignoreCase = true) == true
+            } ?: throw ImapException.Protocol("Attachment response missing")
+        val fields = response.values.getOrNull(2)?.listValue().orEmpty()
+        return fields.firstNotNullOfOrNull { it.literalValue() }
+            ?: throw ImapException.Protocol("Attachment payload missing")
+    }
+
     fun applyMutation(mutation: ImapMutation) {
         val command = when (mutation.type) {
             "MARK_READ" -> "UID STORE ${mutation.uid} +FLAGS.SILENT (\\Seen)"
             "MARK_UNREAD" -> "UID STORE ${mutation.uid} -FLAGS.SILENT (\\Seen)"
             "STAR" -> "UID STORE ${mutation.uid} +FLAGS.SILENT (\\Flagged)"
             "UNSTAR" -> "UID STORE ${mutation.uid} -FLAGS.SILENT (\\Flagged)"
-            "DELETE" -> "UID STORE ${mutation.uid} +FLAGS.SILENT (\\Deleted)"
+            "DELETE" -> "UID STORE ${mutation.uid} +X-GM-LABELS.SILENT (\\Trash)"
             "ARCHIVE" -> "UID STORE ${mutation.uid} -X-GM-LABELS.SILENT (\\Inbox)"
             "ADD_LABEL" -> "UID STORE ${mutation.uid} +X-GM-LABELS.SILENT (${quote(mutation.payload ?: throw ImapException.Protocol("Missing label"))})"
             "REMOVE_LABEL" -> "UID STORE ${mutation.uid} -X-GM-LABELS.SILENT (${quote(mutation.payload ?: throw ImapException.Protocol("Missing label"))})"

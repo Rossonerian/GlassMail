@@ -59,7 +59,7 @@ class GlassMailDatabaseInstrumentedTest {
         db.mailDao().upsertMessages(listOf(MessageEntity("m", "a", null, null, null, null, null, null)))
         db.syncDao().upsertCheckpoint(SyncCheckpointEntity("a:INBOX", "a", 7, 1, 1, 2))
         db.pendingMutationDao().insert(PendingMutationEntity("p", "a", "a:INBOX", "m", 1, "MARK_READ", null, createdAtEpochMillis = 1))
-        assertEquals(1, db.syncDao().checkpoint("a:INBOX")?.highestKnownUid)
+        assertEquals(1L, db.syncDao().checkpoint("a:INBOX")?.highestKnownUid)
         assertNotNull(db.pendingMutationDao().activeForAccount("a").singleOrNull())
     }
 

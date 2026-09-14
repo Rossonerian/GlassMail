@@ -18,6 +18,12 @@ interface MailRepository {
     suspend fun clearDebugMailbox()
 }
 
+data class DownloadedAttachment(val filePath: String, val fileName: String, val mimeType: String)
+
+interface AttachmentRepository {
+    suspend fun downloadAttachment(accountId: String, attachmentId: String): Result<DownloadedAttachment>
+}
+
 data class MailAccount(val accountId: String, val email: String, val syncState: String)
 data class MailListItem(val messageId: String, val threadId: String?, val sender: String, val subject: String, val preview: String, val sentAtEpochMillis: Long?, val unread: Boolean, val starred: Boolean, val labels: List<String>, val hasAttachment: Boolean)
 data class MailAttachment(val attachmentId: String, val fileName: String?, val mimeType: String?, val sizeBytes: Long?, val downloadState: String)

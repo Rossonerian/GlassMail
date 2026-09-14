@@ -28,6 +28,11 @@ android {
     buildFeatures {
         buildConfig = true
     }
+
+    packaging {
+        resources.excludes += "/META-INF/NOTICE.md"
+        resources.excludes += "/META-INF/LICENSE.md"
+    }
 }
 
 dependencies {
@@ -43,11 +48,13 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(project(":designsystem:glass"))
+    implementation(project(":designsystem"))
     implementation(libs.kotlinx.coroutines.android)
 }

@@ -3,9 +3,12 @@ package com.glassmail.app
 import android.app.Application
 import com.glassmail.core.database.GlassMailDatabase
 import com.glassmail.core.imap.GmailImapClient
+import com.glassmail.core.imap.GmailSmtpMailSender
+import com.glassmail.core.imap.SmtpCredentialProvider
 import com.glassmail.core.security.AndroidKeystoreCredentialStore
 import com.glassmail.data.mail.ImapMailRepository
 import com.glassmail.domain.mail.MailRepository
+import com.glassmail.domain.mail.DraftRepository
 import com.glassmail.domain.mail.SyncAccountUseCase
 import com.glassmail.sync.SyncRuntime
 import com.glassmail.sync.AccountSyncScheduler
@@ -33,15 +36,26 @@ class GlassMailApplication : Application() {
 }
 
 class AppGraph(application: Application) {
+    val context = application.applicationContext
+    val contentResolver = application.contentResolver
+    val appearancePreferences = AppearancePreferences(application)
+    private val notificationCoordinator = NotificationCoordinator(application, appearancePreferences)
     private val database = GlassMailDatabase.create(application)
     val credentialStore = AndroidKeystoreCredentialStore(application)
-    val mailRepository: MailRepository = ImapMailRepository(
+    private val repositoryImpl = ImapMailRepository(
         database = database,
         credentialStore = credentialStore,
         imapClient = GmailImapClient(),
+        attachmentRoot = java.io.File(application.filesDir, "mail-cache"),
+        onNewMessages = notificationCoordinator::onNewMessages,
     )
+    val mailRepository: MailRepository = repositoryImpl
+    val draftRepository: DraftRepository = repositoryImpl
     val syncAccountUseCase = SyncAccountUseCase(mailRepository)
     val syncScheduler = AccountSyncScheduler(application)
+    val mailSender = GmailSmtpMailSender(object : SmtpCredentialProvider {
+        override suspend fun <T> withCredential(accountId: String, block: suspend (CharArray) -> T): T? = credentialStore.withCredential(accountId, block)
+    })
 
     init {
         SyncRuntime.install(mailRepository)
