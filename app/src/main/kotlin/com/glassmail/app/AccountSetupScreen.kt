@@ -7,20 +7,33 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.MarkEmailUnread
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,29 +56,19 @@ fun AccountSetupRoute(graph: AppGraph) {
     var appPassword by remember { mutableStateOf("") }
 
     Column(
-        modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding().padding(24.dp),
+        modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("GlassMail diagnostic setup", style = MaterialTheme.typography.headlineSmall)
-        Text("Phase 1 connects Gmail IMAP and stores only message metadata locally.")
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Gmail address") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-        )
-        OutlinedTextField(
-            value = appPassword,
-            onValueChange = { appPassword = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Google App Password") },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-        )
+        Spacer(Modifier.height(16.dp))
+        Icon(Icons.Outlined.MarkEmailUnread, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+        Text("GlassMail", style = MaterialTheme.typography.headlineLarge)
+        FlatMetadata("Local-first Gmail setup", color = MaterialTheme.colorScheme.primary)
+        Text("Connect one Gmail account securely. Mail metadata is cached locally so the inbox stays useful offline.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(8.dp))
+        SetupField("Gmail address", email, { email = it }, "you@gmail.com", KeyboardType.Email)
+        SetupField("Google App Password", appPassword, { appPassword = it }, "Stored in Android Keystore", KeyboardType.Password, password = true)
         Button(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             enabled = !state.isWorking && email.isNotBlank() && appPassword.isNotBlank(),
             onClick = {
                 val credential = appPassword.toCharArray()
@@ -80,9 +83,32 @@ fun AccountSetupRoute(graph: AppGraph) {
                 Text("Use 100-message debug mailbox")
             }
         }
-        Text(state.message)
+        Text(state.message, color = if (state.message.contains("completed", true) || state.message.contains("ready", true)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         state.messageCount?.let { Text("Persisted INBOX metadata rows: $it") }
         state.gmailExtensionsEnabled?.let { Text("X-GM-EXT-1 detected: $it") }
+    }
+}
+
+@Composable
+private fun SetupField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String, keyboardType: KeyboardType, password: Boolean = false) {
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .40f)).padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
+            decorationBox = { inner ->
+                if (value.isBlank()) Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                inner()
+            },
+        )
     }
 }
 

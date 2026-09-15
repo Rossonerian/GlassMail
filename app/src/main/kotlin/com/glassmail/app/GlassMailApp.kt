@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Box
@@ -50,6 +51,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,9 +63,12 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.material.icons.Icons
@@ -135,6 +140,9 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
     val drafts by vm.drafts.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     var paletteOpen by remember { mutableStateOf(false) }
+    var dockCompact by remember { mutableStateOf(false) }
+    var dockBackdropFrozen by remember { mutableStateOf(false) }
+    var dockBackdropKey by remember { mutableStateOf<Any?>(0) }
     val currentRoute by navController.currentBackStackEntryAsState()
     val notificationId by notificationMessageId.collectAsStateWithLifecycle()
     val route = currentRoute?.destination?.route
@@ -181,18 +189,20 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
     AmbientCanvas(ambient, dark = dark) { Box(Modifier.fillMaxSize()) { NavHost(navController = navController, startDestination = ROUTE_INBOX) {
         composable(ROUTE_SETUP) { AccountSetupRoute(graph) }
         composable(ROUTE_INBOX) {
-            InboxScreen(vm, accounts.firstOrNull(),
+            InboxScreen(vm, accounts.firstOrNull(), appearance.glassQuality,
                 open = { navController.navigate("$ROUTE_READER/$it") },
                 search = { navController.navigate(ROUTE_SEARCH) },
                 settings = { navController.navigate(ROUTE_SETTINGS) },
                 openPalette = { paletteOpen = true },
-                compose = { openCompose() },
+                onDockCompactChanged = { dockCompact = it },
+                onDockBackdropChanged = { key, frozen -> dockBackdropKey = key; dockBackdropFrozen = frozen },
             )
         }
         composable(ROUTE_SEARCH) {
             SearchScreen(
                 vm = vm,
                 account = accounts.firstOrNull(),
+                quality = appearance.glassQuality,
                 open = { navController.navigate("$ROUTE_READER/$it") },
                 back = { navController.popBackStack() },
                 openPalette = { paletteOpen = true },
@@ -202,7 +212,7 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
             SettingsScreen(graph, vm, accounts.firstOrNull(), { navController.popBackStack() }, { paletteOpen = true })
         }
         composable("$ROUTE_COMPOSE/{draftId}") { entry ->
-            ComposeRoute(graph, accounts.firstOrNull(), entry.arguments?.getString("draftId")?.takeUnless { it == "new" }, { navController.popBackStack() })
+            ComposeRoute(graph, accounts.firstOrNull(), appearance.glassQuality, entry.arguments?.getString("draftId")?.takeUnless { it == "new" }, { navController.popBackStack() })
         }
         composable(
             route = "$ROUTE_READER/{messageId}",
@@ -211,10 +221,36 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
             ReaderScreen(vm, accounts.firstOrNull(), entry.arguments?.getString("messageId").orEmpty(), appearance.glassQuality, { navController.popBackStack() }, { paletteOpen = true }, { draft -> openCompose(draft) }, { attachment -> vm.downloadAttachment(attachment) })
         }
     }
+    val dockSelectedIndex = when (route) {
+        ROUTE_INBOX -> 0
+        ROUTE_SEARCH -> 1
+        ROUTE_SETTINGS -> 3
+        else -> null
+    }
+    if (dockSelectedIndex != null) {
+        MorphingDock(
+            compact = route == ROUTE_INBOX && dockCompact,
+            selectedIndex = dockSelectedIndex,
+            quality = appearance.glassQuality,
+            onSelect = { destination ->
+                val target = when (destination) {
+                    0 -> ROUTE_INBOX
+                    1 -> ROUTE_SEARCH
+                    3 -> ROUTE_SETTINGS
+                    else -> return@MorphingDock
+                }
+                if (route != target) navController.navigate(target) { launchSingleTop = true }
+            },
+            onCompose = { openCompose() },
+            backdropKey = route to dockBackdropKey,
+            backdropFrozen = route == ROUTE_INBOX && dockBackdropFrozen,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
     if (paletteOpen) {
         val selected = if (route?.startsWith(ROUTE_READER) == true) vm.readerUiState.collectAsStateWithLifecycle().value.selected else null
         val actions = buildList {
-            add(CommandPaletteAction("inbox", "Inbox", "Open Priority inbox") { paletteOpen = false; navController.navigate(ROUTE_INBOX) })
+            add(CommandPaletteAction("inbox", "Inbox", "Open cached mailbox") { paletteOpen = false; navController.navigate(ROUTE_INBOX) })
             add(CommandPaletteAction("search", "Search", "Search cached mail") { paletteOpen = false; navController.navigate(ROUTE_SEARCH) })
             add(CommandPaletteAction("settings", "Settings", "Appearance and account") { paletteOpen = false; navController.navigate(ROUTE_SETTINGS) })
             add(CommandPaletteAction("refresh", "Refresh", "Synchronize the current account") { paletteOpen = false; vm.refresh() })
@@ -335,56 +371,74 @@ data class ReaderUiState(
     val thread: List<com.glassmail.domain.mail.MailMessage> = emptyList(),
 )
 
-@Composable private fun InboxScreen(vm: AppViewModel, account: MailAccount?, open: (String) -> Unit, search: () -> Unit, settings: () -> Unit, openPalette: () -> Unit, compose: () -> Unit) {
+@Composable private fun InboxScreen(vm: AppViewModel, account: MailAccount?, quality: GlassQuality, open: (String) -> Unit, search: () -> Unit, settings: () -> Unit, openPalette: () -> Unit, onDockCompactChanged: (Boolean) -> Unit, onDockBackdropChanged: (Any, Boolean) -> Unit) {
     val state by vm.inboxUiState.collectAsStateWithLifecycle()
     val selectedAccount = state.account ?: account
     val rows = state.messages
     val listState = rememberLazyListState()
     val compact by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 56 } }
+    LaunchedEffect(compact) { onDockCompactChanged(compact) }
+    LaunchedEffect(listState) {
+        androidx.compose.runtime.snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collectLatest { onDockBackdropChanged(it, listState.isScrollInProgress) }
+    }
+    LaunchedEffect(listState) {
+        androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
+            .collectLatest { onDockBackdropChanged(listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset, it) }
+    }
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                        Text("GlassMail", style = MaterialTheme.typography.titleLarge)
-                        if (!compact) Text("Priority", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                },
-                actions = {
-                    IconButton(openPalette) { Icon(Icons.Outlined.MoreHoriz, contentDescription = "Open command palette") }
-                    IconButton(search) { Icon(Icons.Outlined.Search, contentDescription = "Search mail") }
-                    IconButton(settings) { Icon(Icons.Outlined.Settings, contentDescription = "Open settings") }
-                },
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                GlassMailTopCapsule(
+                    title = "GlassMail",
+                    subtitle = "Inbox",
+                    quality = quality,
+                    actions = {
+                        IconButton(openPalette) { Icon(Icons.Outlined.MoreHoriz, contentDescription = "Open command palette") }
+                        IconButton(settings) { Icon(Icons.Outlined.Settings, contentDescription = "Open settings") }
+                    },
+                )
+                if (!compact) GlassMailSearchCapsule(
+                    quality = quality,
+                    placeholder = "Search mail, people, or dates…",
+                    onClick = search,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+            }
         },
-        floatingActionButton = { androidx.compose.material3.FloatingActionButton(onClick = compose) { Text("+") } },
-        bottomBar = { MorphingDock(compact, 0) { if (it == 1) search() else if (it == 2) settings() } },
     ) { padding ->
         if (selectedAccount == null) Column(Modifier.fillMaxSize().padding(padding).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Text("No account yet"); Button({ vm.seed(100) }) { Text("Seed debug mailbox") } }
         else if (rows.isEmpty()) Column(Modifier.fillMaxSize().padding(padding).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Text("Inbox is empty", style = MaterialTheme.typography.titleLarge); Text(syncStatus(selectedAccount.syncState)); Button({ vm.refresh() }) { Text("Refresh") } }
-        else LazyColumn(Modifier.fillMaxSize().padding(padding), state = listState) { items(rows, key = { it.messageId }, contentType = { "mail" }) { row -> MailRow(row, open, vm) } }
+        else LazyColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(padding), state = listState, contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 100.dp)) { items(rows, key = { it.messageId }, contentType = { "mail" }) { row -> MailRow(row, open, vm) } }
     }
 }
 
 @Composable private fun MailRow(row: MailListItem, open: (String) -> Unit, vm: AppViewModel) {
     var menuOpen by remember(row.messageId) { mutableStateOf(false) }
-    Row(
-        Modifier.fillMaxWidth().clickable { open(row.messageId) }.padding(horizontal = 20.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(row.sender, style = if (row.unread) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyLarge, maxLines = 1)
-            Text(row.subject, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-            Text(row.preview, maxLines = 1, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (row.labels.isNotEmpty()) Text(row.labels.joinToString(), style = MaterialTheme.typography.labelSmall, maxLines = 1, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(timeLabel(row.sentAtEpochMillis), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (row.starred) Icon(Icons.Outlined.Star, contentDescription = "Starred", tint = MaterialTheme.colorScheme.primary)
-                if (row.hasAttachment) Icon(Icons.Outlined.AttachFile, contentDescription = "Has attachment", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Box {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 72.dp).clickable { open(row.messageId) }.padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            if (row.unread) Box(Modifier.width(3.dp).height(44.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.primary))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(row.sender, style = if (row.unread) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(row.subject, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(row.preview, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val visibleLabel = row.labels.firstOrNull { !it.equals("INBOX", ignoreCase = true) }
+                if (visibleLabel != null || row.hasAttachment) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (row.hasAttachment) Icon(Icons.Outlined.AttachFile, contentDescription = "Has attachment", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                        visibleLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }
+                }
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(timeLabel(row.sentAtEpochMillis), style = MaterialTheme.typography.labelSmall, color = if (row.unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (row.starred) Icon(Icons.Outlined.Star, contentDescription = "Starred", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Box {
                     IconButton(onClick = { menuOpen = true }) { Icon(Icons.Outlined.MoreVert, contentDescription = "Message actions") }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
@@ -408,9 +462,11 @@ data class ReaderUiState(
                             onClick = { menuOpen = false; vm.mutation(row, "delete") },
                         )
                     }
+                    }
                 }
             }
         }
+        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .55f))
     }
 }
 
@@ -453,8 +509,10 @@ private fun timeLabel(epochMillis: Long?): String = epochMillis?.let { java.time
             }
         },
         topBar = {
-            TopAppBar(
-                title = { Text(if (collapsed) subject.take(36) else "Conversation", maxLines = 1) },
+            GlassMailTopCapsule(
+                title = if (collapsed) subject else "Thread",
+                subtitle = if (collapsed) null else "Message",
+                quality = quality,
                 navigationIcon = { IconButton(back) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back") } },
                 actions = { IconButton(openPalette) { Icon(Icons.Outlined.MoreHoriz, contentDescription = "Open command palette") } },
             )
@@ -474,14 +532,17 @@ private fun timeLabel(epochMillis: Long?): String = epochMillis?.let { java.time
                     Text(item.preview, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(item.body ?: item.preview, style = MaterialTheme.typography.bodyLarge)
                     if (item.messageId == state.selected?.messageId && item.attachments.isNotEmpty()) {
-                        item.attachments.forEach { attachment ->
-                            Button(onClick = { download(attachment) }, modifier = Modifier.fillMaxWidth()) {
-                                Text(if (attachment.downloadState == "AVAILABLE") "Open ${attachment.fileName ?: "attachment"}" else "Download ${attachment.fileName ?: "attachment"}")
-                            }
-                        }
+                        item.attachments.forEach { attachment -> ReaderAttachmentRow(attachment, download) }
                     }
                     if (item.messageId == state.selected?.messageId) {
-                        TextButton(onClick = { labelDialogOpen = true }) { Text("Labels: ${item.labels.ifEmpty { listOf("none") }.joinToString()}") }
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { labelDialogOpen = true }.padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text("Labels", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(item.labels.filterNot { it.equals("INBOX", true) }.ifEmpty { listOf("none") }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                     if (item.html) Text("Remote content blocked · HTML shown as safe text", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -502,17 +563,39 @@ private fun timeLabel(epochMillis: Long?): String = epochMillis?.let { java.time
     }
 }
 
-@Composable private fun SearchScreen(vm: AppViewModel, account: MailAccount?, open: (String) -> Unit, back: () -> Unit, openPalette: () -> Unit) {
+@Composable
+private fun ReaderAttachmentRow(attachment: MailAttachment, onAction: (MailAttachment) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .38f)).padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.AttachFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Column(Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Text(attachment.fileName ?: "Attachment", style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(attachment.mimeType ?: "application/octet-stream", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+        TextButton(onClick = { onAction(attachment) }, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(if (attachment.downloadState == "AVAILABLE") "Open" else "Download")
+        }
+    }
+}
+
+@Composable private fun SearchScreen(vm: AppViewModel, account: MailAccount?, quality: GlassQuality, open: (String) -> Unit, back: () -> Unit, openPalette: () -> Unit) {
     BackHandler(onBack = back)
     val state by vm.searchUiState.collectAsStateWithLifecycle()
-    Scaffold { padding ->
+    Scaffold(
+        topBar = {
+            GlassMailTopCapsule(
+                title = "Search",
+                subtitle = "Local mail",
+                quality = quality,
+                navigationIcon = { IconButton(back) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back") } },
+                actions = { IconButton(openPalette) { Icon(Icons.Outlined.Terminal, contentDescription = "Open command palette") } },
+            )
+        },
+    ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).imePadding().navigationBarsPadding()) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(back) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back") }
-                Text("Search", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.weight(1f))
-                IconButton(openPalette) { Icon(Icons.Outlined.Terminal, contentDescription = "Open command palette") }
-            }
             TextField(
                 value = state.query,
                 onValueChange = vm::setSearchQuery,
@@ -529,7 +612,7 @@ private fun timeLabel(epochMillis: Long?): String = epochMillis?.let { java.time
             when {
                 state.query.isBlank() -> Text("Search cached sender, subject, and preview text", Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 state.messages.isEmpty() -> Text("No cached mail matches this search", Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                else -> LazyColumn(Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) { items(state.messages, key = { it.messageId }, contentType = { "searchMail" }) { MailRow(it, open, vm) } }
+                else -> LazyColumn(Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 100.dp)) { items(state.messages, key = { it.messageId }, contentType = { "searchMail" }) { MailRow(it, open, vm) } }
             }
         }
     }
@@ -542,14 +625,16 @@ private fun timeLabel(epochMillis: Long?): String = epochMillis?.let { java.time
     var credentialText by remember { mutableStateOf("") }
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Settings") },
+            GlassMailTopCapsule(
+                title = "Settings",
+                subtitle = "System preferences",
+                quality = appearance.glassQuality,
                 navigationIcon = { IconButton(back) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back") } },
                 actions = { IconButton(openPalette) { Icon(Icons.Outlined.MoreHoriz, contentDescription = "Open command palette") } },
             )
         },
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(account?.email ?: "No account", style = MaterialTheme.typography.titleMedium, maxLines = 1)
@@ -567,7 +652,12 @@ private fun timeLabel(epochMillis: Long?): String = epochMillis?.let { java.time
                     Text("Accessibility", style = MaterialTheme.typography.titleMedium)
                     PreferenceRow("Reduce Transparency", appearance.reduceTransparency) { vm.updateAppearance { it.copy(reduceTransparency = !it.reduceTransparency) } }
                     PreferenceRow("Reduce Motion", appearance.reduceMotion) { vm.updateAppearance { it.copy(reduceMotion = !it.reduceMotion) } }
-                    PreferenceRow("Notification previews", appearance.showNotificationPreviews) { vm.updateAppearance { it.copy(showNotificationPreviews = !it.showNotificationPreviews) } }
+                }
+            }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Notifications", style = MaterialTheme.typography.titleMedium)
+                    PreferenceRow("Show message previews", appearance.showNotificationPreviews) { vm.updateAppearance { it.copy(showNotificationPreviews = !it.showNotificationPreviews) } }
                 }
             }
             item { GlassSurface(appearance.glassQuality, Modifier.fillMaxWidth()) { Text("Glass preview", Modifier.padding(16.dp)) } }
@@ -593,16 +683,41 @@ private fun timeLabel(epochMillis: Long?): String = epochMillis?.let { java.time
 private fun <T> ChoiceSection(title: String, choices: List<T>, selected: T, onSelect: (T) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium)
-        choices.forEach { choice ->
-            PreferenceRow(choice.toString().replace('_', ' '), choice == selected) { onSelect(choice) }
+        val rows = if (choices.size > 3) choices.chunked(2) else listOf(choices)
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .38f)).padding(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            rows.forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    row.forEach { choice ->
+                        val isSelected = choice == selected
+                        Box(
+                            Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(9.dp))
+                                .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                                .clickable { onSelect(choice) }
+                                .semantics {
+                                    role = androidx.compose.ui.semantics.Role.RadioButton
+                                    stateDescription = if (isSelected) "Selected" else "Not selected"
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(prettyChoice(choice), style = MaterialTheme.typography.labelLarge, color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        }
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
         }
     }
 }
 
+private fun prettyChoice(value: Any?): String = value.toString().lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+
 @Composable
 private fun PreferenceRow(title: String, selected: Boolean, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
             .clickable(onClick = onClick)
@@ -612,7 +727,7 @@ private fun PreferenceRow(title: String, selected: Boolean, onClick: () -> Unit)
     ) {
         Text(title, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.weight(1f))
-        Text(if (selected) "✓" else "", color = MaterialTheme.colorScheme.primary)
+        Switch(checked = selected, onCheckedChange = { onClick() })
     }
 }
 

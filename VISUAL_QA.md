@@ -36,3 +36,25 @@ This pass is reference-driven presentation work. Mail state, protocol behavior, 
 - The real device continued to show a transient charging/dynamicspot overlay during some captures. Those frames were discarded; only captures with `com.glassmail.app` as focused app were used as evidence.
 - No per-row live blur was introduced. Rows, reader body, compose body, settings rows, and attachment rows remain flat content surfaces.
 - Large-font and TalkBack remain source-reviewed only; a dedicated accessibility run was not performed on this device.
+
+## Stitch integration verification
+
+The Stitch kit and clipboard export were used as visual references; the native
+implementation remains the source of behavior. The final Stitch slice was
+installed on Pixel 9a serial `5B271XEBF3XDF0` and inspected while GlassMail
+owned foreground focus.
+
+| Screen / component | Severity | Device evidence | Result |
+|---|---:|---|---|
+| Inbox glass chrome text/icons | HIGH | `/tmp/glassmail-stitch-inbox-after.png` | Fixed and device verified; the surface no longer blurs its own content |
+| Expanded dock Compose label | HIGH | `/tmp/glassmail-stitch-inbox-after.png` | Fixed and device verified; Material icon and single-line label remain within the target |
+| Search | MEDIUM | `/tmp/glassmail-stitch-search-dock-actual.png`, `/tmp/glassmail-stitch-search-typed2.png` | Device inspected; Room-backed empty/typed states and IME remained usable |
+| Command palette | MEDIUM | `/tmp/glassmail-stitch-palette-after.png` | Device inspected; bounded sheet, real commands, and readable rows |
+| Settings | MEDIUM | `/tmp/glassmail-stitch-settings-after.png` | Device inspected; compact real preference choices and action rows |
+| Reader | MEDIUM | `/tmp/glassmail-stitch-reader-after2.png` | Device inspected; flat reading canvas and bounded reply actions |
+| Compose | MEDIUM | `/tmp/glassmail-stitch-compose-after.png` | Device inspected; real draft/reply content, top Send, and attachment action |
+
+The `⌘K` search hint was removed after device inspection because it implied an
+unsupported desktop shortcut on Android. Light mode, Liquid/Blur/Transparent
+variants, large text, and TalkBack were not re-inspected after this final APK
+because they were not part of the reachable device route during this run.

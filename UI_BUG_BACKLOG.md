@@ -16,3 +16,5 @@ Presentation defects are tracked separately from functional behavior. Cosmetic i
 | DEVICE_VERIFIED | Reader | Reply controls were inline bright buttons | HIGH | Reading surface was visually interrupted | Bottom action bar verified on Pixel 9a |
 | DEVICE_VERIFIED | Command palette | Dark sheet command titles were unreadable | HIGH | Commands could not be confidently selected | Explicit content colors verified on Pixel 9a |
 | DEVICE_VERIFIED | Light system bars | Status-bar icon contrast after theme switch | HIGH | Light status icons can disappear on porcelain canvas | Final APK verified on Pixel 9a |
+| DEVICE_VERIFIED | Glass chrome | Blur/refraction effect processed chrome's own text and icons | HIGH | Header and dock content was unreadable | Keep content on the unprocessed foreground layer |
+| DEVICE_VERIFIED | Dock | Four expanded destinations allowed the Compose label to wrap | HIGH | Dock label presentation was clipped/wrapped | Keep labels single-line with native vector icons |

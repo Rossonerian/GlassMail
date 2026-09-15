@@ -72,6 +72,7 @@ import kotlinx.coroutines.delay
 fun ComposeRoute(
     graph: AppGraph,
     account: MailAccount?,
+    quality: com.glassmail.designsystem.glass.GlassQuality,
     draftId: String?,
     back: () -> Unit,
 ) {
@@ -100,8 +101,14 @@ fun ComposeRoute(
     }
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("New message") },
+            GlassMailTopCapsule(
+                title = "Compose",
+                subtitle = when (state.status) {
+                    DraftStatus.SENDING -> "Sending"
+                    DraftStatus.SENT -> "Sent"
+                    else -> "Draft saved locally"
+                },
+                quality = quality,
                 navigationIcon = { IconButton(back) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back") } },
                 actions = {
                     TextButton(enabled = state.status != DraftStatus.SENDING, onClick = vm::send) {
@@ -115,6 +122,7 @@ fun ComposeRoute(
             Modifier.fillMaxSize().padding(padding).imePadding().navigationBarsPadding().padding(20.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
+            FlatMetadata("Local draft")
             ComposeLine("To", draft.to.joinToString(", "), vm::updateTo, "Required · separate addresses with commas")
             ComposeLine("Cc", draft.cc.joinToString(", "), vm::updateCc, "Optional")
             ComposeLine("Bcc", draft.bcc.joinToString(", "), vm::updateBcc, "Optional")

@@ -69,12 +69,14 @@ class AccountSyncSchedulerInstrumentedTest {
     }
 
     @Test(expected = CancellationException::class)
-    fun workerPropagatesCancellation() = runBlocking {
-        SyncRuntime.install(FakeRepository(MailSyncResult.Failure(MailSyncError.Cancelled)))
-        TestListenableWorkerBuilder<AccountSyncWorker>(ApplicationProvider.getApplicationContext())
-            .setInputData(androidx.work.workDataOf(AccountSyncWorker.KEY_ACCOUNT_ID to "account"))
-            .build()
-            .doWork()
+    fun workerPropagatesCancellation() {
+        runBlocking {
+            SyncRuntime.install(FakeRepository(MailSyncResult.Failure(MailSyncError.Cancelled)))
+            TestListenableWorkerBuilder<AccountSyncWorker>(ApplicationProvider.getApplicationContext())
+                .setInputData(androidx.work.workDataOf(AccountSyncWorker.KEY_ACCOUNT_ID to "account"))
+                .build()
+                .doWork()
+        }
     }
 
     private class FakeRepository(private val result: MailSyncResult) : MailRepository {
@@ -83,6 +85,7 @@ class AccountSyncSchedulerInstrumentedTest {
         override fun observeInbox(accountId: String): Flow<List<MailListItem>> = emptyFlow()
         override fun search(accountId: String, query: String): Flow<List<MailListItem>> = emptyFlow()
         override fun observeMessage(messageId: String): Flow<MailMessage?> = emptyFlow()
+        override fun observeThread(messageId: String): Flow<List<MailMessage>> = emptyFlow()
         override suspend fun createAccount(accountId: String, email: String) = Unit
         override suspend fun removeAccount(accountId: String) = Unit
         override suspend fun synchronize(accountId: String): MailSyncResult = result
