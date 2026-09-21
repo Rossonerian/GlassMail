@@ -260,7 +260,7 @@ interface MailDao {
     @Query("SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, mm.flags, mm.labels FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.messageId = :messageId LIMIT 1")
     fun observeMessage(messageId: String): Flow<MessageDetailRow?>
 
-    @Query("SELECT DISTINCT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, mm.flags, mm.labels FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.gmailThreadId = (SELECT gmailThreadId FROM messages WHERE messageId = :messageId) ORDER BY m.sentAtEpochMillis ASC")
+    @Query("SELECT DISTINCT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, mm.flags, mm.labels FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE (m.messageId = :messageId OR (m.gmailThreadId IS NOT NULL AND m.gmailThreadId != '' AND m.gmailThreadId = (SELECT target.gmailThreadId FROM messages target WHERE target.messageId = :messageId AND target.gmailThreadId IS NOT NULL AND target.gmailThreadId != ''))) ORDER BY m.sentAtEpochMillis ASC")
     fun observeThread(messageId: String): Flow<List<MessageDetailRow>>
 
     @Query("SELECT * FROM attachments WHERE messageId = :messageId ORDER BY partId")

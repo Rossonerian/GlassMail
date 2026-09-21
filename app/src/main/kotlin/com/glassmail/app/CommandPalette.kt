@@ -2,6 +2,7 @@ package com.glassmail.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,13 +63,25 @@ fun CommandPalette(
     Box(
         Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = .48f))
-            .clickable(onClick = onDismiss),
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss,
+            ),
         contentAlignment = Alignment.BottomCenter,
     ) {
         GlassSurface(
             quality = quality,
             shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.fillMaxWidth(.96f).heightIn(max = 680.dp).navigationBarsPadding().padding(horizontal = 10.dp, vertical = 12.dp).clickable { },
+            modifier = Modifier
+                .fillMaxWidth(.96f)
+                .heightIn(max = 680.dp)
+                .navigationBarsPadding()
+                .padding(horizontal = 10.dp, vertical = 12.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { },
         ) {
             Column(Modifier.padding(horizontal = 6.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.fillMaxWidth().padding(bottom = 2.dp), contentAlignment = Alignment.Center) {

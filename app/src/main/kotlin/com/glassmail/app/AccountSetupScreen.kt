@@ -147,11 +147,11 @@ class AccountSetupViewModel(
                     )
                 }
             } catch (error: CancellationException) {
-                credential.fill('\u0000')
                 throw error
             } catch (_: Exception) {
-                credential.fill('\u0000')
                 mutableState.value = AccountSetupUiState(message = "Secure setup could not complete.")
+            } finally {
+                credential.fill('\u0000')
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.glassmail.core.imap
 
 import com.glassmail.domain.mail.MailAccount
+import com.glassmail.domain.mail.OutgoingAttachment
 import com.glassmail.domain.mail.OutgoingMail
 import com.glassmail.domain.mail.SendMailError
 import com.glassmail.domain.mail.SendMailResult
@@ -25,5 +26,26 @@ class GmailSmtpMailSenderTest {
         }
         val result = GmailSmtpMailSender(missing).send(account, OutgoingMail("op", "a", account.email, listOf("to@example.com"), subject = "x", body = "x"))
         assertEquals(SendMailResult.Failed(SendMailError.Authentication), result)
+    }
+
+    @Test fun `oversized outgoing message returns InvalidMessage error`() = runBlocking {
+        val oversizedMail = OutgoingMail(
+            operationId = "op",
+            accountId = "a",
+            from = account.email,
+            to = listOf("to@example.com"),
+            subject = "Large",
+            body = "x",
+            attachments = listOf(
+                OutgoingAttachment(
+                    fileName = "big.bin",
+                    mimeType = "application/octet-stream",
+                    sizeBytes = 25L * 1024 * 1024,
+                    openStream = { java.io.ByteArrayInputStream(ByteArray(0)) }
+                )
+            )
+        )
+        val result = GmailSmtpMailSender(provider).send(account, oversizedMail)
+        assertEquals(SendMailResult.Failed(SendMailError.InvalidMessage), result)
     }
 }

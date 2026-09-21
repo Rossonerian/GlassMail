@@ -93,8 +93,9 @@ class GmailSmtpMailSender(
                         }
                     }
                     coroutineContext.ensureActive()
+                    SendMailResult.Sent
                 }
-            }?.let { SendMailResult.Sent } ?: SendMailResult.Failed(SendMailError.Authentication)
+            } ?: SendMailResult.Failed(SendMailError.Authentication)
         } catch (_: CancellationException) {
             throw CancellationException("Send cancelled")
         } catch (_: AddressException) {

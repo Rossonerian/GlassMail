@@ -312,7 +312,18 @@ class AppViewModel(
             ReaderUiState(selected = selected, thread = thread)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReaderUiState())
-    fun mutation(item: MailListItem, type: String) = viewModelScope.launch { repository.applyMutation(when (type) { "star" -> MailMutation.Star(accounts.value.first().accountId, item.messageId, null, !item.starred); "read" -> MailMutation.MarkRead(accounts.value.first().accountId, item.messageId, null, item.unread); "archive" -> MailMutation.Archive(accounts.value.first().accountId, item.messageId, "${accounts.value.first().accountId}:INBOX"); else -> MailMutation.Delete(accounts.value.first().accountId, item.messageId, null) }) }
+    fun mutation(item: MailListItem, type: String) = viewModelScope.launch {
+        val account = accounts.value.firstOrNull() ?: return@launch
+        val inboxId = "${account.accountId}:INBOX"
+        repository.applyMutation(
+            when (type) {
+                "star" -> MailMutation.Star(account.accountId, item.messageId, inboxId, !item.starred)
+                "read" -> MailMutation.MarkRead(account.accountId, item.messageId, inboxId, item.unread)
+                "archive" -> MailMutation.Archive(account.accountId, item.messageId, inboxId)
+                else -> MailMutation.Delete(account.accountId, item.messageId, inboxId)
+            }
+        )
+    }
     fun setLabel(messageId: String, label: String, add: Boolean) = viewModelScope.launch {
         accounts.value.firstOrNull()?.let { repository.applyMutation(MailMutation.Label(it.accountId, messageId, null, label, add)) }
     }
@@ -345,7 +356,14 @@ class AppViewModel(
             }.onFailure { Toast.makeText(context, "No app can open this attachment", Toast.LENGTH_LONG).show() }
         }.onFailure { Toast.makeText(context, "Attachment download failed", Toast.LENGTH_LONG).show() }
     }
-    fun updateCredential(accountId: String, credential: CharArray) = viewModelScope.launch { credentialStore.store(accountId, credential); refresh() }
+    fun updateCredential(accountId: String, credential: CharArray) = viewModelScope.launch {
+        try {
+            credentialStore.store(accountId, credential)
+            refresh()
+        } finally {
+            credential.fill('\u0000')
+        }
+    }
     companion object {
         fun factory(context: Context, repository: MailRepository, syncScheduler: AccountSyncScheduler, preferences: AppearancePreferences, draftRepository: DraftRepository, credentialStore: com.glassmail.core.security.CredentialStore) = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST") override fun <T: ViewModel> create(modelClass: Class<T>) = AppViewModel(context, repository, syncScheduler, preferences, draftRepository, credentialStore) as T

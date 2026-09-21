@@ -123,9 +123,9 @@ fun ComposeRoute(
             verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
             FlatMetadata("Local draft")
-            ComposeLine("To", draft.to.joinToString(", "), vm::updateTo, "Required · separate addresses with commas")
-            ComposeLine("Cc", draft.cc.joinToString(", "), vm::updateCc, "Optional")
-            ComposeLine("Bcc", draft.bcc.joinToString(", "), vm::updateBcc, "Optional")
+            ComposeLine("To", state.rawTo, vm::updateTo, "Required · separate addresses with commas")
+            ComposeLine("Cc", state.rawCc, vm::updateCc, "Optional")
+            ComposeLine("Bcc", state.rawBcc, vm::updateBcc, "Optional")
             ComposeLine("Subject", draft.subject, vm::updateSubject, "Optional")
             Spacer(Modifier.padding(top = 12.dp))
             Text("Message", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -188,6 +188,9 @@ private fun ComposeLine(label: String, value: String, onValueChange: (String) ->
 
 data class ComposeUiState(
     val draft: MailDraft,
+    val rawTo: String = draft.to.joinToString(", "),
+    val rawCc: String = draft.cc.joinToString(", "),
+    val rawBcc: String = draft.bcc.joinToString(", "),
     val status: DraftStatus = DraftStatus.DRAFT,
     val error: String? = null,
 )
@@ -206,13 +209,33 @@ class ComposeViewModel(
 
     init {
         if (draftId != null) viewModelScope.launch {
-            drafts.observeDraft(draftId).first { it != null }?.let { loaded -> _state.value = ComposeUiState(loaded, loaded.status) }
+            drafts.observeDraft(draftId).first { it != null }?.let { loaded ->
+                _state.value = ComposeUiState(
+                    draft = loaded,
+                    rawTo = loaded.to.joinToString(", "),
+                    rawCc = loaded.cc.joinToString(", "),
+                    rawBcc = loaded.bcc.joinToString(", "),
+                    status = loaded.status,
+                )
+            }
         }
     }
 
-    fun updateTo(value: String) = update { it.copy(to = normalizeAddresses(value), status = DraftStatus.DRAFT) }
-    fun updateCc(value: String) = update { it.copy(cc = normalizeAddresses(value), status = DraftStatus.DRAFT) }
-    fun updateBcc(value: String) = update { it.copy(bcc = normalizeAddresses(value), status = DraftStatus.DRAFT) }
+    fun updateTo(value: String) {
+        _state.value = _state.value.copy(rawTo = value)
+        update { it.copy(to = normalizeAddresses(value), status = DraftStatus.DRAFT) }
+    }
+
+    fun updateCc(value: String) {
+        _state.value = _state.value.copy(rawCc = value)
+        update { it.copy(cc = normalizeAddresses(value), status = DraftStatus.DRAFT) }
+    }
+
+    fun updateBcc(value: String) {
+        _state.value = _state.value.copy(rawBcc = value)
+        update { it.copy(bcc = normalizeAddresses(value), status = DraftStatus.DRAFT) }
+    }
+
     fun updateSubject(value: String) = update { it.copy(subject = value.take(MAX_SUBJECT), status = DraftStatus.DRAFT) }
     fun updateBody(value: String) = update { it.copy(body = value.take(MAX_BODY), status = DraftStatus.DRAFT) }
     fun addAttachments(value: List<DraftAttachment>) = update { it.copy(attachments = (it.attachments + value).distinctBy(DraftAttachment::uri), status = DraftStatus.DRAFT) }
@@ -227,7 +250,7 @@ class ComposeViewModel(
         }
         viewModelScope.launch {
             val sending = current.draft.copy(status = DraftStatus.SENDING, updatedAtEpochMillis = System.currentTimeMillis())
-            _state.value = ComposeUiState(sending, DraftStatus.SENDING)
+            _state.value = current.copy(draft = sending, status = DraftStatus.SENDING)
             drafts.saveDraft(sending)
             val outgoingAttachments = sending.attachments.mapNotNull { attachment ->
                 val available = runCatching { contentResolver.openInputStream(android.net.Uri.parse(attachment.uri))?.use { true } ?: false }.getOrDefault(false)
@@ -238,20 +261,21 @@ class ComposeViewModel(
                 SendMailResult.Sent -> {
                     val sent = sending.copy(status = DraftStatus.SENT, updatedAtEpochMillis = System.currentTimeMillis())
                     drafts.saveDraft(sent)
-                    _state.value = ComposeUiState(sent, DraftStatus.SENT)
+                    _state.value = current.copy(draft = sent, status = DraftStatus.SENT)
                 }
                 is SendMailResult.Failed -> {
                     val failed = sending.copy(status = DraftStatus.FAILED, updatedAtEpochMillis = System.currentTimeMillis())
                     drafts.saveDraft(failed)
-                    _state.value = ComposeUiState(failed, DraftStatus.FAILED, result.error.userMessage())
+                    _state.value = current.copy(draft = failed, status = DraftStatus.FAILED, error = result.error.userMessage())
                 }
             }
         }
     }
 
     private fun update(transform: (MailDraft) -> MailDraft) {
-        val next = transform(_state.value.draft).copy(updatedAtEpochMillis = System.currentTimeMillis())
-        _state.value = ComposeUiState(next, DraftStatus.DRAFT)
+        val current = _state.value
+        val next = transform(current.draft).copy(updatedAtEpochMillis = System.currentTimeMillis())
+        _state.value = current.copy(draft = next, status = DraftStatus.DRAFT, error = null)
         saveJob?.cancel()
         saveJob = viewModelScope.launch {
             delay(AUTOSAVE_DELAY_MILLIS)
