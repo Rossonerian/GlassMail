@@ -6,13 +6,14 @@ This pass is reference-driven presentation work. Mail state, protocol behavior, 
 
 | Screen / component | Severity | Before | Expected | Fix | After / device evidence |
 |---|---:|---|---|---|---|
-| Inbox rows | HIGH | Four permanent action controls made each row tall and visually noisy | Email content leads; actions remain available without a permanent strip | Kept the row click and real mutations, moved actions to one overflow menu | `redesign-inbox-clean.png`; DEVICE VERIFIED |
-| Inbox top chrome | MEDIUM | Unicode command/search/settings symbols and oversized single-line title | Compact, recognizable Android chrome with context | Material vector icons, compact title/context column | `inbox-reference-topbar-after.png`; DEVICE VERIFIED |
-| Command palette | HIGH | Dark theme primary command text resolved black on the sheet | All command titles and descriptions readable | Explicit theme content colors inside `GlassSurface` | `command-palette-after.png`; DEVICE VERIFIED for primary text |
-| Reader actions | HIGH | Reply, Reply all, and Forward were bright inline buttons in message content | Reading canvas stays quiet; actions live in bounded chrome | Moved existing callbacks into a bottom GlassSurface action bar | `reader-reference-actionbar-after.png`; DEVICE VERIFIED |
+| Inbox rows | HIGH | Four permanent action controls made each row tall and visually noisy | Email content leads; actions remain available without a permanent strip | Kept the row click and real mutations, moved actions to one overflow menu; modularized into `MailRow.kt` | `redesign-inbox-clean.png`; DEVICE VERIFIED |
+| Inbox top chrome | MEDIUM | Unicode command/search/settings symbols and oversized single-line title | Compact, recognizable Android chrome with context | Material vector icons, compact title/context column in `GlassMailTopCapsule` | `inbox-reference-topbar-after.png`; DEVICE VERIFIED |
+| Command palette | HIGH | Dark theme primary command text resolved black on the sheet | All command titles and descriptions readable | Explicit theme content colors inside `GlassSurface(material = GlassPresets.Dialog)` | `command-palette-after.png`; DEVICE VERIFIED for primary text |
+| Reader actions | HIGH | Reply, Reply all, and Forward were bright inline buttons in message content | Reading canvas stays quiet; actions live in bounded chrome | Moved existing callbacks into a bottom floating glass action dock (`GlassPresets.BottomBar`) | `reader-reference-actionbar-after.png`; DEVICE VERIFIED |
 | Compose | HIGH | Generic outlined fields and full-width buttons dominated the writing surface | Flat mail-composer hierarchy with Send always reachable | Flat BasicTextField rows, writing-first body, compact attachment rows, top-bar Send | `compose-reference-after-rebuild.png` and `compose-rebuild-ime.png`; DEVICE VERIFIED |
 | Settings | HIGH | Account operations appeared as full-width primary CTAs | Native settings action rows with descriptions | Added compact action rows and dividers; callbacks unchanged | `settings-reference-after-rebuild-2.png`; DEVICE VERIFIED |
 | Light system bars | HIGH | Light status-bar icons disappeared on the light canvas | System icons match background luminance | Root theme updates light status/navigation bar appearance | `final-launch.png`; DEVICE VERIFIED |
+| Glass Optical Lab | NEW | No developer interface to tune physical shader parameters live | Interactive sandbox with sliders, 4 test backdrops, presets, and frame timings | Added `ROUTE_GLASS_LAB` accessible from Settings | SOURCE REVIEW & COMPILE VERIFIED |
 
 ## Route matrix
 
@@ -28,6 +29,7 @@ This pass is reference-driven presentation work. Mail state, protocol behavior, 
 | Command palette | PASS | NOT TESTED | NOT TESTED | NOT TESTED | PASS | PASS | PASS | SOURCE REVIEW ONLY | YES |
 | Settings | PASS | PASS | NOT TESTED | NOT TESTED | PASS | PASS | PASS | SOURCE REVIEW ONLY | YES |
 | Dock | PASS | PASS | PASS | PASS | PASS | PASS | PASS | SOURCE REVIEW ONLY | YES |
+| Glass Lab | PASS | PASS | PASS | PASS | PASS | PASS | PASS | SOURCE REVIEW ONLY | COMPILE & SOURCE VERIFIED |
 
 ## Device evidence
 

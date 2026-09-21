@@ -52,8 +52,10 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
+import com.glassmail.designsystem.glass.GlassTier
 import com.glassmail.designsystem.glass.LocalGlassPreferences
 import kotlin.math.roundToInt
 
@@ -110,8 +112,13 @@ fun MorphingDock(
         contentAlignment = Alignment.Center,
     ) {
         GlassSurface(
-            quality = quality,
-            shape = RoundedCornerShape(30.dp),
+            material = GlassPresets.BottomBar.copy(cornerRadius = GlassRadius.dock),
+            tierOverride = when (quality) {
+                GlassQuality.AUTOMATIC, GlassQuality.LIQUID -> GlassTier.FULL
+                GlassQuality.BLUR -> GlassTier.LITE
+                GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
+            },
+            shape = RoundedCornerShape(GlassRadius.dock),
             modifier = Modifier.fillMaxSize(),
             backdropSampling = true,
             backdropKey = backdropKey,
@@ -123,7 +130,7 @@ fun MorphingDock(
                 val maxLensOffset = (slotWidthPx * (destinations.size - 1)).coerceAtLeast(0f)
                 val settledOffset by animateDpAsState(
                     targetValue = slotWidth * selectedIndex,
-                    animationSpec = if (preferences.reduceMotion) tween(100) else spring(stiffness = Spring.StiffnessMedium, dampingRatio = .82f),
+                    animationSpec = if (preferences.reduceMotion) tween(100) else GlassMotion.SpringDock,
                     label = "dockLensSlide",
                 )
                 val currentOffset = if (dragActive) with(density) { dragOffsetPx.toDp() } else settledOffset
@@ -164,7 +171,7 @@ fun MorphingDock(
                             .width(slotWidth)
                             .fillMaxHeight()
                             .padding(5.dp)
-                            .clip(RoundedCornerShape(22.dp))
+                            .clip(RoundedCornerShape(GlassRadius.innerLens))
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = if (dragActive) .24f else .18f)),
                     )
                     Row(Modifier.fillMaxSize()) {
@@ -172,7 +179,7 @@ fun MorphingDock(
                             val visualActive = if (dragActive) index == previewIndex else index == selectedIndex
                             val iconScale by animateFloatAsState(
                                 targetValue = if (visualActive) 1.06f else 1f,
-                                animationSpec = if (preferences.reduceMotion) tween(80) else spring(stiffness = Spring.StiffnessMedium, dampingRatio = .9f),
+                                animationSpec = if (preferences.reduceMotion) tween(80) else GlassMotion.SpringSubtle,
                                 label = "dockIconScale$index",
                             )
                             Box(

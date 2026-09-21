@@ -86,3 +86,33 @@ fun GlassMailSearchCapsule(
 fun FlatMetadata(text: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
     Text(text.uppercase(), modifier = modifier, color = color, style = MaterialTheme.typography.labelSmall, maxLines = 1)
 }
+
+fun senderAmbient(sender: String): Color = when ((sender.hashCode() and Int.MAX_VALUE) % 4) {
+    0 -> com.glassmail.designsystem.GlassMailPalette.Personal.first
+    1 -> com.glassmail.designsystem.GlassMailPalette.Work.first
+    2 -> com.glassmail.designsystem.GlassMailPalette.Updates.first
+    else -> com.glassmail.designsystem.GlassMailPalette.Newsletters.first
+}
+
+fun syncStatus(state: String): String = if (state.contains("offline", ignoreCase = true) || state.contains("network", ignoreCase = true)) {
+    "Offline — showing cached mail"
+} else state
+
+fun replyDraft(message: com.glassmail.domain.mail.MailMessage, account: com.glassmail.domain.mail.MailAccount, all: Boolean): com.glassmail.domain.mail.MailDraft {
+    val headers = com.glassmail.domain.mail.ReceivedMailHeaders(replyTo = listOf(message.sender), messageId = message.messageId)
+    val recipients = if (all) com.glassmail.domain.mail.replyAllRecipients(headers, account.email) else com.glassmail.domain.mail.replyRecipients(message, account.email)
+    return com.glassmail.domain.mail.MailDraft(
+        java.util.UUID.randomUUID().toString(), account.accountId, to = recipients,
+        subject = com.glassmail.domain.mail.replySubject(message.subject),
+        body = "\n\n— Original message —\n${message.body ?: message.preview}",
+        inReplyTo = message.messageId,
+        references = com.glassmail.domain.mail.referencesForReply(message.messageId, headers.references),
+    )
+}
+
+fun forwardDraft(message: com.glassmail.domain.mail.MailMessage, account: com.glassmail.domain.mail.MailAccount): com.glassmail.domain.mail.MailDraft = com.glassmail.domain.mail.MailDraft(
+    java.util.UUID.randomUUID().toString(), account.accountId,
+    subject = com.glassmail.domain.mail.forwardSubject(message.subject),
+    body = "\n\n— Forwarded message —\nFrom: ${message.sender}\nSubject: ${message.subject}\n\n${message.body ?: message.preview}",
+)
+

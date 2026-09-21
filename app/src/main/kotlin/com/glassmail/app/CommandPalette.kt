@@ -38,8 +38,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.glassmail.designsystem.GlassRadius
+import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
+import com.glassmail.designsystem.glass.GlassTier
 
 data class CommandPaletteAction(
     val id: String,
@@ -71,8 +74,13 @@ fun CommandPalette(
         contentAlignment = Alignment.BottomCenter,
     ) {
         GlassSurface(
-            quality = quality,
-            shape = RoundedCornerShape(28.dp),
+            material = GlassPresets.Dialog.copy(cornerRadius = GlassRadius.dialog),
+            tierOverride = when (quality) {
+                GlassQuality.AUTOMATIC, GlassQuality.LIQUID -> GlassTier.FULL
+                GlassQuality.BLUR -> GlassTier.LITE
+                GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
+            },
+            shape = RoundedCornerShape(GlassRadius.dialog),
             modifier = Modifier
                 .fillMaxWidth(.96f)
                 .heightIn(max = 680.dp)

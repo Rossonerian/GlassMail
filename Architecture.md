@@ -1,14 +1,49 @@
 # Architecture
 
 ```text
-Compose → ViewModel StateFlow → MailRepository → Room Flow
-                                         ↘ IMAP / WorkManager
-
-Compose send follows the same boundary: ComposeViewModel → MailSender → GmailSmtpMailSender → STARTTLS SMTP. Credentials are supplied only at the adapter boundary by Android Keystore's CredentialStore. Drafts use a separate DraftRepository backed by Room and are autosaved with debounce.
+Compose UI (Modular Screens & Floating Glass Chrome)
+       │
+       ▼
+AppViewModel (StateFlow & Coroutine Orchestration)
+       │
+       ├─────────────────────────────────┐
+       ▼                                 ▼
+MailRepository / DraftRepository    AccountSyncScheduler (WorkManager)
+       │                                 │
+       ├──────────────┬──────────────────┤
+       ▼              ▼                  ▼
+GlassMailDatabase  GmailImapClient   GmailSmtpMailSender
+   (Room DB)       (IMAP Transport)  (SMTP Transport)
 ```
 
-Room is the durable source of truth. `:app` consumes domain models only; it does not use DAOs, IMAP, or WorkManager. `:data:mail` maps Room rows to domain inbox/search/message models. `:core:database` owns entities and transaction boundaries. `:designsystem:glass` owns visual quality/rendering APIs; features only call `GlassSurface`.
+## Boundaries & Principles
+- **Room as Source of Truth**: UI consumes immutable `StateFlow` streams from `AppViewModel`, backed directly by Room queries. Compose never creates a secondary in-memory list or shadows durable state.
+- **Repository Isolation**: `:app` interacts with domain interfaces (`MailRepository`, `DraftRepository`, `MailSender`, `CredentialStore`), not internal DAOs or IMAP sessions.
+- **Security**: Keystore credentials are provided to `withCredential` lambdas only at the transport boundary and wiped immediately via `finally { credential.fill('\u0000') }`.
+- **Flat Content Surfaces vs Floating Liquid Glass**:
+  - Message rows (`MailRow.kt`), reading canvas (`ReaderScreen.kt`), and compose canvas (`ComposeScreen.kt`) are strictly flat, high-contrast surfaces to guarantee maximum legibility and zero distortion.
+  - Liquid glass is confined exclusively to floating chrome (`MorphingDock`, `GlassMailTopCapsule`, floating reader action bar, `CommandPalette`, dialogs).
 
-Modules: `:app`, `:core:model`, `:core:security`, `:core:database`, `:core:imap`, `:domain:mail`, `:data:mail`, `:sync`, `:designsystem`, `:designsystem:glass`, and `:benchmark`.
+## Modular Screen De-monolithization
+Previously all screens were in an 840-line monolithic `GlassMailApp.kt`. The UI layer is now cleanly decomposed into modular, focused components:
+- `AppViewModel.kt`: Central state holder and repository orchestrator for inbox, search, reader, drafts, and appearance preferences.
+- `MailRow.kt`: High-contrast, flat email list row with unread indicator, snippet preview, star toggle, and overflow actions.
+- `InboxScreen.kt`: Filterable mail list with top capsule, search/settings actions, and backdrop freeze signaling.
+- `ReaderScreen.kt`: Distraction-free email reading view with attachment chips and floating glass action bar.
+- `SearchScreen.kt`: Instant local cache search with history suggestion chips and full query filtering.
+- `SettingsScreen.kt`: Appearance controls (Theme, Glass Quality, Accessibility), diagnostic mailbox seed/clear, and credentials update.
+- `GlassLabScreen.kt`: Developer playground for interactive live AGSL shader tuning, preset switching, and frame timing diagnostics.
+- `GlassMailChrome.kt`: Shared top capsules, dock coordination, and draft helpers.
 
-Debug fixtures flow through the same Room/repository/ViewModel path as IMAP metadata. Settings hides fixture controls in non-debug builds. Remote Gmail draft synchronization and Sent-folder append are not currently implemented.
+## Module Structure
+- `:app`: Application entry point, modular screens, Navigation graph, and application graph wiring.
+- `:designsystem`: Theme tokens (`GlassSpacing`, `GlassRadius`, `GlassIconSize`, `GlassElevation`, `GlassMotion`), `AmbientCanvas`, and `MorphingDock`.
+- `:designsystem:glass`: Zero-copy live `GlassProvider`, `GlassSurface`, 14-parameter `GlassMaterial`, AGSL shader, and quality tiers.
+- `:domain:mail`: Core entities (`MailMessage`, `MailDraft`, `MailAccount`, `MailMutation`) and repository contracts.
+- `:data:mail`: `ImapMailRepository` implementation coordinating Room persistence and remote IMAP sync.
+- `:core:database`: Room database, entities, DAOs, and database migrations.
+- `:core:imap`: `GmailImapClient` and `GmailSmtpMailSender` network transports.
+- `:core:security`: Android Keystore credential storage.
+- `:core:model`: Shared data transfer models.
+- `:sync`: WorkManager scheduled background synchronization.
+- `:benchmark`: Macrobenchmark start-up and scroll performance tests.

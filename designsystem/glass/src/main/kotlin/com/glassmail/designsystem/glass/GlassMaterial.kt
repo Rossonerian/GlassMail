@@ -259,6 +259,8 @@ fun GlassSurface(
     shape: Shape = RoundedCornerShape(material.cornerRadius),
     tierOverride: GlassTier? = null,
     backdropSampling: Boolean = true,
+    backdropKey: Any? = Unit,
+    backdropFrozen: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val preferences = LocalGlassPreferences.current
@@ -440,7 +442,9 @@ fun GlassSurface(
         modifier = modifier,
         shape = shape,
         tierOverride = tier,
-        backdropSampling = true,
+        backdropSampling = backdropSampling,
+        backdropKey = backdropKey,
+        backdropFrozen = backdropFrozen,
         content = content,
     )
 }

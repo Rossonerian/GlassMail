@@ -16,6 +16,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 data class AmbientPalette(val first: Color, val second: Color)
@@ -30,7 +31,66 @@ object GlassMailPalette {
     val Promotions = AmbientPalette(Color(0xFFD97706), Color(0xFFDC2626))
     val Reminders = AmbientPalette(Color(0xFF6366F1), Color(0xFF8B5CF6))
 }
-object GlassMotion { const val Fast = 150; const val Standard = 250; const val Chroma = 450 }
+
+object GlassSpacing {
+    val xxs = 2.dp
+    val xs = 4.dp
+    val sm = 8.dp
+    val md = 12.dp
+    val base = 16.dp
+    val lg = 20.dp
+    val xl = 24.dp
+    val xxl = 32.dp
+    val xxxl = 48.dp
+}
+
+object GlassRadius {
+    val xs = 4.dp
+    val sm = 8.dp
+    val md = 12.dp
+    val lg = 16.dp
+    val card = 20.dp
+    val innerLens = 22.dp
+    val dialog = 28.dp
+    val dock = 30.dp
+    val pill = 999.dp
+}
+
+object GlassIconSize {
+    val xs = 14.dp
+    val sm = 18.dp
+    val md = 22.dp
+    val lg = 28.dp
+    val xl = 48.dp
+}
+
+object GlassElevation {
+    val level0 = 0.dp
+    val level1 = 2.dp
+    val level2 = 4.dp
+    val level3 = 8.dp
+    val level4 = 16.dp
+}
+
+object GlassMotion {
+    const val Fast = 150
+    const val Standard = 250
+    const val Chroma = 450
+    const val Morph = 320
+
+    val SpringSubtle = androidx.compose.animation.core.spring<Float>(
+        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+        dampingRatio = 0.88f,
+    )
+    val SpringBouncy = androidx.compose.animation.core.spring<Float>(
+        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
+        dampingRatio = 0.75f,
+    )
+    val SpringDock = androidx.compose.animation.core.spring<androidx.compose.ui.unit.Dp>(
+        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
+        dampingRatio = 0.82f,
+    )
+}
 
 @Composable fun GlassMailTheme(dark: Boolean = isSystemInDarkTheme(), ambient: AmbientPalette = GlassMailPalette.Priority, content: @Composable () -> Unit) {
     val scheme = if (dark) darkColorScheme(

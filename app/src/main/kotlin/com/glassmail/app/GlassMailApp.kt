@@ -186,90 +186,130 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
         }
     }
     androidx.compose.runtime.CompositionLocalProvider(LocalGlassPreferences provides GlassPreferences(appearance.reduceTransparency, appearance.reduceMotion)) {
-    AmbientCanvas(ambient, dark = dark) { Box(Modifier.fillMaxSize()) { NavHost(navController = navController, startDestination = ROUTE_INBOX) {
-        composable(ROUTE_SETUP) { AccountSetupRoute(graph) }
-        composable(ROUTE_INBOX) {
-            InboxScreen(vm, accounts.firstOrNull(), appearance.glassQuality,
-                open = { navController.navigate("$ROUTE_READER/$it") },
-                search = { navController.navigate(ROUTE_SEARCH) },
-                settings = { navController.navigate(ROUTE_SETTINGS) },
-                openPalette = { paletteOpen = true },
-                onDockCompactChanged = { dockCompact = it },
-                onDockBackdropChanged = { key, frozen -> dockBackdropKey = key; dockBackdropFrozen = frozen },
-            )
-        }
-        composable(ROUTE_SEARCH) {
-            SearchScreen(
-                vm = vm,
-                account = accounts.firstOrNull(),
-                quality = appearance.glassQuality,
-                open = { navController.navigate("$ROUTE_READER/$it") },
-                back = { navController.popBackStack() },
-                openPalette = { paletteOpen = true },
-            )
-        }
-        composable(ROUTE_SETTINGS) {
-            SettingsScreen(graph, vm, accounts.firstOrNull(), { navController.popBackStack() }, { paletteOpen = true })
-        }
-        composable("$ROUTE_COMPOSE/{draftId}") { entry ->
-            ComposeRoute(graph, accounts.firstOrNull(), appearance.glassQuality, entry.arguments?.getString("draftId")?.takeUnless { it == "new" }, { navController.popBackStack() })
-        }
-        composable(
-            route = "$ROUTE_READER/{messageId}",
-            arguments = listOf(navArgument("messageId") { type = NavType.StringType }),
-        ) { entry ->
-            ReaderScreen(vm, accounts.firstOrNull(), entry.arguments?.getString("messageId").orEmpty(), appearance.glassQuality, { navController.popBackStack() }, { paletteOpen = true }, { draft -> openCompose(draft) }, { attachment -> vm.downloadAttachment(attachment) })
-        }
-    }
-    val dockSelectedIndex = when (route) {
-        ROUTE_INBOX -> 0
-        ROUTE_SEARCH -> 1
-        ROUTE_SETTINGS -> 3
-        else -> null
-    }
-    if (dockSelectedIndex != null) {
-        MorphingDock(
-            compact = route == ROUTE_INBOX && dockCompact,
-            selectedIndex = dockSelectedIndex,
-            quality = appearance.glassQuality,
-            onSelect = { destination ->
-                val target = when (destination) {
-                    0 -> ROUTE_INBOX
-                    1 -> ROUTE_SEARCH
-                    3 -> ROUTE_SETTINGS
-                    else -> return@MorphingDock
+    AmbientCanvas(ambient, dark = dark) {
+        Box(Modifier.fillMaxSize()) {
+            com.glassmail.designsystem.glass.GlassProvider(
+                enabled = appearance.glassQuality != GlassQuality.TRANSPARENT && !appearance.reduceTransparency,
+            ) {
+                NavHost(navController = navController, startDestination = ROUTE_INBOX) {
+                    composable(ROUTE_SETUP) { AccountSetupRoute(graph) }
+                    composable(ROUTE_INBOX) {
+                        InboxScreen(
+                            vm = vm,
+                            account = accounts.firstOrNull(),
+                            quality = appearance.glassQuality,
+                            open = { navController.navigate("$ROUTE_READER/$it") },
+                            search = { navController.navigate(ROUTE_SEARCH) },
+                            settings = { navController.navigate(ROUTE_SETTINGS) },
+                            openPalette = { paletteOpen = true },
+                            onDockCompactChanged = { dockCompact = it },
+                            onDockBackdropChanged = { key, frozen -> dockBackdropKey = key; dockBackdropFrozen = frozen },
+                        )
+                    }
+                    composable(ROUTE_SEARCH) {
+                        SearchScreen(
+                            vm = vm,
+                            account = accounts.firstOrNull(),
+                            quality = appearance.glassQuality,
+                            open = { navController.navigate("$ROUTE_READER/$it") },
+                            back = { navController.popBackStack() },
+                            openPalette = { paletteOpen = true },
+                        )
+                    }
+                    composable(ROUTE_SETTINGS) {
+                        SettingsScreen(
+                            graph = graph,
+                            vm = vm,
+                            account = accounts.firstOrNull(),
+                            back = { navController.popBackStack() },
+                            openPalette = { paletteOpen = true },
+                            openLab = { navController.navigate(ROUTE_GLASS_LAB) },
+                        )
+                    }
+                    composable(ROUTE_GLASS_LAB) {
+                        GlassLabScreen(
+                            quality = appearance.glassQuality,
+                            back = { navController.popBackStack() },
+                        )
+                    }
+                    composable("$ROUTE_COMPOSE/{draftId}") { entry ->
+                        ComposeRoute(
+                            graph = graph,
+                            account = accounts.firstOrNull(),
+                            quality = appearance.glassQuality,
+                            draftId = entry.arguments?.getString("draftId")?.takeUnless { it == "new" },
+                            back = { navController.popBackStack() },
+                        )
+                    }
+                    composable(
+                        route = "$ROUTE_READER/{messageId}",
+                        arguments = listOf(navArgument("messageId") { type = NavType.StringType }),
+                    ) { entry ->
+                        ReaderScreen(
+                            vm = vm,
+                            account = accounts.firstOrNull(),
+                            id = entry.arguments?.getString("messageId").orEmpty(),
+                            quality = appearance.glassQuality,
+                            back = { navController.popBackStack() },
+                            openPalette = { paletteOpen = true },
+                            compose = { draft -> openCompose(draft) },
+                            download = { attachment -> vm.downloadAttachment(attachment) },
+                        )
+                    }
                 }
-                if (route != target) navController.navigate(target) { launchSingleTop = true }
-            },
-            onCompose = { openCompose() },
-            backdropKey = route to dockBackdropKey,
-            backdropFrozen = route == ROUTE_INBOX && dockBackdropFrozen,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
-    }
-    if (paletteOpen) {
-        val selected = if (route?.startsWith(ROUTE_READER) == true) vm.readerUiState.collectAsStateWithLifecycle().value.selected else null
-        val actions = buildList {
-            add(CommandPaletteAction("inbox", "Inbox", "Open cached mailbox") { paletteOpen = false; navController.navigate(ROUTE_INBOX) })
-            add(CommandPaletteAction("search", "Search", "Search cached mail") { paletteOpen = false; navController.navigate(ROUTE_SEARCH) })
-            add(CommandPaletteAction("settings", "Settings", "Appearance and account") { paletteOpen = false; navController.navigate(ROUTE_SETTINGS) })
-            add(CommandPaletteAction("refresh", "Refresh", "Synchronize the current account") { paletteOpen = false; vm.refresh() })
-            add(CommandPaletteAction("compose", "Compose", "Write a new message") { paletteOpen = false; openCompose() })
-            drafts.forEach { draft ->
-                add(CommandPaletteAction("draft-${draft.draftId}", "Draft: ${draft.subject.ifBlank { "(no subject)" }}", "Resume saved draft") { paletteOpen = false; navController.navigate("$ROUTE_COMPOSE/${draft.draftId}") })
             }
-            selected?.let { message ->
-                val target = message.toListItem()
-                add(CommandPaletteAction("message-read", if (message.unread) "Mark read" else "Mark unread", "Current message") { paletteOpen = false; vm.mutation(target, "read") })
-                add(CommandPaletteAction("message-star", if (message.starred) "Unstar" else "Star", "Current message") { paletteOpen = false; vm.mutation(target, "star") })
-                add(CommandPaletteAction("message-archive", "Archive", "Remove from Inbox") { paletteOpen = false; vm.mutation(target, "archive") })
-                add(CommandPaletteAction("message-delete", "Delete", "Move current message to trash", destructive = true) { paletteOpen = false; vm.mutation(target, "delete") })
+
+            val dockSelectedIndex = when (route) {
+                ROUTE_INBOX -> 0
+                ROUTE_SEARCH -> 1
+                ROUTE_SETTINGS, ROUTE_GLASS_LAB -> 3
+                else -> null
+            }
+            if (dockSelectedIndex != null) {
+                MorphingDock(
+                    compact = route == ROUTE_INBOX && dockCompact,
+                    selectedIndex = dockSelectedIndex,
+                    quality = appearance.glassQuality,
+                    onSelect = { destination ->
+                        val target = when (destination) {
+                            0 -> ROUTE_INBOX
+                            1 -> ROUTE_SEARCH
+                            3 -> ROUTE_SETTINGS
+                            else -> return@MorphingDock
+                        }
+                        if (route != target) navController.navigate(target) { launchSingleTop = true }
+                    },
+                    onCompose = { openCompose() },
+                    backdropKey = route to dockBackdropKey,
+                    backdropFrozen = route == ROUTE_INBOX && dockBackdropFrozen,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
+            if (paletteOpen) {
+                val selected = if (route?.startsWith(ROUTE_READER) == true) vm.readerUiState.collectAsStateWithLifecycle().value.selected else null
+                val actions = buildList {
+                    add(CommandPaletteAction("inbox", "Inbox", "Open cached mailbox") { paletteOpen = false; navController.navigate(ROUTE_INBOX) })
+                    add(CommandPaletteAction("search", "Search", "Search cached mail") { paletteOpen = false; navController.navigate(ROUTE_SEARCH) })
+                    add(CommandPaletteAction("settings", "Settings", "Appearance and account") { paletteOpen = false; navController.navigate(ROUTE_SETTINGS) })
+                    add(CommandPaletteAction("lab", "Glass Optical Lab", "Interactive shader sandbox") { paletteOpen = false; navController.navigate(ROUTE_GLASS_LAB) })
+                    add(CommandPaletteAction("refresh", "Refresh", "Synchronize the current account") { paletteOpen = false; vm.refresh() })
+                    add(CommandPaletteAction("compose", "Compose", "Write a new message") { paletteOpen = false; openCompose() })
+                    drafts.forEach { draft ->
+                        add(CommandPaletteAction("draft-${draft.draftId}", "Draft: ${draft.subject.ifBlank { "(no subject)" }}", "Resume saved draft") { paletteOpen = false; navController.navigate("$ROUTE_COMPOSE/${draft.draftId}") })
+                    }
+                    selected?.let { message ->
+                        val target = message.toListItem()
+                        add(CommandPaletteAction("message-read", if (message.unread) "Mark read" else "Mark unread", "Current message") { paletteOpen = false; vm.mutation(target, "read") })
+                        add(CommandPaletteAction("message-star", if (message.starred) "Unstar" else "Star", "Current message") { paletteOpen = false; vm.mutation(target, "star") })
+                        add(CommandPaletteAction("message-archive", "Archive", "Remove from Inbox") { paletteOpen = false; vm.mutation(target, "archive") })
+                        add(CommandPaletteAction("message-delete", "Delete", "Move current message to trash", destructive = true) { paletteOpen = false; vm.mutation(target, "delete") })
+                    }
+                }
+                CommandPalette(actions, appearance.glassQuality, onDismiss = { paletteOpen = false })
             }
         }
-        CommandPalette(actions, appearance.glassQuality, onDismiss = { paletteOpen = false })
     }
-    } }
-    }
+}
 }
 }
 
@@ -279,518 +319,5 @@ private const val ROUTE_SEARCH = "search"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_READER = "reader"
 private const val ROUTE_COMPOSE = "compose"
+private const val ROUTE_GLASS_LAB = "glass_lab"
 
-class AppViewModel(
-    private val context: Context,
-    private val repository: MailRepository,
-    private val syncScheduler: AccountSyncScheduler,
-    private val appearancePreferences: AppearancePreferences,
-    private val draftRepository: DraftRepository,
-    private val credentialStore: com.glassmail.core.security.CredentialStore,
-) : ViewModel() {
-    private val _appearance = MutableStateFlow(appearancePreferences.read())
-    val appearance: StateFlow<AppearanceSettings> = _appearance
-    val accounts: StateFlow<List<MailAccount>> = repository.observeAccounts().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    private val accountId = accounts.map { it.firstOrNull()?.accountId }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
-    val drafts: StateFlow<List<MailDraft>> = accountId.flatMapLatest { id -> if (id == null) kotlinx.coroutines.flow.flowOf(emptyList()) else draftRepository.observeDrafts(id) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    private val inboxItems = accountId.flatMapLatest { id -> if (id == null) kotlinx.coroutines.flow.flowOf(emptyList()) else repository.observeInbox(id) }
-    val inboxUiState: StateFlow<InboxUiState> = combine(accounts, inboxItems) { availableAccounts, messages ->
-        InboxUiState(account = availableAccounts.firstOrNull(), messages = messages)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InboxUiState())
-    private val searchQuery = MutableStateFlow("")
-    val searchUiState: StateFlow<SearchUiState> = combine(accountId, searchQuery) { id, query -> id to query }
-        .flatMapLatest { (id, query) ->
-            if (id == null || query.isBlank()) kotlinx.coroutines.flow.flowOf(SearchUiState(query = query))
-            else repository.search(id, query).map { SearchUiState(query = query, messages = it) }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
-    private val readerMessageId = MutableStateFlow<String?>(null)
-    val readerUiState: StateFlow<ReaderUiState> = readerMessageId.flatMapLatest { messageId ->
-        if (messageId == null) kotlinx.coroutines.flow.flowOf(ReaderUiState())
-        else combine(repository.observeMessage(messageId), repository.observeThread(messageId)) { selected, thread ->
-            ReaderUiState(selected = selected, thread = thread)
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReaderUiState())
-    fun mutation(item: MailListItem, type: String) = viewModelScope.launch {
-        val account = accounts.value.firstOrNull() ?: return@launch
-        val inboxId = "${account.accountId}:INBOX"
-        repository.applyMutation(
-            when (type) {
-                "star" -> MailMutation.Star(account.accountId, item.messageId, inboxId, !item.starred)
-                "read" -> MailMutation.MarkRead(account.accountId, item.messageId, inboxId, item.unread)
-                "archive" -> MailMutation.Archive(account.accountId, item.messageId, inboxId)
-                else -> MailMutation.Delete(account.accountId, item.messageId, inboxId)
-            }
-        )
-    }
-    fun setLabel(messageId: String, label: String, add: Boolean) = viewModelScope.launch {
-        accounts.value.firstOrNull()?.let { repository.applyMutation(MailMutation.Label(it.accountId, messageId, null, label, add)) }
-    }
-    fun seed(n: Int) = viewModelScope.launch { repository.seedDebugMailbox(n) }
-    fun clear() = viewModelScope.launch { repository.clearDebugMailbox() }
-    fun removeAccount() = viewModelScope.launch {
-        accounts.value.firstOrNull()?.let {
-            syncScheduler.cancel(it.accountId)
-            repository.removeAccount(it.accountId)
-        }
-    }
-    fun refresh() = viewModelScope.launch { accounts.value.firstOrNull()?.let { repository.synchronize(it.accountId) } }
-    fun setSearchQuery(query: String) { searchQuery.value = query }
-    fun selectReaderMessage(messageId: String) { readerMessageId.value = messageId }
-    fun updateAppearance(update: (AppearanceSettings) -> AppearanceSettings) {
-        _appearance.value = update(_appearance.value)
-        appearancePreferences.write(_appearance.value)
-    }
-    fun saveDraft(draft: MailDraft) = viewModelScope.launch { draftRepository.saveDraft(draft) }
-    fun downloadAttachment(attachment: MailAttachment) = viewModelScope.launch {
-        val account = accounts.value.firstOrNull() ?: return@launch
-        val transfer = repository as? AttachmentRepository ?: return@launch
-        transfer.downloadAttachment(account.accountId, attachment.attachmentId).onSuccess { file ->
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", java.io.File(file.filePath))
-            runCatching {
-                context.startActivity(Intent(Intent.ACTION_VIEW, uri).apply {
-                    setDataAndType(uri, file.mimeType)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-                })
-            }.onFailure { Toast.makeText(context, "No app can open this attachment", Toast.LENGTH_LONG).show() }
-        }.onFailure { Toast.makeText(context, "Attachment download failed", Toast.LENGTH_LONG).show() }
-    }
-    fun updateCredential(accountId: String, credential: CharArray) = viewModelScope.launch {
-        try {
-            credentialStore.store(accountId, credential)
-            refresh()
-        } finally {
-            credential.fill('\u0000')
-        }
-    }
-    companion object {
-        fun factory(context: Context, repository: MailRepository, syncScheduler: AccountSyncScheduler, preferences: AppearancePreferences, draftRepository: DraftRepository, credentialStore: com.glassmail.core.security.CredentialStore) = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST") override fun <T: ViewModel> create(modelClass: Class<T>) = AppViewModel(context, repository, syncScheduler, preferences, draftRepository, credentialStore) as T
-        }
-    }
-}
-
-private fun com.glassmail.domain.mail.MailMessage.toListItem() = MailListItem(messageId, threadId, sender, subject, preview, sentAtEpochMillis, unread, starred, labels, attachments.isNotEmpty())
-
-/** Immutable Room-derived inbox state; Compose never owns a second mail list. */
-data class InboxUiState(
-    val account: MailAccount? = null,
-    val messages: List<MailListItem> = emptyList(),
-)
-
-data class SearchUiState(
-    val query: String = "",
-    val messages: List<MailListItem> = emptyList(),
-)
-
-data class ReaderUiState(
-    val selected: com.glassmail.domain.mail.MailMessage? = null,
-    val thread: List<com.glassmail.domain.mail.MailMessage> = emptyList(),
-)
-
-@Composable private fun InboxScreen(vm: AppViewModel, account: MailAccount?, quality: GlassQuality, open: (String) -> Unit, search: () -> Unit, settings: () -> Unit, openPalette: () -> Unit, onDockCompactChanged: (Boolean) -> Unit, onDockBackdropChanged: (Any, Boolean) -> Unit) {
-    val state by vm.inboxUiState.collectAsStateWithLifecycle()
-    val selectedAccount = state.account ?: account
-    val rows = state.messages
-    val listState = rememberLazyListState()
-    val compact by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 56 } }
-    LaunchedEffect(compact) { onDockCompactChanged(compact) }
-    LaunchedEffect(listState) {
-        androidx.compose.runtime.snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collectLatest { onDockBackdropChanged(it, listState.isScrollInProgress) }
-    }
-    LaunchedEffect(listState) {
-        androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
-            .collectLatest { onDockBackdropChanged(listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset, it) }
-    }
-    Scaffold(
-        topBar = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                GlassMailTopCapsule(
-                    title = "GlassMail",
-                    subtitle = "Inbox",
-                    quality = quality,
-                    actions = {
-                        IconButton(openPalette) { Icon(Icons.Outlined.MoreHoriz, contentDescription = "Open command palette") }
-                        IconButton(settings) { Icon(Icons.Outlined.Settings, contentDescription = "Open settings") }
-                    },
-                )
-                if (!compact) GlassMailSearchCapsule(
-                    quality = quality,
-                    placeholder = "Search mail, people, or dates…",
-                    onClick = search,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                )
-            }
-        },
-    ) { padding ->
-        if (selectedAccount == null) Column(Modifier.fillMaxSize().padding(padding).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Text("No account yet"); Button({ vm.seed(100) }) { Text("Seed debug mailbox") } }
-        else if (rows.isEmpty()) Column(Modifier.fillMaxSize().padding(padding).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Text("Inbox is empty", style = MaterialTheme.typography.titleLarge); Text(syncStatus(selectedAccount.syncState)); Button({ vm.refresh() }) { Text("Refresh") } }
-        else LazyColumn(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(padding), state = listState, contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 100.dp)) { items(rows, key = { it.messageId }, contentType = { "mail" }) { row -> MailRow(row, open, vm) } }
-    }
-}
-
-@Composable private fun MailRow(row: MailListItem, open: (String) -> Unit, vm: AppViewModel) {
-    var menuOpen by remember(row.messageId) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = 72.dp).clickable { open(row.messageId) }.padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.Top,
-        ) {
-            if (row.unread) Box(Modifier.width(3.dp).height(44.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.primary))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(row.sender, style = if (row.unread) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(row.subject, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(row.preview, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                val visibleLabel = row.labels.firstOrNull { !it.equals("INBOX", ignoreCase = true) }
-                if (visibleLabel != null || row.hasAttachment) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (row.hasAttachment) Icon(Icons.Outlined.AttachFile, contentDescription = "Has attachment", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
-                        visibleLabel?.let { Text(it, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                    }
-                }
-            }
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(timeLabel(row.sentAtEpochMillis), style = MaterialTheme.typography.labelSmall, color = if (row.unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (row.starred) Icon(Icons.Outlined.Star, contentDescription = "Starred", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                    Box {
-                    IconButton(onClick = { menuOpen = true }) { Icon(Icons.Outlined.MoreVert, contentDescription = "Message actions") }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        DropdownMenuItem(
-                            text = { Text(if (row.unread) "Mark read" else "Mark unread") },
-                            leadingIcon = { Icon(if (row.unread) Icons.Outlined.MarkEmailRead else Icons.Outlined.MarkEmailUnread, contentDescription = null) },
-                            onClick = { menuOpen = false; vm.mutation(row, "read") },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(if (row.starred) "Unstar" else "Star") },
-                            leadingIcon = { Icon(if (row.starred) Icons.Outlined.Star else Icons.Outlined.StarBorder, contentDescription = null) },
-                            onClick = { menuOpen = false; vm.mutation(row, "star") },
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Archive") },
-                            leadingIcon = { Icon(Icons.Outlined.Archive, contentDescription = null) },
-                            onClick = { menuOpen = false; vm.mutation(row, "archive") },
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Delete") },
-                            leadingIcon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null) },
-                            onClick = { menuOpen = false; vm.mutation(row, "delete") },
-                        )
-                    }
-                    }
-                }
-            }
-        }
-        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .55f))
-    }
-}
-
-private fun timeLabel(epochMillis: Long?): String = epochMillis?.let { java.time.Instant.ofEpochMilli(it)
-    .atZone(java.time.ZoneId.systemDefault())
-    .toLocalTime()
-    .toString()
-    .take(5) } ?: "—"
-
-@Composable private fun ReaderScreen(vm: AppViewModel, account: MailAccount?, id: String, quality: GlassQuality, back: () -> Unit, openPalette: () -> Unit, compose: (MailDraft) -> Unit, download: (MailAttachment) -> Unit) {
-    BackHandler(onBack = back)
-    androidx.compose.runtime.LaunchedEffect(id) { vm.selectReaderMessage(id) }
-    val state by vm.readerUiState.collectAsStateWithLifecycle()
-    val listState = rememberLazyListState()
-    val collapsed by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 160 } }
-    val subject = state.selected?.subject ?: "Message"
-    val decay by remember { derivedStateOf { if (listState.firstVisibleItemIndex > 0) 0f else (1f - listState.firstVisibleItemScrollOffset / 160f).coerceIn(0f, 1f) } }
-    val readerTint = state.selected?.sender?.let(::senderAmbient) ?: Color.Transparent
-    var labelDialogOpen by remember { mutableStateOf(false) }
-    val neutral = if (androidx.compose.foundation.isSystemInDarkTheme()) GlassMailPalette.DarkBase else GlassMailPalette.LightBase
-    val chroma = lerp(neutral, readerTint, decay * .10f)
-    Scaffold(
-        bottomBar = {
-            if (account != null && state.selected != null) {
-                GlassSurface(
-                    quality = quality,
-                    modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
-                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        TextButton(onClick = { compose(replyDraft(state.selected!!, account, false)) }) { Text("Reply") }
-                        TextButton(onClick = { compose(replyDraft(state.selected!!, account, true)) }) { Text("Reply all") }
-                        TextButton(onClick = { compose(forwardDraft(state.selected!!, account)) }) { Text("Forward") }
-                    }
-                }
-            }
-        },
-        topBar = {
-            GlassMailTopCapsule(
-                title = if (collapsed) subject else "Thread",
-                subtitle = if (collapsed) null else "Message",
-                quality = quality,
-                navigationIcon = { IconButton(back) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back") } },
-                actions = { IconButton(openPalette) { Icon(Icons.Outlined.MoreHoriz, contentDescription = "Open command palette") } },
-            )
-        },
-    ) { padding ->
-        LazyColumn(
-            Modifier.fillMaxSize().background(chroma).padding(padding).navigationBarsPadding().padding(horizontal = 20.dp),
-            state = listState,
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = if (account != null && state.selected != null) 88.dp else 24.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-        ) {
-            val messages = state.thread.ifEmpty { listOfNotNull(state.selected) }
-            items(messages, key = { it.messageId }, contentType = { "threadMessage" }) { item ->
-                Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(item.subject, style = MaterialTheme.typography.headlineSmall, maxLines = 3)
-                    Text(item.sender, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                    Text(item.preview, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(item.body ?: item.preview, style = MaterialTheme.typography.bodyLarge)
-                    if (item.messageId == state.selected?.messageId && item.attachments.isNotEmpty()) {
-                        item.attachments.forEach { attachment -> ReaderAttachmentRow(attachment, download) }
-                    }
-                    if (item.messageId == state.selected?.messageId) {
-                        Row(
-                            Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { labelDialogOpen = true }.padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text("Labels", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(item.labels.filterNot { it.equals("INBOX", true) }.ifEmpty { listOf("none") }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    if (item.html) Text("Remote content blocked · HTML shown as safe text", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-    }
-    if (labelDialogOpen && state.selected != null) {
-        val choices = (state.selected!!.labels + listOf("Work", "Travel", "Personal")).distinct()
-        AlertDialog(
-            onDismissRequest = { labelDialogOpen = false },
-            title = { Text("Labels") },
-            text = { Column { choices.forEach { label ->
-                val applied = label in state.selected!!.labels
-                TextButton(onClick = { vm.setLabel(state.selected!!.messageId, label, !applied) }) { Text(if (applied) "✓ $label" else "+ $label") }
-            } } },
-            confirmButton = { TextButton({ labelDialogOpen = false }) { Text("Done") } },
-        )
-    }
-}
-
-@Composable
-private fun ReaderAttachmentRow(attachment: MailAttachment, onAction: (MailAttachment) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .38f)).padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Outlined.AttachFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-        Column(Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 8.dp)) {
-            Text(attachment.fileName ?: "Attachment", style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(attachment.mimeType ?: "application/octet-stream", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-        }
-        TextButton(onClick = { onAction(attachment) }, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(if (attachment.downloadState == "AVAILABLE") "Open" else "Download")
-        }
-    }
-}
-
-@Composable private fun SearchScreen(vm: AppViewModel, account: MailAccount?, quality: GlassQuality, open: (String) -> Unit, back: () -> Unit, openPalette: () -> Unit) {
-    BackHandler(onBack = back)
-    val state by vm.searchUiState.collectAsStateWithLifecycle()
-    Scaffold(
-        topBar = {
-            GlassMailTopCapsule(
-                title = "Search",
-                subtitle = "Local mail",
-                quality = quality,
-                navigationIcon = { IconButton(back) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back") } },
-                actions = { IconButton(openPalette) { Icon(Icons.Outlined.Terminal, contentDescription = "Open command palette") } },
-            )
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).imePadding().navigationBarsPadding()) {
-            TextField(
-                value = state.query,
-                onValueChange = vm::setSearchQuery,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).clip(RoundedCornerShape(16.dp)),
-                label = { Text("Search mail & commands…") },
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                trailingIcon = { if (state.query.isNotBlank()) IconButton({ vm.setSearchQuery("") }) { Icon(Icons.Outlined.Clear, contentDescription = "Clear search") } },
-                singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .32f),
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .5f),
-                ),
-            )
-            when {
-                state.query.isBlank() -> Text("Search cached sender, subject, and preview text", Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                state.messages.isEmpty() -> Text("No cached mail matches this search", Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                else -> LazyColumn(Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 100.dp)) { items(state.messages, key = { it.messageId }, contentType = { "searchMail" }) { MailRow(it, open, vm) } }
-            }
-        }
-    }
-}
-
-@Composable private fun SettingsScreen(graph: AppGraph, vm: AppViewModel, account: MailAccount?, back: () -> Unit, openPalette: () -> Unit) {
-    BackHandler(onBack = back)
-    val appearance by vm.appearance.collectAsStateWithLifecycle()
-    var credentialDialogOpen by remember { mutableStateOf(false) }
-    var credentialText by remember { mutableStateOf("") }
-    Scaffold(
-        topBar = {
-            GlassMailTopCapsule(
-                title = "Settings",
-                subtitle = "System preferences",
-                quality = appearance.glassQuality,
-                navigationIcon = { IconButton(back) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back") } },
-                actions = { IconButton(openPalette) { Icon(Icons.Outlined.MoreHoriz, contentDescription = "Open command palette") } },
-            )
-        },
-    ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(account?.email ?: "No account", style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                    Text(account?.syncState ?: "Add an account to sync mail", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                }
-            }
-            item { SettingsActionRow("Manual refresh", "Sync cached mailbox now") { vm.refresh() } }
-            item { SettingsActionRow("Remove account", "Delete local mailbox and credentials", destructive = true) { vm.removeAccount() } }
-            if (account != null) item { SettingsActionRow("Update Gmail App Password", "Replace the secure account credential") { credentialDialogOpen = true } }
-            item { Text("Appearance", style = MaterialTheme.typography.titleLarge) }
-            item { ChoiceSection("Theme", ThemeChoice.entries, appearance.theme) { choice -> vm.updateAppearance { it.copy(theme = choice) } } }
-            item { ChoiceSection("Glass quality", GlassQuality.entries, appearance.glassQuality) { choice -> vm.updateAppearance { it.copy(glassQuality = choice) } } }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Accessibility", style = MaterialTheme.typography.titleMedium)
-                    PreferenceRow("Reduce Transparency", appearance.reduceTransparency) { vm.updateAppearance { it.copy(reduceTransparency = !it.reduceTransparency) } }
-                    PreferenceRow("Reduce Motion", appearance.reduceMotion) { vm.updateAppearance { it.copy(reduceMotion = !it.reduceMotion) } }
-                }
-            }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Notifications", style = MaterialTheme.typography.titleMedium)
-                    PreferenceRow("Show message previews", appearance.showNotificationPreviews) { vm.updateAppearance { it.copy(showNotificationPreviews = !it.showNotificationPreviews) } }
-                }
-            }
-            item { GlassSurface(appearance.glassQuality, Modifier.fillMaxWidth()) { Text("Glass preview", Modifier.padding(16.dp)) } }
-            if (BuildConfig.DEBUG) {
-                item { Text("Debug fixtures", style = MaterialTheme.typography.titleMedium) }
-                item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(10, 100, 1000, 10000).forEach { Button({ vm.seed(it) }, modifier = Modifier.weight(1f)) { Text("$it") } } } }
-                item { Button({ vm.clear() }, modifier = Modifier.fillMaxWidth()) { Text("Clear debug mailbox") } }
-            }
-        }
-    }
-    if (credentialDialogOpen && account != null) {
-        AlertDialog(
-            onDismissRequest = { credentialDialogOpen = false; credentialText = "" },
-            title = { Text("Update credential") },
-            text = { OutlinedTextField(credentialText, { credentialText = it }, label = { Text("Google App Password") }, visualTransformation = PasswordVisualTransformation(), singleLine = true) },
-            confirmButton = { TextButton(enabled = credentialText.isNotBlank(), onClick = { val chars = credentialText.toCharArray(); credentialText = ""; credentialDialogOpen = false; vm.updateCredential(account.accountId, chars) }) { Text("Store securely") } },
-            dismissButton = { TextButton(onClick = { credentialDialogOpen = false; credentialText = "" }) { Text("Cancel") } },
-        )
-    }
-}
-
-@Composable
-private fun <T> ChoiceSection(title: String, choices: List<T>, selected: T, onSelect: (T) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        val rows = if (choices.size > 3) choices.chunked(2) else listOf(choices)
-        Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .38f)).padding(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            rows.forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    row.forEach { choice ->
-                        val isSelected = choice == selected
-                        Box(
-                            Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(9.dp))
-                                .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                .clickable { onSelect(choice) }
-                                .semantics {
-                                    role = androidx.compose.ui.semantics.Role.RadioButton
-                                    stateDescription = if (isSelected) "Selected" else "Not selected"
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(prettyChoice(choice), style = MaterialTheme.typography.labelLarge, color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                        }
-                    }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-private fun prettyChoice(value: Any?): String = value.toString().lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
-
-@Composable
-private fun PreferenceRow(title: String, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent)
-            .clickable(onClick = onClick)
-            .semantics { stateDescription = if (selected) "Selected" else "Not selected" }
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(title, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.weight(1f))
-        Switch(checked = selected, onCheckedChange = { onClick() })
-    }
-}
-
-@Composable
-private fun SettingsActionRow(title: String, description: String, destructive: Boolean = false, onClick: () -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-            }
-            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = .08f))
-    }
-}
-
-private fun senderAmbient(sender: String): Color = when ((sender.hashCode() and Int.MAX_VALUE) % 4) {
-    0 -> GlassMailPalette.Personal.first
-    1 -> GlassMailPalette.Work.first
-    2 -> GlassMailPalette.Updates.first
-    else -> GlassMailPalette.Newsletters.first
-}
-
-private fun syncStatus(state: String): String = if (state.contains("offline", ignoreCase = true) || state.contains("network", ignoreCase = true)) {
-    "Offline — showing cached mail"
-} else state
-
-private fun replyDraft(message: com.glassmail.domain.mail.MailMessage, account: MailAccount, all: Boolean): MailDraft {
-    val headers = ReceivedMailHeaders(replyTo = listOf(message.sender), messageId = message.messageId)
-    val recipients = if (all) replyAllRecipients(headers, account.email) else replyRecipients(message, account.email)
-    return MailDraft(
-        UUID.randomUUID().toString(), account.accountId, to = recipients,
-        subject = replySubject(message.subject),
-        body = "\n\n— Original message —\n${message.body ?: message.preview}",
-        inReplyTo = message.messageId,
-        references = referencesForReply(message.messageId, headers.references),
-    )
-}
-
-private fun forwardDraft(message: com.glassmail.domain.mail.MailMessage, account: MailAccount): MailDraft = MailDraft(
-    UUID.randomUUID().toString(), account.accountId,
-    subject = forwardSubject(message.subject),
-    body = "\n\n— Forwarded message —\nFrom: ${message.sender}\nSubject: ${message.subject}\n\n${message.body ?: message.preview}",
-)
