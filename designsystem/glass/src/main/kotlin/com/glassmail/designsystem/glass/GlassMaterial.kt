@@ -202,6 +202,17 @@ object GlassPresets {
         cornerRadius = 14.dp,
     )
 
+    val Card = GlassMaterial(
+        blur = 12.dp,
+        opacity = 0.25f,
+        refraction = 0.12f,
+        dispersion = 0.08f,
+        rimLight = 0.25f,
+        specularIntensity = 0.30f,
+        shadow = 4.dp,
+        cornerRadius = 16.dp,
+    )
+
     val ReaderChrome = GlassMaterial(
         blur = 18.dp,
         opacity = 0.50f,

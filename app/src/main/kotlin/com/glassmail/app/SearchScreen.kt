@@ -73,6 +73,7 @@ fun SearchScreen(
     val state by vm.searchUiState.collectAsStateWithLifecycle()
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             GlassMailTopCapsule(
                 title = "Search Mail",
@@ -202,7 +203,8 @@ fun SearchScreen(
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(bottom = 110.dp),
+                        contentPadding = PaddingValues(start = GlassSpacing.md, end = GlassSpacing.md, top = GlassSpacing.md, bottom = 120.dp),
+                        verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
                     ) {
                         items(
                             items = state.messages,

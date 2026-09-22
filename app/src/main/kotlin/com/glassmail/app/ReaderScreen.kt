@@ -110,6 +110,7 @@ fun ReaderScreen(
     val chroma = lerp(neutral, readerTint, decay * 0.08f)
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             GlassMailTopCapsule(
                 title = if (collapsed) subject else "Thread",
@@ -185,12 +186,10 @@ fun ReaderScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(chroma)
-                .padding(padding)
-                .padding(horizontal = GlassSpacing.lg),
+                .padding(padding),
             state = listState,
-            contentPadding = PaddingValues(bottom = if (account != null && state.selected != null) 90.dp else 24.dp),
-            verticalArrangement = Arrangement.spacedBy(GlassSpacing.lg),
+            contentPadding = PaddingValues(start = GlassSpacing.md, end = GlassSpacing.md, top = GlassSpacing.md, bottom = if (account != null && state.selected != null) 90.dp else 24.dp),
+            verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
         ) {
             val messages = state.thread.ifEmpty { listOfNotNull(state.selected) }
             items(
@@ -198,13 +197,16 @@ fun ReaderScreen(
                 key = { it.messageId },
                 contentType = { "threadMessage" },
             ) { item ->
-                // Clean, flat reading card for readability
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = GlassSpacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(GlassSpacing.sm),
+                GlassSurface(
+                    material = GlassPresets.Card,
+                    tierOverride = com.glassmail.designsystem.glass.GlassTier.LITE,
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(GlassSpacing.lg),
+                        verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
+                    ) {
                     Text(
                         text = item.subject.ifBlank { "(No subject)" },
                         style = MaterialTheme.typography.headlineMedium,
@@ -279,6 +281,7 @@ fun ReaderScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         )
+                    }
                     }
                 }
             }

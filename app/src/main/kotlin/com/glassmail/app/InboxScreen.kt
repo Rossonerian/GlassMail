@@ -113,6 +113,7 @@ fun InboxScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -267,10 +268,10 @@ fun InboxScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
                         .padding(padding),
                     state = listState,
-                    contentPadding = PaddingValues(bottom = 110.dp),
+                    contentPadding = PaddingValues(start = GlassSpacing.md, end = GlassSpacing.md, top = GlassSpacing.md, bottom = 120.dp),
+                    verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
                 ) {
                     items(
                         items = filteredMessages,
