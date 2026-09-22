@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
@@ -89,7 +91,7 @@ fun MorphingDock(
     }
     val preferences = LocalGlassPreferences.current
     val width by animateDpAsState(
-        targetValue = if (compact) 224.dp else 304.dp,
+        targetValue = if (compact) 224.dp else 336.dp,
         animationSpec = if (preferences.reduceMotion) tween(100) else spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = .86f),
         label = "floatingDockWidth",
     )
@@ -198,14 +200,15 @@ fun MorphingDock(
                                         destination.icon,
                                         contentDescription = null,
                                         tint = if (visualActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.width(22.dp).scale(iconScale),
+                                        modifier = Modifier.size(20.dp).scale(iconScale),
                                     )
                                     if (!compact && visualActive) {
                                         Text(
                                             destination.label,
                                             color = MaterialTheme.colorScheme.primary,
-                                            style = MaterialTheme.typography.labelLarge,
+                                            style = MaterialTheme.typography.labelMedium,
                                             maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                             modifier = Modifier.padding(start = 4.dp),
                                         )
                                     }

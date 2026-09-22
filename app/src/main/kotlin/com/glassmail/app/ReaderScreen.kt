@@ -100,7 +100,13 @@ fun ReaderScreen(
     }
     val readerTint = state.selected?.sender?.let(::senderAmbient) ?: Color.Transparent
     var labelDialogOpen by remember { mutableStateOf(false) }
-    val neutral = if (isSystemInDarkTheme()) GlassMailPalette.DarkBase else GlassMailPalette.LightBase
+    val appearance by vm.appearance.collectAsStateWithLifecycle()
+    val isDark = when (appearance.theme) {
+        ThemeChoice.DARK -> true
+        ThemeChoice.LIGHT -> false
+        ThemeChoice.SYSTEM -> isSystemInDarkTheme()
+    }
+    val neutral = if (isDark) GlassMailPalette.DarkBase else GlassMailPalette.LightBase
     val chroma = lerp(neutral, readerTint, decay * 0.08f)
 
     Scaffold(
@@ -134,6 +140,7 @@ fun ReaderScreen(
                     GlassSurface(
                         material = GlassPresets.BottomBar.copy(cornerRadius = GlassRadius.dock, opacity = 0.42f),
                         shape = RoundedCornerShape(GlassRadius.dock),
+                        backdropSampling = false,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(58.dp),
@@ -351,6 +358,7 @@ private fun ReaderAttachmentRow(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         OutlinedButton(

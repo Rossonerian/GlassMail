@@ -157,26 +157,26 @@ fun MailRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { vm.mutation(row, "star") },
-                        modifier = Modifier.size(36.dp),
+                        modifier = Modifier.size(48.dp),
                     ) {
                         Icon(
                             if (row.starred) Icons.Outlined.Star else Icons.Outlined.StarBorder,
                             contentDescription = if (row.starred) "Unstar" else "Star",
                             tint = if (row.starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(20.dp),
                         )
                     }
 
                     Box {
                         IconButton(
                             onClick = { menuOpen = true },
-                            modifier = Modifier.size(36.dp),
+                            modifier = Modifier.size(48.dp),
                         ) {
                             Icon(
                                 Icons.Outlined.MoreVert,
                                 contentDescription = "Message actions",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(20.dp),
                             )
                         }
 
@@ -236,9 +236,16 @@ fun MailRow(
 }
 
 fun timeLabel(epochMillis: Long?): String = epochMillis?.let {
-    Instant.ofEpochMilli(it)
-        .atZone(ZoneId.systemDefault())
-        .toLocalTime()
-        .toString()
-        .take(5)
+    val zonedDateTime = Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault())
+    val today = java.time.LocalDate.now(ZoneId.systemDefault())
+    val messageDate = zonedDateTime.toLocalDate()
+    if (messageDate == today) {
+        zonedDateTime.toLocalTime().toString().take(5)
+    } else if (messageDate.year == today.year) {
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US)
+        zonedDateTime.format(formatter)
+    } else {
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("MM/dd/yy", java.util.Locale.US)
+        zonedDateTime.format(formatter)
+    }
 } ?: "—"

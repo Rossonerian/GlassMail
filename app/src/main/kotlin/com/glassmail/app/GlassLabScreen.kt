@@ -15,11 +15,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -61,6 +69,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.glassmail.designsystem.GlassRadius
 import com.glassmail.designsystem.GlassSpacing
+import com.glassmail.designsystem.glass.BackdropSource
 import com.glassmail.designsystem.glass.GlassMaterial
 import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.GlassQuality
@@ -137,14 +146,19 @@ fun GlassLabScreen(
         )
     }
 
-    // Frame timing diagnostic
+    // Frame timing diagnostic (throttled to avoid continuous 100% recomposition overhead)
     var lastFrameDeltaMs by remember { mutableLongStateOf(16L) }
     LaunchedEffect(Unit) {
         var lastTime = 0L
+        var lastUpdate = 0L
         while (true) {
             withFrameMillis { now ->
                 if (lastTime > 0L) {
-                    lastFrameDeltaMs = (now - lastTime).coerceIn(1L, 100L)
+                    val delta = (now - lastTime).coerceIn(1L, 100L)
+                    if (now - lastUpdate >= 500L) {
+                        lastFrameDeltaMs = delta
+                        lastUpdate = now
+                    }
                 }
                 lastTime = now
             }
@@ -169,6 +183,7 @@ fun GlassLabScreen(
                 },
             )
         },
+        contentWindowInsets = WindowInsets(0),
         modifier = modifier.fillMaxSize(),
     ) { padding ->
         LazyColumn(
@@ -187,16 +202,33 @@ fun GlassLabScreen(
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(Modifier.height(GlassSpacing.xs))
+                val labBackdropLayer = rememberGraphicsLayer()
+                var labOffset by remember { mutableStateOf(Offset.Zero) }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(260.dp)
                         .clip(RoundedCornerShape(GlassRadius.card))
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), RoundedCornerShape(GlassRadius.card)),
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), RoundedCornerShape(GlassRadius.card))
+                        .onGloballyPositioned { coords ->
+                            val b = coords.boundsInWindow()
+                            labOffset = Offset(b.left, b.top)
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
-                    // Backdrop layer
-                    LabBackdropSurface(selectedBackdrop)
+                    // Isolated backdrop layer recorded without self-sampling recursion
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .drawWithContent {
+                                labBackdropLayer.record {
+                                    this@drawWithContent.drawContent()
+                                }
+                                drawLayer(labBackdropLayer)
+                            },
+                    ) {
+                        LabBackdropSurface(selectedBackdrop)
+                    }
 
                     // Glass Surface Floating over the Backdrop
                     GlassSurface(
@@ -208,6 +240,8 @@ fun GlassLabScreen(
                             GlassQuality.BLUR -> GlassTier.LITE
                             GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
                         },
+                        backdropSampling = true,
+                        backdropSource = BackdropSource(layer = labBackdropLayer, providerOffsetInWindow = labOffset),
                         modifier = Modifier
                             .fillMaxWidth(0.85f)
                             .padding(GlassSpacing.base),
@@ -409,6 +443,7 @@ private fun LabBackdropSurface(backdrop: LabBackdrop) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }

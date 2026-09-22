@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -58,6 +59,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -259,6 +261,7 @@ fun GlassSurface(
     shape: Shape = RoundedCornerShape(material.cornerRadius),
     tierOverride: GlassTier? = null,
     backdropSampling: Boolean = true,
+    backdropSource: BackdropSource = LocalBackdropSource.current,
     backdropKey: Any? = Unit,
     backdropFrozen: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
@@ -272,7 +275,6 @@ fun GlassSurface(
     }
 
     val density = LocalDensity.current
-    val backdropSource = LocalBackdropSource.current
     var surfaceBoundsInWindow by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
 
     val liquidShader = remember(effectiveTier) {
@@ -322,7 +324,7 @@ fun GlassSurface(
     }
 
     val blurRadiusPx = with(density) { material.blur.toPx() }.coerceAtLeast(1f)
-    val opticalRenderEffect = remember(effectiveTier, liquidShader, blurRadiusPx, surfaceWidthPx, surfaceHeightPx) {
+    val opticalRenderEffect = remember(effectiveTier, liquidShader, blurRadiusPx, surfaceWidthPx, surfaceHeightPx, material, resolvedTint) {
         if (effectiveTier == GlassTier.ACCESSIBILITY || surfaceWidthPx <= 0f || surfaceHeightPx <= 0f) null
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             runCatching {
@@ -374,7 +376,7 @@ fun GlassSurface(
         if (effectiveTier != GlassTier.ACCESSIBILITY && backdropSampling && backdropSource.layer != null) {
             Canvas(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .matchParentSize()
                     .graphicsLayer {
                         renderEffect = opticalRenderEffect
                     },
@@ -390,13 +392,13 @@ fun GlassSurface(
         // --- Translucent Tint & Specular Gradients ---
         Box(
             Modifier
-                .fillMaxSize()
+                .matchParentSize()
                 .background(resolvedTint),
         )
         if (effectiveTier != GlassTier.ACCESSIBILITY) {
             Box(
                 Modifier
-                    .fillMaxSize()
+                    .matchParentSize()
                     .background(
                         Brush.verticalGradient(
                             0.0f to Color.White.copy(alpha = 0.12f),
@@ -422,6 +424,7 @@ fun GlassSurface(
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
     backdropSampling: Boolean = false,
+    backdropSource: BackdropSource = LocalBackdropSource.current,
     backdropKey: Any? = Unit,
     backdropFrozen: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
@@ -443,6 +446,7 @@ fun GlassSurface(
         shape = shape,
         tierOverride = tier,
         backdropSampling = backdropSampling,
+        backdropSource = backdropSource,
         backdropKey = backdropKey,
         backdropFrozen = backdropFrozen,
         content = content,
@@ -506,7 +510,7 @@ fun GlassIconButton(
             .semantics { role = Role.Button },
         shape = CircleShape,
     ) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
             content()
         }
     }
@@ -520,12 +524,13 @@ fun GlassToolbar(
 ) {
     GlassSurface(
         material = material,
-        modifier = modifier.heightIn(min = 56.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp),
         shape = RoundedCornerShape(material.cornerRadius),
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             content = content,
@@ -541,12 +546,12 @@ fun GlassBottomBar(
 ) {
     GlassSurface(
         material = material,
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = material.cornerRadius, topEnd = material.cornerRadius),
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             content = content,
@@ -633,7 +638,7 @@ fun <T> GlassSegmentedControl(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -659,6 +664,7 @@ fun <T> GlassSegmentedControl(
                         style = MaterialTheme.typography.labelMedium,
                         color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

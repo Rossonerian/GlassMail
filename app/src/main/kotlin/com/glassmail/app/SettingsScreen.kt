@@ -45,19 +45,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.glassmail.designsystem.GlassRadius
 import com.glassmail.designsystem.GlassSpacing
+import com.glassmail.designsystem.glass.BackdropSource
 import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
+import com.glassmail.designsystem.glass.GlassTier
 import com.glassmail.domain.mail.MailAccount
 
 @Composable
@@ -118,12 +130,14 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         account?.syncState ?: "Add an account to synchronize mail",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -239,27 +253,101 @@ fun SettingsScreen(
             // Live Surface Sample
             item {
                 Text("LIVE GLASS PREVIEW", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            }
-            item {
-                GlassSurface(
-                    quality = appearance.glassQuality,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(GlassRadius.card),
+                Spacer(Modifier.height(GlassSpacing.xs))
+                val previewLayer = rememberGraphicsLayer()
+                var previewOffset by remember { mutableStateOf(Offset.Zero) }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                        .clip(RoundedCornerShape(GlassRadius.card))
+                        .onGloballyPositioned { coords ->
+                            val b = coords.boundsInWindow()
+                            previewOffset = Offset(b.left, b.top)
+                        },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Row(
+                    // Vibrant rich pattern backdrop
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(GlassSpacing.base),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                            .matchParentSize()
+                            .drawWithContent {
+                                previewLayer.record {
+                                    this@drawWithContent.drawContent()
+                                }
+                                drawLayer(previewLayer)
+                            }
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFF38BDF8),
+                                        Color(0xFF818CF8),
+                                        Color(0xFFC084FC),
+                                        Color(0xFFF472B6),
+                                    ),
+                                ),
+                            ),
                     ) {
-                        Column {
-                            Text("Realtime Lens Surface", style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                "Quality: ${appearance.glassQuality.name}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        Box(
+                            Modifier
+                                .size(80.dp)
+                                .align(Alignment.TopStart)
+                                .offset((-20).dp, (-20).dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.35f)),
+                        )
+                        Box(
+                            Modifier
+                                .size(100.dp)
+                                .align(Alignment.BottomEnd)
+                                .offset(20.dp, 20.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.25f)),
+                        )
+                        Text(
+                            "OPTICAL GLASS TEST",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    }
+
+                    // Floating Glass Surface sampling the backdrop
+                    val material = when (appearance.glassQuality) {
+                        GlassQuality.AUTOMATIC, GlassQuality.LIQUID -> GlassPresets.Toolbar.copy(refraction = 0.20f, dispersion = 0.15f)
+                        GlassQuality.BLUR -> GlassPresets.Toolbar.copy(refraction = 0f, dispersion = 0f)
+                        GlassQuality.TRANSPARENT -> GlassPresets.Toolbar.copy(opacity = 0.75f, refraction = 0f, dispersion = 0f, blur = 0.dp)
+                    }
+                    val tier = when (appearance.glassQuality) {
+                        GlassQuality.AUTOMATIC, GlassQuality.LIQUID -> GlassTier.FULL
+                        GlassQuality.BLUR -> GlassTier.LITE
+                        GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
+                    }
+                    GlassSurface(
+                        material = material,
+                        tierOverride = tier,
+                        shape = RoundedCornerShape(GlassRadius.card),
+                        backdropSampling = true,
+                        backdropSource = BackdropSource(layer = previewLayer, providerOffsetInWindow = previewOffset),
+                        modifier = Modifier
+                            .fillMaxWidth(0.92f)
+                            .padding(GlassSpacing.xs),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(GlassSpacing.base),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column {
+                                Text("Realtime Lens Surface", style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "Quality: ${appearance.glassQuality.name}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -443,6 +531,7 @@ fun SettingsActionRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -84,6 +86,7 @@ fun CommandPalette(
             modifier = Modifier
                 .fillMaxWidth(.96f)
                 .heightIn(max = 680.dp)
+                .imePadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 10.dp, vertical = 12.dp)
                 .clickable(
@@ -105,6 +108,7 @@ fun CommandPalette(
                     trailingIcon = { if (query.isNotBlank()) IconButton({ query = "" }) { Icon(Icons.Outlined.Clear, contentDescription = "Clear command search") } },
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
+                        cursorColor = MaterialTheme.colorScheme.primary,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .40f),
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f),
                         unfocusedIndicatorColor = Color.Transparent,
@@ -129,8 +133,22 @@ fun CommandPalette(
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text(command.title, style = MaterialTheme.typography.titleSmall, color = if (command.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-                                command.subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = .72f)) }
+                                Text(
+                                    command.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = if (command.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                                )
+                                command.subtitle?.let {
+                                    Text(
+                                        it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = .72f),
+                                    )
+                                }
                             }
                             Text(if (command.enabled) "›" else "—", color = MaterialTheme.colorScheme.onSurface.copy(alpha = .72f))
                         }

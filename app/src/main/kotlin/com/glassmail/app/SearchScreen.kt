@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -89,6 +90,7 @@ fun SearchScreen(
                 },
             )
         },
+        contentWindowInsets = WindowInsets(0),
         modifier = modifier.fillMaxSize(),
     ) { padding ->
         Column(
@@ -119,6 +121,7 @@ fun SearchScreen(
                 },
                 singleLine = true,
                 colors = TextFieldDefaults.colors(
+                    cursorColor = MaterialTheme.colorScheme.primary,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
                     unfocusedIndicatorColor = Color.Transparent,

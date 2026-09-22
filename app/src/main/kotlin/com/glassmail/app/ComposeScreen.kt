@@ -29,9 +29,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.runtime.Composable
@@ -109,7 +111,7 @@ fun ComposeRoute(
                     else -> "Draft saved locally"
                 },
                 quality = quality,
-                navigationIcon = { IconButton(back) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back") } },
+                navigationIcon = { IconButton(back) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back") } },
                 actions = {
                     TextButton(enabled = state.status != DraftStatus.SENDING, onClick = vm::send) {
                         Text(if (state.status == DraftStatus.SENDING) "Sending…" else "Send")
@@ -117,12 +119,12 @@ fun ComposeRoute(
                 },
             )
         },
+        contentWindowInsets = WindowInsets(0),
     ) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).imePadding().navigationBarsPadding().padding(20.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
-            FlatMetadata("Local draft")
             ComposeLine("To", state.rawTo, vm::updateTo, "Required · separate addresses with commas")
             ComposeLine("Cc", state.rawCc, vm::updateCc, "Optional")
             ComposeLine("Bcc", state.rawBcc, vm::updateBcc, "Optional")
@@ -133,6 +135,7 @@ fun ComposeRoute(
                 value = draft.body,
                 onValueChange = vm::updateBody,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp).semantics { contentDescription = "Message body" },
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                 minLines = 10,
                 decorationBox = { inner ->
@@ -153,14 +156,13 @@ fun ComposeRoute(
                 ) {
                     Icon(Icons.Outlined.AttachFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column(Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 8.dp)) {
-                        Text(attachment.fileName, maxLines = 1, style = MaterialTheme.typography.bodyMedium)
-                        Text(attachment.mimeType, maxLines = 1, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(attachment.fileName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                        Text(attachment.mimeType, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     IconButton(onClick = { vm.removeAttachment(attachment.uri) }) { Icon(Icons.Outlined.Close, contentDescription = "Remove ${attachment.fileName}") }
                 }
             }
             state.error?.let { Text(it, Modifier.padding(top = 12.dp), color = MaterialTheme.colorScheme.error) }
-            Text(if (state.status == DraftStatus.SENDING) "Sending…" else if (state.status == DraftStatus.SENT) "Sent" else "Draft saved locally", Modifier.padding(top = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -174,6 +176,7 @@ private fun ComposeLine(label: String, value: String, onValueChange: (String) ->
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.weight(1f).semantics { contentDescription = label },
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                 decorationBox = { inner ->
