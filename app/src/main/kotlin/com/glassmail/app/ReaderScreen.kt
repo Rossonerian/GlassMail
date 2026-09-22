@@ -200,6 +200,7 @@ fun ReaderScreen(
                 GlassSurface(
                     material = GlassPresets.Card,
                     tierOverride = com.glassmail.designsystem.glass.GlassTier.LITE,
+                    backdropSampling = false,
                 ) {
                     Column(
                         modifier = Modifier

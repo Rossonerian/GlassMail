@@ -66,6 +66,7 @@ fun MailRow(
         material = GlassPresets.Card,
         modifier = modifier.fillMaxWidth(),
         tierOverride = GlassTier.LITE,
+        backdropSampling = false,
     ) {
         Row(
             modifier = Modifier
