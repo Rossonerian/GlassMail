@@ -116,7 +116,8 @@ fun MorphingDock(
         GlassSurface(
             material = GlassPresets.BottomBar.copy(cornerRadius = GlassRadius.dock),
             tierOverride = when (quality) {
-                GlassQuality.AUTOMATIC, GlassQuality.LIQUID -> GlassTier.FULL
+                GlassQuality.AUTOMATIC -> GlassTier.BALANCED
+                GlassQuality.LIQUID -> GlassTier.FULL
                 GlassQuality.BLUR -> GlassTier.LITE
                 GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
             },

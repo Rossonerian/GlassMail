@@ -441,7 +441,7 @@ fun GlassSurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val tier = when (quality) {
-        GlassQuality.AUTOMATIC -> GlassTier.FULL
+        GlassQuality.AUTOMATIC -> GlassTier.BALANCED
         GlassQuality.LIQUID -> GlassTier.FULL
         GlassQuality.BLUR -> GlassTier.LITE
         GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
