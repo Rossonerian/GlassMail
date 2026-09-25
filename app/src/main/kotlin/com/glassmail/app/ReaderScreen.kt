@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -110,11 +111,11 @@ fun ReaderScreen(
     val chroma = lerp(neutral, readerTint, decay * 0.08f)
 
     Scaffold(
-        containerColor = Color.Transparent,
+        containerColor = chroma,
         topBar = {
             GlassMailTopCapsule(
-                title = if (collapsed) subject else "Thread",
-                subtitle = if (collapsed) null else "Message",
+                title = if (collapsed) subject else "Message",
+                subtitle = if (collapsed) null else state.selected?.sender,
                 quality = quality,
                 navigationIcon = {
                     IconButton(onClick = back) {
@@ -158,7 +159,7 @@ fun ReaderScreen(
                             ) {
                                 Icon(Icons.AutoMirrored.Outlined.Reply, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(GlassSpacing.xs))
-                                Text("Reply")
+                                Text("Reply", style = MaterialTheme.typography.labelLarge)
                             }
 
                             TextButton(
@@ -166,7 +167,7 @@ fun ReaderScreen(
                             ) {
                                 Icon(Icons.AutoMirrored.Outlined.ReplyAll, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(GlassSpacing.xs))
-                                Text("Reply all")
+                                Text("Reply all", style = MaterialTheme.typography.labelLarge)
                             }
 
                             TextButton(
@@ -174,7 +175,7 @@ fun ReaderScreen(
                             ) {
                                 Icon(Icons.AutoMirrored.Outlined.Forward, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(GlassSpacing.xs))
-                                Text("Forward")
+                                Text("Forward", style = MaterialTheme.typography.labelLarge)
                             }
                         }
                     }
@@ -188,7 +189,7 @@ fun ReaderScreen(
                 .fillMaxSize()
                 .padding(padding),
             state = listState,
-            contentPadding = PaddingValues(start = GlassSpacing.md, end = GlassSpacing.md, top = GlassSpacing.md, bottom = if (account != null && state.selected != null) 90.dp else 24.dp),
+            contentPadding = PaddingValues(start = GlassSpacing.md, end = GlassSpacing.md, top = GlassSpacing.md, bottom = if (account != null && state.selected != null) 110.dp else 24.dp),
             verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
         ) {
             val messages = state.thread.ifEmpty { listOfNotNull(state.selected) }
@@ -199,7 +200,7 @@ fun ReaderScreen(
             ) { item ->
                 GlassSurface(
                     material = GlassPresets.Card,
-                    tierOverride = com.glassmail.designsystem.glass.GlassTier.LITE,
+                    tierOverride = com.glassmail.designsystem.glass.GlassTier.LIGHT,
                     backdropSampling = false,
                 ) {
                     Column(
@@ -210,7 +211,7 @@ fun ReaderScreen(
                     ) {
                     Text(
                         text = item.subject.ifBlank { "(No subject)" },
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Row(
@@ -221,7 +222,7 @@ fun ReaderScreen(
                         Text(
                             text = item.sender,
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = timeLabel(item.sentAtEpochMillis),
@@ -230,7 +231,7 @@ fun ReaderScreen(
                         )
                     }
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                     // Message body with distraction-free typography and WCAG AAA contrast
                     Text(
@@ -244,7 +245,7 @@ fun ReaderScreen(
                     if (item.messageId == state.selected?.messageId && item.attachments.isNotEmpty()) {
                         Spacer(Modifier.height(GlassSpacing.xs))
                         Text(
-                            "ATTACHMENTS (${item.attachments.size})",
+                            "Attachments (${item.attachments.size})",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -258,8 +259,13 @@ fun ReaderScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 44.dp)
-                                .clickable { labelDialogOpen = true }
+                                .heightIn(min = 48.dp)
+                                .clip(RoundedCornerShape(GlassRadius.xs))
+                                .clickable(
+                                    role = androidx.compose.ui.semantics.Role.Button,
+                                    onClickLabel = "Edit labels",
+                                    onClick = { labelDialogOpen = true },
+                                )
                                 .padding(vertical = GlassSpacing.xs),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(GlassSpacing.xs),

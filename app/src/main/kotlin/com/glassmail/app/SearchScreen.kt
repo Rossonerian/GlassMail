@@ -3,7 +3,6 @@
 package com.glassmail.app
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -30,6 +28,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,13 +49,15 @@ import com.glassmail.designsystem.GlassSpacing
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.domain.mail.MailAccount
 
+private data class SearchSuggestion(val label: String, val query: String)
+
 private val SEARCH_SUGGESTIONS = listOf(
-    "is:unread",
-    "has:attachment",
-    "is:starred",
-    "Google",
-    "Invoice",
-    "Receipt",
+    SearchSuggestion("Unread", "unread"),
+    SearchSuggestion("Starred", "starred"),
+    SearchSuggestion("Attachments", "attachment"),
+    SearchSuggestion("Google", "Google"),
+    SearchSuggestion("Review", "review"),
+    SearchSuggestion("Updates", "update"),
 )
 
 @Composable
@@ -73,11 +74,11 @@ fun SearchScreen(
     val state by vm.searchUiState.collectAsStateWithLifecycle()
 
     Scaffold(
-        containerColor = Color.Transparent,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             GlassMailTopCapsule(
-                title = "Search Mail",
-                subtitle = if (state.query.isNotBlank()) "${state.messages.size} results" else "Local cache index",
+                title = "Search",
+                subtitle = if (state.query.isNotBlank()) "${state.messages.size} results" else "Search cached messages",
                 quality = quality,
                 navigationIcon = {
                     IconButton(onClick = back) {
@@ -137,13 +138,21 @@ fun SearchScreen(
                 horizontalArrangement = Arrangement.spacedBy(GlassSpacing.xs),
             ) {
                 items(SEARCH_SUGGESTIONS) { suggestion ->
+                    val isSelected = state.query.equals(suggestion.query, ignoreCase = true)
                     FilterChip(
-                        selected = state.query == suggestion,
-                        onClick = { vm.setSearchQuery(suggestion) },
-                        label = { Text(suggestion, style = MaterialTheme.typography.labelSmall) },
+                        selected = isSelected,
+                        onClick = { vm.setSearchQuery(if (isSelected) "" else suggestion.query) },
+                        shape = RoundedCornerShape(GlassRadius.chip),
+                        label = { Text(suggestion.label, style = MaterialTheme.typography.labelMedium) },
                         leadingIcon = {
                             Icon(Icons.Outlined.History, contentDescription = null, modifier = Modifier.size(14.dp))
                         },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     )
                 }
             }
@@ -166,13 +175,13 @@ fun SearchScreen(
                         )
                         Spacer(Modifier.height(GlassSpacing.md))
                         Text(
-                            "Instant Local Search",
+                            "Instant Mail Search",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(Modifier.height(GlassSpacing.xs))
                         Text(
-                            "Search across sender, subject, preview, and label metadata cached offline in Room.",
+                            "Search across sender addresses, subjects, previews, and labels cached for offline access.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -194,7 +203,7 @@ fun SearchScreen(
                         )
                         Spacer(Modifier.height(GlassSpacing.xs))
                         Text(
-                            "Try different keywords, sender addresses, or check spelling.",
+                            "Try searching with different keywords or sender addresses.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -203,7 +212,7 @@ fun SearchScreen(
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(start = GlassSpacing.md, end = GlassSpacing.md, top = GlassSpacing.md, bottom = 120.dp),
+                        contentPadding = PaddingValues(start = GlassSpacing.md, end = GlassSpacing.md, top = GlassSpacing.md, bottom = 128.dp),
                         verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
                     ) {
                         items(

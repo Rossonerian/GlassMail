@@ -2,12 +2,13 @@ package com.glassmail.app
 
 import android.content.Context
 import com.glassmail.designsystem.glass.GlassQuality
+import com.glassmail.designsystem.glass.resolveGlassQuality
 
 enum class ThemeChoice { SYSTEM, LIGHT, DARK }
 
 data class AppearanceSettings(
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
-    val glassQuality: GlassQuality = GlassQuality.AUTOMATIC,
+    val glassQuality: GlassQuality = GlassQuality.BALANCED,
     val reduceTransparency: Boolean = false,
     val reduceMotion: Boolean = false,
     val showNotificationPreviews: Boolean = false,
@@ -18,7 +19,16 @@ class AppearancePreferences(context: Context) {
 
     fun read(): AppearanceSettings = AppearanceSettings(
         theme = runCatching { ThemeChoice.valueOf(preferences.getString(KEY_THEME, ThemeChoice.SYSTEM.name)!!) }.getOrDefault(ThemeChoice.SYSTEM),
-        glassQuality = runCatching { GlassQuality.valueOf(preferences.getString(KEY_QUALITY, GlassQuality.AUTOMATIC.name)!!) }.getOrDefault(GlassQuality.AUTOMATIC),
+        glassQuality = resolveGlassQuality(preferences.getString(KEY_QUALITY, GlassQuality.BALANCED.name).let { stored ->
+            when (stored) {
+                "AUTOMATIC" -> GlassQuality.BALANCED
+                "LIQUID" -> GlassQuality.FULL
+                "BLUR" -> GlassQuality.LIGHT
+                "TRANSPARENT" -> GlassQuality.OFF
+                else -> runCatching { GlassQuality.valueOf(stored ?: GlassQuality.BALANCED.name) }
+                    .getOrDefault(GlassQuality.BALANCED)
+            }
+        }),
         reduceTransparency = preferences.getBoolean(KEY_REDUCE_TRANSPARENCY, false),
         reduceMotion = preferences.getBoolean(KEY_REDUCE_MOTION, false),
         showNotificationPreviews = preferences.getBoolean(KEY_NOTIFICATION_PREVIEWS, false),

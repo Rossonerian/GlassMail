@@ -235,10 +235,10 @@ fun GlassLabScreen(
                         material = activeMaterial,
                         shape = RoundedCornerShape(cornerRadius.dp),
                         tierOverride = when (quality) {
-                            GlassQuality.AUTOMATIC -> GlassTier.FULL
-                            GlassQuality.LIQUID -> GlassTier.FULL
-                            GlassQuality.BLUR -> GlassTier.LITE
-                            GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
+                            GlassQuality.FULL -> GlassTier.FULL
+                            GlassQuality.BALANCED -> GlassTier.BALANCED
+                            GlassQuality.LIGHT -> GlassTier.LIGHT
+                            GlassQuality.OFF -> GlassTier.OFF
                         },
                         backdropSampling = true,
                         backdropSource = BackdropSource(layer = labBackdropLayer, providerOffsetInWindow = labOffset),

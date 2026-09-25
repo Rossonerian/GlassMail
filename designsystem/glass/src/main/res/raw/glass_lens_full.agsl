@@ -1,0 +1,50 @@
+uniform shader content;
+uniform float2 resolution;
+uniform float2 offset;
+uniform float cornerRadius;
+uniform float refractionHeight;
+uniform float chromaticAberrationStrength;
+
+float sdRoundedBox(float2 p, float2 boxSize, float radius) {
+    // The rounded-box SDF gives one continuous distance field for both straight edges and corners.
+    float2 q = abs(p - boxSize * 0.5) - (boxSize * 0.5 - float2(radius));
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
+}
+
+half4 main(float2 p) {
+    float2 safeSize = max(resolution, float2(1.0));
+    float radius = clamp(cornerRadius, 0.0, min(safeSize.x, safeSize.y) * 0.5);
+
+    // Convert through provider coordinates so surface placement stays tied to the shared capture.
+    float2 providerPosition = p + offset;
+    float2 localPosition = providerPosition - offset;
+    float distanceToEdge = sdRoundedBox(localPosition, safeSize, radius);
+
+    // Central differences handle the rounded corner transition uniformly; one-pixel samples trade a
+    // little normal precision for a single stable path across flats, bevels, and corners.
+    float epsilon = 1.0;
+    float2 gradient = float2(
+        sdRoundedBox(localPosition + float2(epsilon, 0.0), safeSize, radius) -
+            sdRoundedBox(localPosition - float2(epsilon, 0.0), safeSize, radius),
+        sdRoundedBox(localPosition + float2(0.0, epsilon), safeSize, radius) -
+            sdRoundedBox(localPosition - float2(0.0, epsilon), safeSize, radius)
+    );
+    float2 normal = normalize(gradient + float2(0.00001));
+
+    // Fade the lens displacement to zero toward the interior so only the rim refracts.
+    float rimFalloff = 1.0 - smoothstep(0.0, max(refractionHeight, 1.0), max(-distanceToEdge, 0.0));
+    float2 displacement = normal * (refractionHeight * rimFalloff);
+    float2 sampleBounds = max(safeSize - float2(1.0), 0.0);
+
+    // Split color channels along the same surface normal; this models dispersion without unrelated offsets.
+    float2 redPosition = clamp(localPosition + displacement * (1.0 + chromaticAberrationStrength), float2(0.0), sampleBounds);
+    float2 greenPosition = clamp(localPosition + displacement, float2(0.0), sampleBounds);
+    float2 bluePosition = clamp(localPosition + displacement * (1.0 - chromaticAberrationStrength), float2(0.0), sampleBounds);
+    half4 redSample = content.eval(redPosition);
+    half4 greenSample = content.eval(greenPosition);
+    half4 blueSample = content.eval(bluePosition);
+
+    // Keep antialiasing at the rounded boundary in the shader because the shared backdrop is rectangular.
+    float edgeAlpha = 1.0 - smoothstep(0.0, 1.0, distanceToEdge);
+    return half4(redSample.r, greenSample.g, blueSample.b, greenSample.a * edgeAlpha);
+}

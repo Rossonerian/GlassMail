@@ -1,0 +1,44 @@
+uniform shader content;
+uniform float2 resolution;
+uniform float2 offset;
+uniform float cornerRadius;
+uniform float refractionHeight;
+
+float sdRoundedBox(float2 p, float2 boxSize, float radius) {
+    // One signed-distance function keeps the lens boundary consistent around rounded corners.
+    float2 q = abs(p - boxSize * 0.5) - (boxSize * 0.5 - float2(radius));
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
+}
+
+half4 main(float2 p) {
+    float2 safeSize = max(resolution, float2(1.0));
+    float radius = clamp(cornerRadius, 0.0, min(safeSize.x, safeSize.y) * 0.5);
+
+    // The provider offset anchors local fragments to the shared capture when a surface moves or resizes.
+    float2 providerPosition = p + offset;
+    float2 localPosition = providerPosition - offset;
+    float distanceToEdge = sdRoundedBox(localPosition, safeSize, radius);
+
+    // Central differences work for both straight and curved portions without a branch at the corner seam.
+    float epsilon = 1.0;
+    float2 gradient = float2(
+        sdRoundedBox(localPosition + float2(epsilon, 0.0), safeSize, radius) -
+            sdRoundedBox(localPosition - float2(epsilon, 0.0), safeSize, radius),
+        sdRoundedBox(localPosition + float2(0.0, epsilon), safeSize, radius) -
+            sdRoundedBox(localPosition - float2(0.0, epsilon), safeSize, radius)
+    );
+    float2 normal = normalize(gradient + float2(0.00001));
+
+    // The displacement fades into the interior so the center remains a clear view of the backdrop.
+    float rimFalloff = 1.0 - smoothstep(0.0, max(refractionHeight, 1.0), max(-distanceToEdge, 0.0));
+    float2 samplePosition = clamp(
+        localPosition + normal * (refractionHeight * rimFalloff),
+        float2(0.0),
+        max(safeSize - float2(1.0), 0.0)
+    );
+
+    // This tier uses one sample and has no chromatic channel work, reducing shader cost without runtime branching.
+    half4 color = content.eval(samplePosition);
+    float edgeAlpha = 1.0 - smoothstep(0.0, 1.0, distanceToEdge);
+    return half4(color.rgb, color.a * edgeAlpha);
+}

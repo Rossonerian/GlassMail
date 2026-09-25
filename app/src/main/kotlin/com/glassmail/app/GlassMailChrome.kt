@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,6 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.glassmail.designsystem.GlassRadius
+import com.glassmail.designsystem.GlassSpacing
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
 
@@ -40,24 +43,36 @@ fun GlassMailTopCapsule(
 ) {
     GlassSurface(
         quality = quality,
-        modifier = modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = GlassSpacing.md, vertical = GlassSpacing.xs),
+        shape = RoundedCornerShape(GlassRadius.card),
     ) {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 6.dp),
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .padding(horizontal = GlassSpacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             navigationIcon?.invoke()
-            Column(Modifier.weight(1f).padding(horizontal = if (navigationIcon == null) 8.dp else 4.dp), verticalArrangement = Arrangement.Center) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = if (navigationIcon == null) GlassSpacing.sm else GlassSpacing.xs),
+                verticalArrangement = Arrangement.Center,
+            ) {
                 Text(
-                    title,
+                    text = title,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 subtitle?.let {
                     Text(
-                        it.uppercase(),
+                        text = it,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
@@ -65,7 +80,12 @@ fun GlassMailTopCapsule(
                     )
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) { actions() }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(0.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                actions()
+            }
         }
     }
 }
@@ -80,34 +100,53 @@ fun GlassMailSearchCapsule(
 ) {
     GlassSurface(
         quality = quality,
-        modifier = modifier.fillMaxWidth().clickable(onClick = onClick).semantics { role = Role.Button },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .semantics { role = Role.Button },
+        shape = RoundedCornerShape(GlassRadius.lg),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = GlassSpacing.base, vertical = GlassSpacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(12.dp))
+            Icon(
+                Icons.Outlined.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(GlassSpacing.md))
             Text(
                 placeholder,
                 Modifier.weight(1f),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             shortcut?.let {
-                Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 8.dp))
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(start = GlassSpacing.sm),
+                )
             }
         }
     }
 }
 
 @Composable
-fun FlatMetadata(text: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
+fun FlatMetadata(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
     Text(
-        text.uppercase(),
+        text = text,
         modifier = modifier,
         color = color,
         style = MaterialTheme.typography.labelSmall,
@@ -125,13 +164,23 @@ fun senderAmbient(sender: String): Color = when ((sender.hashCode() and Int.MAX_
 
 fun syncStatus(state: String): String = if (state.contains("offline", ignoreCase = true) || state.contains("network", ignoreCase = true)) {
     "Offline — showing cached mail"
+} else if (state.equals("READY", ignoreCase = true)) {
+    "Synced and up to date"
+} else if (state.equals("SYNCING", ignoreCase = true)) {
+    "Synchronizing mail…"
 } else state
 
-fun replyDraft(message: com.glassmail.domain.mail.MailMessage, account: com.glassmail.domain.mail.MailAccount, all: Boolean): com.glassmail.domain.mail.MailDraft {
+fun replyDraft(
+    message: com.glassmail.domain.mail.MailMessage,
+    account: com.glassmail.domain.mail.MailAccount,
+    all: Boolean,
+): com.glassmail.domain.mail.MailDraft {
     val headers = com.glassmail.domain.mail.ReceivedMailHeaders(replyTo = listOf(message.sender), messageId = message.messageId)
     val recipients = if (all) com.glassmail.domain.mail.replyAllRecipients(headers, account.email) else com.glassmail.domain.mail.replyRecipients(message, account.email)
     return com.glassmail.domain.mail.MailDraft(
-        java.util.UUID.randomUUID().toString(), account.accountId, to = recipients,
+        java.util.UUID.randomUUID().toString(),
+        account.accountId,
+        to = recipients,
         subject = com.glassmail.domain.mail.replySubject(message.subject),
         body = "\n\n— Original message —\n${message.body ?: message.preview}",
         inReplyTo = message.messageId,
@@ -139,9 +188,12 @@ fun replyDraft(message: com.glassmail.domain.mail.MailMessage, account: com.glas
     )
 }
 
-fun forwardDraft(message: com.glassmail.domain.mail.MailMessage, account: com.glassmail.domain.mail.MailAccount): com.glassmail.domain.mail.MailDraft = com.glassmail.domain.mail.MailDraft(
-    java.util.UUID.randomUUID().toString(), account.accountId,
+fun forwardDraft(
+    message: com.glassmail.domain.mail.MailMessage,
+    account: com.glassmail.domain.mail.MailAccount,
+): com.glassmail.domain.mail.MailDraft = com.glassmail.domain.mail.MailDraft(
+    java.util.UUID.randomUUID().toString(),
+    account.accountId,
     subject = com.glassmail.domain.mail.forwardSubject(message.subject),
     body = "\n\n— Forwarded message —\nFrom: ${message.sender}\nSubject: ${message.subject}\n\n${message.body ?: message.preview}",
 )
-

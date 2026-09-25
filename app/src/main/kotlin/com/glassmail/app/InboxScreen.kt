@@ -128,13 +128,13 @@ fun InboxScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = (selectedAccount?.email?.firstOrNull() ?: 'G').uppercase(),
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
                         }
                     },
@@ -175,6 +175,7 @@ fun InboxScreen(
                                 FilterChip(
                                     selected = selected,
                                     onClick = { activeFilter = filter },
+                                    shape = RoundedCornerShape(GlassRadius.chip),
                                     label = {
                                         Text(
                                             when (filter) {
@@ -182,6 +183,7 @@ fun InboxScreen(
                                                 InboxFilter.Unread -> "Unread ($unreadCount)"
                                                 InboxFilter.Starred -> "Starred (${allMessages.count { it.starred }})"
                                             },
+                                            style = MaterialTheme.typography.labelMedium,
                                         )
                                     },
                                     leadingIcon = if (selected) {
@@ -190,6 +192,8 @@ fun InboxScreen(
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                         selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     ),
                                 )
                             }
@@ -214,7 +218,7 @@ fun InboxScreen(
                         Icons.Outlined.Inbox,
                         contentDescription = null,
                         modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                     )
                     Spacer(Modifier.height(GlassSpacing.base))
                     Text("No Account Connected", style = MaterialTheme.typography.titleLarge)
@@ -270,7 +274,7 @@ fun InboxScreen(
                         .fillMaxSize()
                         .padding(padding),
                     state = listState,
-                    contentPadding = PaddingValues(start = GlassSpacing.md, end = GlassSpacing.md, top = GlassSpacing.md, bottom = 120.dp),
+                    contentPadding = PaddingValues(start = GlassSpacing.md, end = GlassSpacing.md, top = GlassSpacing.md, bottom = 128.dp),
                     verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
                 ) {
                     items(

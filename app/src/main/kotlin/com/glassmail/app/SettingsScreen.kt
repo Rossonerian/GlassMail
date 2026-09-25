@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -70,6 +71,7 @@ import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
 import com.glassmail.designsystem.glass.GlassTier
+import com.glassmail.designsystem.glass.resolveGlassQuality
 import com.glassmail.domain.mail.MailAccount
 
 @Composable
@@ -86,6 +88,9 @@ fun SettingsScreen(
     val appearance by vm.appearance.collectAsStateWithLifecycle()
     var credentialDialogOpen by remember { mutableStateOf(false) }
     var credentialText by remember { mutableStateOf("") }
+    val selectableGlassQualities = remember {
+        GlassQuality.entries.filter { quality -> resolveGlassQuality(quality) == quality }
+    }
 
     Scaffold(
         topBar = {
@@ -112,15 +117,18 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = GlassSpacing.lg),
-            contentPadding = PaddingValues(bottom = 110.dp),
+            contentPadding = PaddingValues(bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
         ) {
-            // Account Information
+            // Section 1: Account
+            item {
+                Text("Account", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            }
             item {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(GlassRadius.md))
+                        .clip(RoundedCornerShape(GlassRadius.card))
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
                         .padding(GlassSpacing.md),
                     verticalArrangement = Arrangement.spacedBy(GlassSpacing.xxs),
@@ -141,14 +149,12 @@ fun SettingsScreen(
                     )
                 }
             }
-
-            // Account Actions
             item {
-                SettingsActionRow("Manual Sync", "Synchronize cached mailbox now") { vm.refresh() }
+                SettingsActionRow("Sync now", "Synchronize cached mailbox now") { vm.refresh() }
             }
             if (account != null) {
                 item {
-                    SettingsActionRow("Update Gmail App Password", "Replace the Android Keystore credential") {
+                    SettingsActionRow("Update App Password", "Replace the Android Keystore credential") {
                         credentialDialogOpen = true
                     }
                 }
@@ -159,47 +165,10 @@ fun SettingsScreen(
                 }
             }
 
-            // Glass Lab Link
+            // Section 2: Look and Feel
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(GlassRadius.md))
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-                        .clickable(onClick = openLab)
-                        .padding(GlassSpacing.md),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Icons.Outlined.Science,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                    Spacer(Modifier.width(GlassSpacing.md))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Glass Optical Lab",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        Text(
-                            "Interactive AGSL shader test sandbox & frame diagnostics",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                        )
-                    }
-                    Icon(
-                        Icons.Outlined.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            // Appearance Section
-            item {
-                Text("APPEARANCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(GlassSpacing.xs))
+                Text("Look and feel", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             }
             item {
                 ChoiceSection("Theme Mode", ThemeChoice.entries, appearance.theme) { choice ->
@@ -207,53 +176,13 @@ fun SettingsScreen(
                 }
             }
             item {
-                ChoiceSection("Glass Quality Tier", GlassQuality.entries, appearance.glassQuality) { choice ->
+                ChoiceSection("Glass Quality Tier", selectableGlassQualities, appearance.glassQuality) { choice ->
                     vm.updateAppearance { it.copy(glassQuality = choice) }
                 }
             }
-
-            // Accessibility Section
             item {
-                Text("ACCESSIBILITY", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            }
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(GlassRadius.md))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
-                        .padding(GlassSpacing.xs),
-                    verticalArrangement = Arrangement.spacedBy(GlassSpacing.xs),
-                ) {
-                    PreferenceRow(
-                        title = "Reduce Transparency",
-                        selected = appearance.reduceTransparency,
-                        onClick = { vm.updateAppearance { it.copy(reduceTransparency = !it.reduceTransparency) } },
-                    )
-                    PreferenceRow(
-                        title = "Reduce Motion",
-                        selected = appearance.reduceMotion,
-                        onClick = { vm.updateAppearance { it.copy(reduceMotion = !it.reduceMotion) } },
-                    )
-                }
-            }
-
-            // Notifications Section
-            item {
-                Text("NOTIFICATIONS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            }
-            item {
-                PreferenceRow(
-                    title = "Show Message Previews",
-                    selected = appearance.showNotificationPreviews,
-                    onClick = { vm.updateAppearance { it.copy(showNotificationPreviews = !it.showNotificationPreviews) } },
-                )
-            }
-
-            // Live Surface Sample
-            item {
-                Text("LIVE GLASS PREVIEW", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.height(GlassSpacing.xs))
+                Text("Live Glass Preview", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Spacer(Modifier.height(GlassSpacing.xxs))
                 val previewLayer = rememberGraphicsLayer()
                 var previewOffset by remember { mutableStateOf(Offset.Zero) }
                 Box(
@@ -314,14 +243,15 @@ fun SettingsScreen(
 
                     // Floating Glass Surface sampling the backdrop
                     val material = when (appearance.glassQuality) {
-                        GlassQuality.AUTOMATIC, GlassQuality.LIQUID -> GlassPresets.Toolbar.copy(refraction = 0.20f, dispersion = 0.15f)
-                        GlassQuality.BLUR -> GlassPresets.Toolbar.copy(refraction = 0f, dispersion = 0f)
-                        GlassQuality.TRANSPARENT -> GlassPresets.Toolbar.copy(opacity = 0.75f, refraction = 0f, dispersion = 0f, blur = 0.dp)
+                        GlassQuality.FULL, GlassQuality.BALANCED -> GlassPresets.Toolbar.copy(refraction = 0.20f, dispersion = 0.15f)
+                        GlassQuality.LIGHT -> GlassPresets.Toolbar.copy(refraction = 0f, dispersion = 0f)
+                        GlassQuality.OFF -> GlassPresets.Toolbar.copy(opacity = 0.75f, refraction = 0f, dispersion = 0f, blur = 0.dp)
                     }
                     val tier = when (appearance.glassQuality) {
-                        GlassQuality.AUTOMATIC, GlassQuality.LIQUID -> GlassTier.FULL
-                        GlassQuality.BLUR -> GlassTier.LITE
-                        GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
+                        GlassQuality.FULL -> GlassTier.FULL
+                        GlassQuality.BALANCED -> GlassTier.BALANCED
+                        GlassQuality.LIGHT -> GlassTier.LIGHT
+                        GlassQuality.OFF -> GlassTier.OFF
                     }
                     GlassSurface(
                         material = material,
@@ -343,7 +273,7 @@ fun SettingsScreen(
                             Column {
                                 Text("Realtime Lens Surface", style = MaterialTheme.typography.titleSmall)
                                 Text(
-                                    "Quality: ${appearance.glassQuality.name}",
+                                    "Quality: ${prettyChoice(appearance.glassQuality)}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -353,32 +283,122 @@ fun SettingsScreen(
                 }
             }
 
+            // Section 3: Comfort
+            item {
+                Spacer(Modifier.height(GlassSpacing.xs))
+                Text("Comfort", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(GlassRadius.card))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
+                        .padding(GlassSpacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(GlassSpacing.xs),
+                ) {
+                    PreferenceRow(
+                        title = "Reduce Transparency",
+                        selected = appearance.reduceTransparency,
+                        onClick = { vm.updateAppearance { it.copy(reduceTransparency = !it.reduceTransparency) } },
+                    )
+                    PreferenceRow(
+                        title = "Reduce Motion",
+                        selected = appearance.reduceMotion,
+                        onClick = { vm.updateAppearance { it.copy(reduceMotion = !it.reduceMotion) } },
+                    )
+                }
+            }
+
+            // Section 4: Notifications
+            item {
+                Spacer(Modifier.height(GlassSpacing.xs))
+                Text("Notifications", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            item {
+                PreferenceRow(
+                    title = "Show Message Previews",
+                    selected = appearance.showNotificationPreviews,
+                    onClick = { vm.updateAppearance { it.copy(showNotificationPreviews = !it.showNotificationPreviews) } },
+                )
+            }
+
+            // Section 5: Advanced
+            item {
+                Spacer(Modifier.height(GlassSpacing.xs))
+                Text("Advanced", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(GlassRadius.card))
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+                        .clickable(onClick = openLab)
+                        .padding(GlassSpacing.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Outlined.Science,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(GlassSpacing.md))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Glass Optical Lab",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                        Text(
+                            "Interactive AGSL shader test sandbox & frame diagnostics",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        )
+                    }
+                    Icon(
+                        Icons.Outlined.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
             // Debug Fixtures (Debug Only)
             if (BuildConfig.DEBUG) {
                 item {
-                    Text("DEBUG FIXTURES", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
-                }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(GlassSpacing.xs),
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(GlassRadius.card))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.20f))
+                            .padding(GlassSpacing.md),
+                        verticalArrangement = Arrangement.spacedBy(GlassSpacing.sm),
                     ) {
-                        listOf(10, 100, 1000).forEach { count ->
-                            Button(
-                                onClick = { vm.seed(count) },
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text("$count")
+                        Text("Seed Debug Mailbox", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(GlassSpacing.xs),
+                        ) {
+                            listOf(10, 100, 1000).forEach { count ->
+                                Button(
+                                    onClick = { vm.seed(count) },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(GlassRadius.innerLens),
+                                ) {
+                                    Text("$count")
+                                }
                             }
                         }
-                    }
-                }
-                item {
-                    Button(
-                        onClick = { vm.clear() },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Clear Debug Mailbox")
+                        Button(
+                            onClick = { vm.clear() },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(GlassRadius.innerLens),
+                            colors = ButtonDefaults.filledTonalButtonColors(),
+                        ) {
+                            Text("Clear Debug Mailbox")
+                        }
                     }
                 }
             }

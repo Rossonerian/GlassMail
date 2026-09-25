@@ -43,6 +43,9 @@ class AppViewModel(
     val appearance: StateFlow<AppearanceSettings> = _appearance
     val accounts: StateFlow<List<MailAccount>> = repository.observeAccounts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val accountsLoaded: StateFlow<Boolean> = repository.observeAccounts()
+        .map { true }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
     private val accountId = accounts.map { it.firstOrNull()?.accountId }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val drafts: StateFlow<List<MailDraft>> = accountId.flatMapLatest { id ->

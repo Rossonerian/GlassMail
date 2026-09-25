@@ -45,6 +45,8 @@ import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
 import com.glassmail.designsystem.glass.GlassTier
+import com.glassmail.designsystem.glass.BackdropSource
+import com.glassmail.designsystem.glass.LocalBackdropSource
 
 data class CommandPaletteAction(
     val id: String,
@@ -59,6 +61,7 @@ data class CommandPaletteAction(
 fun CommandPalette(
     actions: List<CommandPaletteAction>,
     quality: GlassQuality,
+    backdropSource: BackdropSource = LocalBackdropSource.current,
     onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
@@ -78,10 +81,12 @@ fun CommandPalette(
         GlassSurface(
             material = GlassPresets.Dialog.copy(cornerRadius = GlassRadius.dialog),
             tierOverride = when (quality) {
-                GlassQuality.AUTOMATIC, GlassQuality.LIQUID -> GlassTier.FULL
-                GlassQuality.BLUR -> GlassTier.LITE
-                GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
+                GlassQuality.FULL -> GlassTier.FULL
+                GlassQuality.BALANCED -> GlassTier.BALANCED
+                GlassQuality.LIGHT -> GlassTier.LIGHT
+                GlassQuality.OFF -> GlassTier.OFF
             },
+            backdropSource = backdropSource,
             shape = RoundedCornerShape(GlassRadius.dialog),
             modifier = Modifier
                 .fillMaxWidth(.96f)
@@ -115,7 +120,7 @@ fun CommandPalette(
                         focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                     ),
                 )
-                Text("COMMANDS · ${filtered.size}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text("Commands (${filtered.size})", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 LazyColumn(Modifier.heightIn(max = 450.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     items(filtered, key = { it.id }) { command ->
                         Row(

@@ -102,6 +102,9 @@ import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
 import com.glassmail.designsystem.glass.GlassPreferences
 import com.glassmail.designsystem.glass.LocalGlassPreferences
+import com.glassmail.designsystem.glass.BackdropProvider
+import com.glassmail.designsystem.glass.LocalBackdropSource
+import com.glassmail.designsystem.glass.rememberGlassBackdrop
 import com.glassmail.designsystem.AmbientCanvas
 import com.glassmail.designsystem.GlassMailPalette
 import com.glassmail.designsystem.GlassMailTheme
@@ -136,6 +139,7 @@ import kotlinx.coroutines.launch
 fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = MutableStateFlow(null)) {
     val vm: AppViewModel = viewModel(factory = AppViewModel.factory(graph.context, graph.mailRepository, graph.syncScheduler, graph.appearancePreferences, graph.draftRepository, graph.credentialStore))
     val accounts by vm.accounts.collectAsStateWithLifecycle()
+    val accountsLoaded by vm.accountsLoaded.collectAsStateWithLifecycle()
     val appearance by vm.appearance.collectAsStateWithLifecycle()
     val drafts by vm.drafts.collectAsStateWithLifecycle()
     val navController = rememberNavController()
@@ -164,7 +168,8 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
         navController.navigate("$ROUTE_COMPOSE/${draft.draftId}")
     }
     BackHandler(enabled = paletteOpen) { paletteOpen = false }
-    androidx.compose.runtime.LaunchedEffect(accounts.isEmpty()) {
+    androidx.compose.runtime.LaunchedEffect(accounts.isEmpty(), accountsLoaded) {
+        if (!accountsLoaded) return@LaunchedEffect
         val current = navController.currentBackStackEntry?.destination?.route
         if (accounts.isEmpty() && current != ROUTE_SETUP) {
             navController.navigate(ROUTE_SETUP) { popUpTo(ROUTE_INBOX) { inclusive = true } }
@@ -187,76 +192,78 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
     }
     androidx.compose.runtime.CompositionLocalProvider(LocalGlassPreferences provides GlassPreferences(appearance.reduceTransparency, appearance.reduceMotion)) {
     AmbientCanvas(ambient, dark = dark) {
+        val rootBackdrop = rememberGlassBackdrop()
+        androidx.compose.runtime.CompositionLocalProvider(
+            LocalBackdropSource provides rootBackdrop,
+        ) {
         Box(Modifier.fillMaxSize()) {
-            com.glassmail.designsystem.glass.GlassProvider(
-                enabled = appearance.glassQuality != GlassQuality.TRANSPARENT && !appearance.reduceTransparency,
-            ) {
-                NavHost(navController = navController, startDestination = ROUTE_INBOX) {
-                    composable(ROUTE_SETUP) { AccountSetupRoute(graph) }
-                    composable(ROUTE_INBOX) {
-                        InboxScreen(
-                            vm = vm,
-                            account = accounts.firstOrNull(),
-                            quality = appearance.glassQuality,
-                            open = { navController.navigate("$ROUTE_READER/$it") },
-                            search = { navController.navigate(ROUTE_SEARCH) },
-                            settings = { navController.navigate(ROUTE_SETTINGS) },
-                            openPalette = { paletteOpen = true },
-                            onDockCompactChanged = { dockCompact = it },
-                            onDockBackdropChanged = { key, frozen -> dockBackdropKey = key; dockBackdropFrozen = frozen },
-                        )
+            BackdropProvider(backdrop = rootBackdrop, modifier = Modifier.fillMaxSize()) {
+                    NavHost(navController = navController, startDestination = ROUTE_INBOX) {
+                        composable(ROUTE_SETUP) { AccountSetupRoute(graph) }
+                        composable(ROUTE_INBOX) {
+                            InboxScreen(
+                                vm = vm,
+                                account = accounts.firstOrNull(),
+                                quality = appearance.glassQuality,
+                                open = { navController.navigate("$ROUTE_READER/$it") },
+                                search = { navController.navigate(ROUTE_SEARCH) },
+                                settings = { navController.navigate(ROUTE_SETTINGS) },
+                                openPalette = { paletteOpen = true },
+                                onDockCompactChanged = { dockCompact = it },
+                                onDockBackdropChanged = { key, frozen -> dockBackdropKey = key; dockBackdropFrozen = frozen },
+                            )
+                        }
+                        composable(ROUTE_SEARCH) {
+                            SearchScreen(
+                                vm = vm,
+                                account = accounts.firstOrNull(),
+                                quality = appearance.glassQuality,
+                                open = { navController.navigate("$ROUTE_READER/$it") },
+                                back = { navController.popBackStack() },
+                                openPalette = { paletteOpen = true },
+                            )
+                        }
+                        composable(ROUTE_SETTINGS) {
+                            SettingsScreen(
+                                graph = graph,
+                                vm = vm,
+                                account = accounts.firstOrNull(),
+                                back = { navController.popBackStack() },
+                                openPalette = { paletteOpen = true },
+                                openLab = { navController.navigate(ROUTE_GLASS_LAB) },
+                            )
+                        }
+                        composable(ROUTE_GLASS_LAB) {
+                            GlassLabScreen(
+                                quality = appearance.glassQuality,
+                                back = { navController.popBackStack() },
+                            )
+                        }
+                        composable("$ROUTE_COMPOSE/{draftId}") { entry ->
+                            ComposeRoute(
+                                graph = graph,
+                                account = accounts.firstOrNull(),
+                                quality = appearance.glassQuality,
+                                draftId = entry.arguments?.getString("draftId")?.takeUnless { it == "new" },
+                                back = { navController.popBackStack() },
+                            )
+                        }
+                        composable(
+                            route = "$ROUTE_READER/{messageId}",
+                            arguments = listOf(navArgument("messageId") { type = NavType.StringType }),
+                        ) { entry ->
+                            ReaderScreen(
+                                vm = vm,
+                                account = accounts.firstOrNull(),
+                                id = entry.arguments?.getString("messageId").orEmpty(),
+                                quality = appearance.glassQuality,
+                                back = { navController.popBackStack() },
+                                openPalette = { paletteOpen = true },
+                                compose = { draft -> openCompose(draft) },
+                                download = { attachment -> vm.downloadAttachment(attachment) },
+                            )
+                        }
                     }
-                    composable(ROUTE_SEARCH) {
-                        SearchScreen(
-                            vm = vm,
-                            account = accounts.firstOrNull(),
-                            quality = appearance.glassQuality,
-                            open = { navController.navigate("$ROUTE_READER/$it") },
-                            back = { navController.popBackStack() },
-                            openPalette = { paletteOpen = true },
-                        )
-                    }
-                    composable(ROUTE_SETTINGS) {
-                        SettingsScreen(
-                            graph = graph,
-                            vm = vm,
-                            account = accounts.firstOrNull(),
-                            back = { navController.popBackStack() },
-                            openPalette = { paletteOpen = true },
-                            openLab = { navController.navigate(ROUTE_GLASS_LAB) },
-                        )
-                    }
-                    composable(ROUTE_GLASS_LAB) {
-                        GlassLabScreen(
-                            quality = appearance.glassQuality,
-                            back = { navController.popBackStack() },
-                        )
-                    }
-                    composable("$ROUTE_COMPOSE/{draftId}") { entry ->
-                        ComposeRoute(
-                            graph = graph,
-                            account = accounts.firstOrNull(),
-                            quality = appearance.glassQuality,
-                            draftId = entry.arguments?.getString("draftId")?.takeUnless { it == "new" },
-                            back = { navController.popBackStack() },
-                        )
-                    }
-                    composable(
-                        route = "$ROUTE_READER/{messageId}",
-                        arguments = listOf(navArgument("messageId") { type = NavType.StringType }),
-                    ) { entry ->
-                        ReaderScreen(
-                            vm = vm,
-                            account = accounts.firstOrNull(),
-                            id = entry.arguments?.getString("messageId").orEmpty(),
-                            quality = appearance.glassQuality,
-                            back = { navController.popBackStack() },
-                            openPalette = { paletteOpen = true },
-                            compose = { draft -> openCompose(draft) },
-                            download = { attachment -> vm.downloadAttachment(attachment) },
-                        )
-                    }
-                }
             }
 
             val dockSelectedIndex = when (route) {
@@ -282,6 +289,7 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
                     onCompose = { openCompose() },
                     backdropKey = route to dockBackdropKey,
                     backdropFrozen = route == ROUTE_INBOX && dockBackdropFrozen,
+                    backdropSource = rootBackdrop,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -305,8 +313,9 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
                         add(CommandPaletteAction("message-delete", "Delete", "Move current message to trash", destructive = true) { paletteOpen = false; vm.mutation(target, "delete") })
                     }
                 }
-                CommandPalette(actions, appearance.glassQuality, onDismiss = { paletteOpen = false })
+                CommandPalette(actions, appearance.glassQuality, backdropSource = rootBackdrop, onDismiss = { paletteOpen = false })
             }
+        }
         }
     }
 }
@@ -320,4 +329,3 @@ private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_READER = "reader"
 private const val ROUTE_COMPOSE = "compose"
 private const val ROUTE_GLASS_LAB = "glass_lab"
-

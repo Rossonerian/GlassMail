@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.draw.clip
@@ -34,6 +35,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -51,6 +56,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+import com.glassmail.designsystem.GlassRadius
+import com.glassmail.designsystem.GlassSpacing
+
 @Composable
 fun AccountSetupRoute(graph: AppGraph) {
     val viewModel: AccountSetupViewModel = viewModel(factory = AccountSetupViewModel.factory(graph))
@@ -59,50 +67,142 @@ fun AccountSetupRoute(graph: AppGraph) {
     var appPassword by remember { mutableStateOf("") }
 
     Column(
-        modifier = Modifier.fillMaxSize().statusBarsPadding().imePadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+            .imePadding()
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = GlassSpacing.lg, vertical = GlassSpacing.xl),
+        verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
     ) {
-        Spacer(Modifier.height(16.dp))
-        Icon(Icons.Outlined.MarkEmailUnread, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+        Spacer(Modifier.height(GlassSpacing.md))
+        Icon(
+            Icons.Outlined.MarkEmailUnread,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(48.dp),
+        )
         Text("GlassMail", style = MaterialTheme.typography.headlineLarge)
         FlatMetadata("Local-first Gmail setup", color = MaterialTheme.colorScheme.primary)
-        Text("Connect one Gmail account securely. Mail metadata is cached locally so the inbox stays useful offline.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(8.dp))
-        SetupField("Gmail address", email, { email = it }, "you@gmail.com", KeyboardType.Email)
-        SetupField("Google App Password", appPassword, { appPassword = it }, "Stored in Android Keystore", KeyboardType.Password, password = true)
-        Button(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-            enabled = !state.isWorking && email.isNotBlank() && appPassword.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(
-                disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-            ),
-            onClick = {
-                val credential = appPassword.toCharArray()
-                appPassword = ""
-                viewModel.connect(email, credential)
-            },
+        Text(
+            "Connect one Gmail account securely. Mail metadata is cached locally so the inbox stays responsive and useful offline.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(GlassSpacing.xs))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(GlassRadius.card))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f))
+                .padding(GlassSpacing.md),
+            verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
         ) {
-            Text(if (state.isWorking) "Connecting…" else "Store securely and sync")
-        }
-        if (BuildConfig.DEBUG) {
-            Button(enabled = !state.isWorking, onClick = { viewModel.seedDebugMailbox() }) {
-                Text("Use 100-message debug mailbox")
+            SetupField("Gmail address", email, { email = it }, "you@gmail.com", KeyboardType.Email)
+            SetupField("Google App Password", appPassword, { appPassword = it }, "Stored in Android Keystore", KeyboardType.Password, password = true)
+
+            Text(
+                "For the Google account you’re adding, enable 2-Step Verification, then create an App Password under Google Account → Security → App passwords.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            val uriHandler = LocalUriHandler.current
+            Text(
+                text = "Open Google App Passwords",
+                modifier = Modifier.clickable(role = Role.Button) {
+                    uriHandler.openUri(GOOGLE_APP_PASSWORDS_URL)
+                },
+                style = MaterialTheme.typography.labelLarge.merge(
+                    TextStyle(textDecoration = TextDecoration.Underline),
+                ),
+                color = MaterialTheme.colorScheme.primary,
+            )
+
+            Button(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 52.dp),
+                enabled = !state.isWorking && email.isNotBlank() && appPassword.isNotBlank(),
+                shape = RoundedCornerShape(GlassRadius.innerLens),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                ),
+                onClick = {
+                    val credential = appPassword.toCharArray()
+                    appPassword = ""
+                    viewModel.connect(email, credential)
+                },
+            ) {
+                Text(
+                    if (state.isWorking) "Connecting…" else "Store securely & sync",
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
         }
-        Text(state.message, color = if (state.message.contains("completed", true) || state.message.contains("ready", true)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-        state.messageCount?.let { Text("Persisted INBOX metadata rows: $it") }
-        state.gmailExtensionsEnabled?.let { Text("X-GM-EXT-1 detected: $it") }
+
+        if (state.message.isNotBlank()) {
+            val isSuccess = state.message.contains("completed", true) || state.message.contains("ready", true)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(GlassRadius.md))
+                    .background(
+                        if (isSuccess) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.20f)
+                    )
+                    .padding(horizontal = GlassSpacing.md, vertical = GlassSpacing.sm),
+                verticalArrangement = Arrangement.spacedBy(GlassSpacing.xxs),
+            ) {
+                Text(
+                    state.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                state.messageCount?.let {
+                    Text(
+                        "Synchronized messages: $it",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        if (BuildConfig.DEBUG) {
+            Button(
+                enabled = !state.isWorking,
+                shape = RoundedCornerShape(GlassRadius.innerLens),
+                colors = ButtonDefaults.filledTonalButtonColors(),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                onClick = { viewModel.seedDebugMailbox() },
+            ) {
+                Text("Use 100-message debug mailbox", style = MaterialTheme.typography.labelMedium)
+            }
+        }
     }
 }
+
+private const val GOOGLE_APP_PASSWORDS_URL = "https://myaccount.google.com/apppasswords"
 
 @Composable
 private fun SetupField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String, keyboardType: KeyboardType, password: Boolean = false) {
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .40f)).padding(horizontal = 14.dp, vertical = 10.dp),
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(GlassRadius.sm))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .40f))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         BasicTextField(
             value = value,
             onValueChange = onValueChange,

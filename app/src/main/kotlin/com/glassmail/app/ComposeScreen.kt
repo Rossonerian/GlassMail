@@ -13,8 +13,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
@@ -22,10 +26,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,8 +41,11 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Close
+import com.glassmail.designsystem.GlassRadius
+import com.glassmail.designsystem.GlassSpacing
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -101,20 +111,40 @@ fun ComposeRoute(
         }
         vm.addAttachments(attachments)
     }
+    var showCcBcc by remember { mutableStateOf(state.rawCc.isNotBlank() || state.rawBcc.isNotBlank()) }
+
     Scaffold(
         topBar = {
             GlassMailTopCapsule(
                 title = "Compose",
                 subtitle = when (state.status) {
-                    DraftStatus.SENDING -> "Sending"
+                    DraftStatus.SENDING -> "Sending…"
                     DraftStatus.SENT -> "Sent"
                     else -> "Draft saved locally"
                 },
                 quality = quality,
                 navigationIcon = { IconButton(back) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back") } },
                 actions = {
-                    TextButton(enabled = state.status != DraftStatus.SENDING, onClick = vm::send) {
-                        Text(if (state.status == DraftStatus.SENDING) "Sending…" else "Send")
+                    Button(
+                        enabled = state.status != DraftStatus.SENDING,
+                        onClick = vm::send,
+                        shape = RoundedCornerShape(GlassRadius.innerLens),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.Send,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            if (state.status == DraftStatus.SENDING) "Sending…" else "Send",
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
                 },
             )
@@ -122,47 +152,139 @@ fun ComposeRoute(
         contentWindowInsets = WindowInsets(0),
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).imePadding().navigationBarsPadding().padding(20.dp).verticalScroll(rememberScrollState()),
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .imePadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
-            ComposeLine("To", state.rawTo, vm::updateTo, "Required · separate addresses with commas")
-            ComposeLine("Cc", state.rawCc, vm::updateCc, "Optional")
-            ComposeLine("Bcc", state.rawBcc, vm::updateBcc, "Optional")
-            ComposeLine("Subject", draft.subject, vm::updateSubject, "Optional")
-            Spacer(Modifier.padding(top = 12.dp))
-            Text("Message", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Recipient field with inline Cc/Bcc toggle
+            Column(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = 4.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "To",
+                        modifier = Modifier.width(56.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    BasicTextField(
+                        value = state.rawTo,
+                        onValueChange = vm::updateTo,
+                        modifier = Modifier.weight(1f).semantics { contentDescription = "To" },
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                        decorationBox = { inner ->
+                            if (state.rawTo.isBlank()) {
+                                Text(
+                                    "Recipients (comma separated)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .72f),
+                                )
+                            }
+                            inner()
+                        },
+                    )
+                    if (!showCcBcc) {
+                        TextButton(
+                            onClick = { showCcBcc = true },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        ) {
+                            Text(
+                                "Cc/Bcc",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            }
+
+            if (showCcBcc) {
+                ComposeLine("Cc", state.rawCc, vm::updateCc, "Optional")
+                ComposeLine("Bcc", state.rawBcc, vm::updateBcc, "Optional")
+            }
+
+            ComposeLine("Subject", draft.subject, vm::updateSubject, "Subject")
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Message",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(6.dp))
             BasicTextField(
                 value = draft.body,
                 onValueChange = vm::updateBody,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp).semantics { contentDescription = "Message body" },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp).semantics { contentDescription = "Message body" },
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                minLines = 10,
+                minLines = 8,
                 decorationBox = { inner ->
-                    if (draft.body.isBlank()) Text("Write your message…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (draft.body.isBlank()) {
+                        Text("Write your message here…", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                    }
                     inner()
                 },
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = .10f))
-            TextButton(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.padding(top = 8.dp)) {
-                Icon(Icons.Outlined.AttachFile, contentDescription = null)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { picker.launch(arrayOf("*/*")) },
+                shape = RoundedCornerShape(GlassRadius.chip),
+                modifier = Modifier.padding(vertical = 4.dp),
+            ) {
+                Icon(Icons.Outlined.AttachFile, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Add attachment")
+                Text("Add attachment", style = MaterialTheme.typography.labelMedium)
             }
+
             draft.attachments.forEach { attachment ->
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .28f)).padding(start = 12.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(GlassRadius.md))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Outlined.AttachFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Column(Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 8.dp)) {
+                    Icon(Icons.Outlined.AttachFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                         Text(attachment.fileName, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                         Text(attachment.mimeType, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    IconButton(onClick = { vm.removeAttachment(attachment.uri) }) { Icon(Icons.Outlined.Close, contentDescription = "Remove ${attachment.fileName}") }
+                    IconButton(onClick = { vm.removeAttachment(attachment.uri) }) {
+                        Icon(Icons.Outlined.Close, contentDescription = "Remove ${attachment.fileName}")
+                    }
                 }
             }
-            state.error?.let { Text(it, Modifier.padding(top = 12.dp), color = MaterialTheme.colorScheme.error) }
+
+            state.error?.let {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .clip(RoundedCornerShape(GlassRadius.md))
+                        .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f))
+                        .padding(12.dp),
+                ) {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
         }
     }
 }

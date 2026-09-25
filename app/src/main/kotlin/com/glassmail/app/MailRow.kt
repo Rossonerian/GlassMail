@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.glassmail.domain.mail.MailListItem
 import androidx.compose.material.icons.Icons
@@ -26,7 +26,6 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,18 +38,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.glassmail.designsystem.GlassRadius
 import com.glassmail.designsystem.GlassSpacing
-import java.time.Instant
-import java.time.ZoneId
 import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.GlassSurface
 import com.glassmail.designsystem.glass.GlassTier
+import java.time.Instant
+import java.time.ZoneId
 
 /**
  * Minimalist, high-contrast liquid glass email list row.
- * Utilizes GlassTier.LITE hardware blur to ensure flawless 60fps scrolling performance
+ * Uses the LIGHT rendering tier for bounded per-surface blur cost during scrolling
  * when rendering 15+ cards on-screen simultaneously.
  */
 @Composable
@@ -65,62 +67,67 @@ fun MailRow(
     GlassSurface(
         material = GlassPresets.Card,
         modifier = modifier.fillMaxWidth(),
-        tierOverride = GlassTier.LITE,
+        tierOverride = GlassTier.LIGHT,
         backdropSampling = false,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 76.dp)
-                .clickable { open(row.messageId) }
-                .padding(horizontal = GlassSpacing.lg, vertical = GlassSpacing.md),
+                .heightIn(min = 80.dp)
+                .clickable(
+                    onClickLabel = "Open message",
+                    onClick = { open(row.messageId) },
+                )
+                .padding(horizontal = GlassSpacing.base, vertical = GlassSpacing.md),
             horizontalArrangement = Arrangement.spacedBy(GlassSpacing.md),
             verticalAlignment = Alignment.Top,
         ) {
-            // Unread vertical accent indicator
-            if (row.unread) {
-                Box(
-                    modifier = Modifier
-                        .width(4.dp)
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(MaterialTheme.colorScheme.primary),
-                )
-            } else {
-                Spacer(modifier = Modifier.width(4.dp))
-            }
+            // Unread subtle sage indicator dot
+            Box(
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (row.unread) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    ),
+            )
 
             // Message metadata and preview column
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
                     text = row.sender,
                     style = if (row.unread) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = if (row.unread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = row.subject.ifBlank { "(No subject)" },
-                    style = if (row.unread) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = row.preview,
+                    text = row.subject.ifBlank { "(No subject)" },
+                    style = if (row.unread) {
+                        MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                    } else {
+                        MaterialTheme.typography.bodyMedium
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    color = if (row.unread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = row.preview,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
                 )
 
                 val visibleLabel = row.labels.firstOrNull { !it.equals("INBOX", ignoreCase = true) }
                 if (visibleLabel != null || row.hasAttachment) {
                     Row(
-                        modifier = Modifier.padding(top = 2.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(GlassSpacing.xs),
                     ) {
@@ -129,22 +136,22 @@ fun MailRow(
                                 Icons.Outlined.AttachFile,
                                 contentDescription = "Has attachment",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(14.dp),
+                                modifier = Modifier.size(15.dp),
                             )
                         }
                         visibleLabel?.let { label ->
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp),
                             ) {
                                 Text(
                                     text = label,
                                     style = MaterialTheme.typography.labelSmall,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 )
                             }
                         }
@@ -170,7 +177,7 @@ fun MailRow(
                         Icon(
                             if (row.starred) Icons.Outlined.Star else Icons.Outlined.StarBorder,
                             contentDescription = if (row.starred) "Unstar" else "Star",
-                            tint = if (row.starred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            tint = if (row.starred) Color(0xFFE5A93C) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -239,7 +246,6 @@ fun MailRow(
                 }
             }
         }
-
     }
 }
 

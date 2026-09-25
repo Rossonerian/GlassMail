@@ -43,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -55,9 +54,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.glassmail.designsystem.glass.GlassPresets
+import com.glassmail.designsystem.glass.BackdropSource
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
 import com.glassmail.designsystem.glass.GlassTier
+import com.glassmail.designsystem.glass.LocalBackdropSource
 import com.glassmail.designsystem.glass.LocalGlassPreferences
 import kotlin.math.roundToInt
 
@@ -73,6 +74,7 @@ fun MorphingDock(
     onCompose: (() -> Unit)? = null,
     backdropKey: Any? = Unit,
     backdropFrozen: Boolean = false,
+    backdropSource: BackdropSource = LocalBackdropSource.current,
     modifier: Modifier = Modifier,
 ) {
     val destinations = if (onCompose == null) {
@@ -91,7 +93,7 @@ fun MorphingDock(
     }
     val preferences = LocalGlassPreferences.current
     val width by animateDpAsState(
-        targetValue = if (compact) 224.dp else 336.dp,
+        targetValue = if (compact) 230.dp else 340.dp,
         animationSpec = if (preferences.reduceMotion) tween(100) else spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = .86f),
         label = "floatingDockWidth",
     )
@@ -108,7 +110,7 @@ fun MorphingDock(
     Box(
         modifier
             .navigationBarsPadding()
-            .padding(bottom = 16.dp)
+            .padding(bottom = 12.dp)
             .width(width)
             .height(60.dp),
         contentAlignment = Alignment.Center,
@@ -116,14 +118,15 @@ fun MorphingDock(
         GlassSurface(
             material = GlassPresets.BottomBar.copy(cornerRadius = GlassRadius.dock),
             tierOverride = when (quality) {
-                GlassQuality.AUTOMATIC -> GlassTier.BALANCED
-                GlassQuality.LIQUID -> GlassTier.FULL
-                GlassQuality.BLUR -> GlassTier.LITE
-                GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
+                GlassQuality.FULL -> GlassTier.FULL
+                GlassQuality.BALANCED -> GlassTier.BALANCED
+                GlassQuality.LIGHT -> GlassTier.LIGHT
+                GlassQuality.OFF -> GlassTier.OFF
             },
             shape = RoundedCornerShape(GlassRadius.dock),
             modifier = Modifier.fillMaxSize(),
             backdropSampling = true,
+            backdropSource = backdropSource,
             backdropKey = backdropKey,
             backdropFrozen = backdropFrozen,
         ) {
@@ -173,15 +176,19 @@ fun MorphingDock(
                         Modifier.offset(x = currentOffset)
                             .width(slotWidth)
                             .fillMaxHeight()
-                            .padding(5.dp)
+                            .padding(4.dp)
                             .clip(RoundedCornerShape(GlassRadius.innerLens))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = if (dragActive) .24f else .18f)),
+                            .background(
+                                MaterialTheme.colorScheme.primaryContainer.copy(
+                                    alpha = if (dragActive) 0.52f else 0.40f,
+                                ),
+                            ),
                     )
                     Row(Modifier.fillMaxSize()) {
                         destinations.forEachIndexed { index, destination ->
                             val visualActive = if (dragActive) index == previewIndex else index == selectedIndex
                             val iconScale by animateFloatAsState(
-                                targetValue = if (visualActive) 1.06f else 1f,
+                                targetValue = if (visualActive) 1.05f else 1f,
                                 animationSpec = if (preferences.reduceMotion) tween(80) else GlassMotion.SpringSubtle,
                                 label = "dockIconScale$index",
                             )
@@ -200,7 +207,7 @@ fun MorphingDock(
                                     Icon(
                                         destination.icon,
                                         contentDescription = null,
-                                        tint = if (visualActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint = if (visualActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                                         modifier = Modifier.size(20.dp).scale(iconScale),
                                     )
                                     if (!compact && visualActive) {

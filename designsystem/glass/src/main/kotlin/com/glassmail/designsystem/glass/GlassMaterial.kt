@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -65,28 +66,24 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
-/**
- * Rendering tiers bounding GPU shader cost based on device capability and accessibility settings.
- */
-enum class GlassTier {
-    /** Full optical pipeline: live backdrop + gaussian blur + AGSL refraction + dispersion + specular rim. */
-    FULL,
-    /** Balanced pipeline: live backdrop + blur + refraction + simplified highlight. */
-    BALANCED,
-    /** Lite pipeline: blur + tint + simplified rim without expensive dispersion. */
-    LITE,
-    /** Accessibility fallback: mostly opaque tonal surface with high contrast and no distortion. */
-    ACCESSIBILITY,
-}
+/** Selects one of the separately implemented glass rendering paths. */
+enum class GlassQuality { FULL, BALANCED, LIGHT, OFF }
 
-/** Public quality contract preserved for backwards compatibility with preferences. */
-enum class GlassQuality { AUTOMATIC, LIQUID, BLUR, TRANSPARENT }
+/** Kept as a source-compatible name for existing material call sites. */
+typealias GlassTier = GlassQuality
 
 data class GlassPreferences(
     val reduceTransparency: Boolean = false,
     val reduceMotion: Boolean = false,
-    val preferredTier: GlassTier? = null,
+    val preferredTier: GlassQuality? = null,
 )
+
+/** Resolve the requested tier before any platform-specific shader/effect is created. */
+fun resolveGlassQuality(requested: GlassQuality, sdkInt: Int = Build.VERSION.SDK_INT): GlassQuality = when {
+    sdkInt < Build.VERSION_CODES.S -> GlassQuality.OFF
+    sdkInt < Build.VERSION_CODES.TIRAMISU && requested in setOf(GlassQuality.FULL, GlassQuality.BALANCED) -> GlassQuality.LIGHT
+    else -> requested
+}
 
 val LocalGlassPreferences = staticCompositionLocalOf { GlassPreferences() }
 
@@ -261,8 +258,8 @@ fun Modifier.glassPress(
 /**
  * Core optical glass surface.
  *
- * Samples the live [BackdropSource] recorded by an enclosing [GlassProvider], applying
- * hardware-accelerated AGSL rounded-lens refraction, chromatic dispersion, and gaussian blur.
+ * Samples the live [BackdropSource] recorded by a [BackdropProvider] in a separate draw layer,
+ * applying hardware-accelerated AGSL rounded-lens refraction or the selected fallback.
  * Sharp content remains on the foreground layer without undergoing optical distortion.
  */
 @Composable
@@ -278,83 +275,57 @@ fun GlassSurface(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val preferences = LocalGlassPreferences.current
-    val effectiveTier = when {
-        preferences.reduceTransparency -> GlassTier.ACCESSIBILITY
+    val requestedTier = when {
+        preferences.reduceTransparency -> GlassQuality.OFF
         tierOverride != null -> tierOverride
         preferences.preferredTier != null -> preferences.preferredTier
-        else -> GlassTier.FULL
+        else -> GlassQuality.BALANCED
     }
-
+    val platformTier = resolveGlassQuality(requestedTier)
+    val samplingOwnCapture = LocalBackdropCaptureSource.current === backdropSource
     val density = LocalDensity.current
+    val context = LocalContext.current
     var surfaceBoundsInWindow by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
 
-    val liquidShader = remember(effectiveTier) {
-        if (effectiveTier != GlassTier.FULL && effectiveTier != GlassTier.BALANCED) null
-        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            runCatching { RuntimeShader(PHYSICAL_LENS_SHADER) }
-                .onFailure { Log.w(GLASS_LOG_TAG, "AGSL runtime shader failed to initialize", it) }
-                .getOrNull()
-        } else null
+    val liquidShader = remember(platformTier, context) {
+        val shaderResource = when (platformTier) {
+            GlassQuality.FULL -> R.raw.glass_lens_full
+            GlassQuality.BALANCED -> R.raw.glass_lens_balanced
+            GlassQuality.LIGHT, GlassQuality.OFF -> null
+        }
+        if (shaderResource == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            null
+        } else {
+            runCatching {
+                val source = context.resources.openRawResource(shaderResource).bufferedReader().use { it.readText() }
+                RuntimeShader(source)
+            }.onFailure { Log.w(GLASS_LOG_TAG, "AGSL runtime shader failed to initialize", it) }.getOrNull()
+        }
     }
 
     val surfaceWidthPx = surfaceBoundsInWindow?.width ?: 0f
     val surfaceHeightPx = surfaceBoundsInWindow?.height ?: 0f
     val cornerRadiusPx = with(density) { material.cornerRadius.toPx() }
+    val refractionHeightPx = with(density) { material.refractionHeight.toPx() }
+
+    val effectiveTier = if (
+        liquidShader == null && platformTier in setOf(GlassQuality.FULL, GlassQuality.BALANCED)
+    ) GlassQuality.LIGHT else platformTier
 
     val resolvedTint = if (material.tint != Color.Unspecified) {
         material.tint.copy(alpha = material.opacity)
     } else {
         MaterialTheme.colorScheme.surface.copy(
-            alpha = when (effectiveTier) {
-                GlassTier.ACCESSIBILITY -> 0.98f
-                GlassTier.LITE -> 0.68f
-                GlassTier.BALANCED -> 0.54f
-                GlassTier.FULL -> material.opacity
+            alpha = if (preferences.reduceTransparency) 0.98f else when (effectiveTier) {
+                GlassQuality.OFF -> 0.78f
+                GlassQuality.LIGHT -> 0.68f
+                GlassQuality.BALANCED -> 0.54f
+                GlassQuality.FULL -> material.opacity
             },
         )
     }
 
-    // Configure shader uniforms dynamically as layout geometry changes
-    if (liquidShader != null && surfaceWidthPx > 0f && surfaceHeightPx > 0f) {
-        liquidShader.setFloatUniform("resolution", surfaceWidthPx, surfaceHeightPx)
-        liquidShader.setFloatUniform("cornerRadius", cornerRadiusPx)
-        liquidShader.setFloatUniform("refraction", if (effectiveTier == GlassTier.FULL) material.refraction else material.refraction * 0.7f)
-        liquidShader.setFloatUniform("dispersion", if (effectiveTier == GlassTier.FULL) material.dispersion else 0.0f)
-        liquidShader.setFloatUniform("rimLight", material.rimLight)
-        liquidShader.setFloatUniform("specularIntensity", material.specularIntensity)
-        liquidShader.setFloatUniform("specularAngle", material.specularAngle)
-        liquidShader.setFloatUniform("highlightFalloff", material.highlightFalloff)
-        liquidShader.setFloatUniform(
-            "tintColor",
-            resolvedTint.red,
-            resolvedTint.green,
-            resolvedTint.blue,
-            resolvedTint.alpha,
-        )
-        liquidShader.setFloatUniform("luminanceAdaptation", material.luminanceAdaptation)
-    }
-
-    val blurRadiusPx = with(density) { material.blur.toPx() }.coerceAtLeast(1f)
-    val opticalRenderEffect = remember(effectiveTier, liquidShader, blurRadiusPx, surfaceWidthPx, surfaceHeightPx, material, resolvedTint) {
-        if (effectiveTier == GlassTier.ACCESSIBILITY || surfaceWidthPx <= 0f || surfaceHeightPx <= 0f) null
-        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            runCatching {
-                val blur = RenderEffect.createBlurEffect(blurRadiusPx, blurRadiusPx, Shader.TileMode.CLAMP)
-                when (effectiveTier) {
-                    GlassTier.FULL, GlassTier.BALANCED -> liquidShader?.let { shader ->
-                        RenderEffect.createChainEffect(
-                            RenderEffect.createRuntimeShaderEffect(shader, "content"),
-                            blur,
-                        ).asComposeRenderEffect()
-                    } ?: blur.asComposeRenderEffect()
-                    GlassTier.LITE -> blur.asComposeRenderEffect()
-                    GlassTier.ACCESSIBILITY -> null
-                }
-            }.onFailure { Log.w(GLASS_LOG_TAG, "RenderEffect failed", it) }.getOrNull()
-        } else null
-    }
-
-    val relativeOffset by remember(surfaceBoundsInWindow, backdropSource.providerOffsetInWindow) {
+    val relativeOffset by remember(surfaceBoundsInWindow, backdropSource) {
         derivedStateOf {
             val bounds = surfaceBoundsInWindow ?: return@derivedStateOf Offset.Zero
             Offset(
@@ -362,6 +333,40 @@ fun GlassSurface(
                 y = bounds.top - backdropSource.providerOffsetInWindow.y,
             )
         }
+    }
+
+    // Uniform updates reuse the remembered RuntimeShader; pointer/material changes redraw this
+    // glass surface without touching the provider's GraphicsLayer.
+    if (liquidShader != null && surfaceWidthPx > 0f && surfaceHeightPx > 0f) {
+        liquidShader.setFloatUniform("resolution", surfaceWidthPx, surfaceHeightPx)
+        liquidShader.setFloatUniform("offset", relativeOffset.x, relativeOffset.y)
+        liquidShader.setFloatUniform("cornerRadius", cornerRadiusPx)
+        liquidShader.setFloatUniform("refractionHeight", refractionHeightPx * material.refraction.coerceAtLeast(0f))
+        if (effectiveTier == GlassQuality.FULL) {
+            liquidShader.setFloatUniform("chromaticAberrationStrength", material.dispersion.coerceAtLeast(0f))
+        }
+    }
+
+    val blurRadiusPx = with(density) { material.blur.toPx() }.coerceAtLeast(1f)
+    val opticalRenderEffect = remember(effectiveTier, liquidShader, blurRadiusPx, surfaceWidthPx, surfaceHeightPx) {
+        if (surfaceWidthPx <= 0f || surfaceHeightPx <= 0f || effectiveTier == GlassQuality.OFF) {
+            null
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            runCatching {
+                val blur = RenderEffect.createBlurEffect(blurRadiusPx, blurRadiusPx, Shader.TileMode.CLAMP)
+                when (effectiveTier) {
+                    GlassQuality.FULL, GlassQuality.BALANCED -> {
+                        val shader = requireNotNull(liquidShader)
+                        RenderEffect.createChainEffect(
+                            RenderEffect.createRuntimeShaderEffect(shader, "content"),
+                            blur,
+                        ).asComposeRenderEffect()
+                    }
+                    GlassQuality.LIGHT -> blur.asComposeRenderEffect()
+                    GlassQuality.OFF -> null
+                }
+            }.onFailure { Log.w(GLASS_LOG_TAG, "RenderEffect failed; glass is using a flat tint", it) }.getOrNull()
+        } else null
     }
 
     Box(
@@ -384,7 +389,7 @@ fun GlassSurface(
             ),
     ) {
         // --- Live Optical Backdrop Layer ---
-        if (effectiveTier != GlassTier.ACCESSIBILITY && backdropSampling && backdropSource.layer != null) {
+        if (!samplingOwnCapture && backdropSampling && backdropSource.layer != null && effectiveTier != GlassQuality.OFF) {
             Canvas(
                 modifier = Modifier
                     .matchParentSize()
@@ -406,7 +411,7 @@ fun GlassSurface(
                 .matchParentSize()
                 .background(resolvedTint),
         )
-        if (effectiveTier != GlassTier.ACCESSIBILITY) {
+        if (effectiveTier != GlassQuality.OFF) {
             Box(
                 Modifier
                     .matchParentSize()
@@ -440,16 +445,11 @@ fun GlassSurface(
     backdropFrozen: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val tier = when (quality) {
-        GlassQuality.AUTOMATIC -> GlassTier.BALANCED
-        GlassQuality.LIQUID -> GlassTier.FULL
-        GlassQuality.BLUR -> GlassTier.LITE
-        GlassQuality.TRANSPARENT -> GlassTier.ACCESSIBILITY
-    }
+    val tier = quality
     val material = when (quality) {
-        GlassQuality.AUTOMATIC, GlassQuality.LIQUID -> GlassPresets.Toolbar
-        GlassQuality.BLUR -> GlassPresets.Toolbar.copy(refraction = 0f, dispersion = 0f)
-        GlassQuality.TRANSPARENT -> GlassPresets.Toolbar.copy(opacity = 0.78f, refraction = 0f, dispersion = 0f, blur = 0.dp)
+        GlassQuality.FULL, GlassQuality.BALANCED -> GlassPresets.Toolbar
+        GlassQuality.LIGHT -> GlassPresets.Toolbar.copy(refraction = 0f, dispersion = 0f)
+        GlassQuality.OFF -> GlassPresets.Toolbar.copy(opacity = 0.78f, refraction = 0f, dispersion = 0f, blur = 0.dp)
     }
     GlassSurface(
         material = material,
@@ -721,85 +721,5 @@ fun GlassSwitch(
         )
     }
 }
-
-// =========================================================================
-// PHYSICAL AGSL SHADER IMPLEMENTATION (Phase 1)
-// =========================================================================
-
-private const val PHYSICAL_LENS_SHADER = """
-uniform shader content;
-uniform float2 resolution;
-uniform float cornerRadius;
-uniform float refraction;
-uniform float dispersion;
-uniform float rimLight;
-uniform float specularIntensity;
-uniform float specularAngle;
-uniform float highlightFalloff;
-uniform float4 tintColor;
-uniform float luminanceAdaptation;
-
-float roundedBoxSDF(float2 p, float2 size, float r) {
-    float2 d = abs(p - size * 0.5) - size * 0.5 + float2(r, r);
-    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - r;
-}
-
-half4 main(float2 p) {
-    float r = clamp(cornerRadius, 0.0, min(resolution.x, resolution.y) * 0.5);
-    float dist = roundedBoxSDF(p, resolution, r);
-
-    // Discard pixels strictly outside rounded boundary
-    if (dist > 1.5) {
-        return half4(0.0);
-    }
-
-    // Edge proximity factor (smooth decay over 28px inward)
-    float edgeDist = abs(dist);
-    float edgeFactor = smoothstep(28.0, 0.0, edgeDist);
-
-    // Directional vector away from center for physical lens distortion
-    float2 center = resolution * 0.5;
-    float2 fromCenter = p - center;
-    float centerDist = length(fromCenter);
-    float2 normal = normalize(fromCenter + float2(0.0001, 0.0001));
-
-    // Refractive displacement magnitude (stronger near corners and perimeter)
-    float dispMag = (edgeFactor * 0.75 + 0.25 * (centerDist / max(center.x, 1.0))) * refraction * 10.0;
-    float2 dispVector = normal * dispMag;
-
-    // Chromatic dispersion (per-channel chromatic offset)
-    float dispAmount = dispersion * 3.0 * edgeFactor;
-    float2 pR = clamp(p + dispVector + normal * dispAmount, float2(0.0), resolution);
-    float2 pG = clamp(p + dispVector, float2(0.0), resolution);
-    float2 pB = clamp(p + dispVector - normal * dispAmount, float2(0.0), resolution);
-
-    half4 colorR = content.eval(pR);
-    half4 colorG = content.eval(pG);
-    half4 colorB = content.eval(pB);
-    half4 baseColor = half4(colorR.r, colorG.g, colorB.b, colorG.a);
-
-    // Environmental tint blend
-    half3 tinted = mix(baseColor.rgb, tintColor.rgb, tintColor.a);
-
-    // Dynamic luminance adaptation for contrast safety
-    if (luminanceAdaptation > 0.0) {
-        float lum = dot(baseColor.rgb, half3(0.2126, 0.7152, 0.0722));
-        float adapt = (lum - 0.5) * luminanceAdaptation;
-        tinted = clamp(tinted - half3(adapt * 0.12), 0.0, 1.0);
-    }
-
-    // Directional specular rim highlight
-    float2 lightDir = float2(cos(specularAngle), sin(specularAngle));
-    float rimAlignment = max(dot(-normal, lightDir), 0.0);
-    float specular = pow(rimAlignment, max(highlightFalloff, 1.0)) * specularIntensity * edgeFactor;
-
-    // Perimeter ambient rim glow
-    float rim = edgeFactor * rimLight * 0.22;
-
-    half3 finalRgb = tinted + half3(rim + specular);
-    float alpha = smoothstep(1.0, -1.0, dist);
-    return half4(finalRgb, baseColor.a * alpha);
-}
-"""
 
 private const val GLASS_LOG_TAG = "GlassMailGlass"
