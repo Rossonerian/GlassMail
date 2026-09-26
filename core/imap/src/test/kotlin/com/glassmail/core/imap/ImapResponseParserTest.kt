@@ -34,4 +34,35 @@ class ImapResponseParserTest {
         val literal = response.values[2].listValue().attribute("BODY[]")
         assertEquals("hello", literal?.literalValue()?.decodeToString())
     }
+
+    @Test
+    fun `parses Gmail SELECT status response codes in square brackets`() {
+        val response = ImapResponseParser.parse(
+            "* OK [UIDVALIDITY 12345] UIDs valid",
+            emptyList(),
+        ) as ImapResponse.Untagged
+
+        val responseCode = response.values[1].listValue()
+        assertEquals("UIDVALIDITY", responseCode[0].atomValue())
+        assertEquals("12345", responseCode.attribute("UIDVALIDITY")?.atomValue())
+        assertEquals("UIDs", response.values[2].atomValue())
+    }
+
+    @Test
+    fun `missing response attribute does not return the first value`() {
+        val values = listOf(ImapValue.Atom("UIDVALIDITY"), ImapValue.Atom("12345"))
+
+        assertEquals(null, values.attribute("UIDNEXT"))
+    }
+
+    @Test
+    fun `keeps spaces and parentheses inside BODY section atoms`() {
+        val response = ImapResponseParser.parse(
+            "* 1 FETCH (UID 7 BODY[HEADER.FIELDS (DATE FROM)] \u0000L0\u0000)",
+            listOf("x".encodeToByteArray()),
+        ) as ImapResponse.Untagged
+
+        val fields = response.values[2].listValue()
+        assertEquals("x", fields.attribute("BODY[HEADER.FIELDS (DATE FROM)]")?.literalValue()?.decodeToString())
+    }
 }

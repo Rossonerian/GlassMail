@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -25,11 +26,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MarkEmailUnread
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +55,7 @@ import com.glassmail.domain.mail.SyncAccountUseCase
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -60,37 +64,49 @@ import com.glassmail.designsystem.GlassRadius
 import com.glassmail.designsystem.GlassSpacing
 
 @Composable
-fun AccountSetupRoute(graph: AppGraph) {
+fun AccountSetupRoute(graph: AppGraph, onConnected: () -> Unit = {}) {
     val viewModel: AccountSetupViewModel = viewModel(factory = AccountSetupViewModel.factory(graph))
     val state by viewModel.state.collectAsStateWithLifecycle()
     var email by remember { mutableStateOf("") }
     var appPassword by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()
-            .imePadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = GlassSpacing.lg, vertical = GlassSpacing.xl),
-        verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
+    LaunchedEffect(state.connected) {
+        if (state.connected) onConnected()
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
-        Spacer(Modifier.height(GlassSpacing.md))
-        Icon(
-            Icons.Outlined.MarkEmailUnread,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(48.dp),
-        )
-        Text("GlassMail", style = MaterialTheme.typography.headlineLarge)
-        FlatMetadata("Local-first Gmail setup", color = MaterialTheme.colorScheme.primary)
-        Text(
-            "Connect one Gmail account securely. Mail metadata is cached locally so the inbox stays responsive and useful offline.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .imePadding()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = GlassSpacing.lg, vertical = GlassSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
+        ) {
+            Spacer(Modifier.height(GlassSpacing.md))
+            Icon(
+                Icons.Outlined.MarkEmailUnread,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(48.dp),
+            )
+            Text(
+                "GlassMail",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            FlatMetadata("Local-first Gmail setup", color = MaterialTheme.colorScheme.primary)
+            Text(
+                "Connect one Gmail account securely. Mail metadata is cached locally so the inbox stays responsive and useful offline.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
         Spacer(Modifier.height(GlassSpacing.xs))
 
@@ -98,7 +114,8 @@ fun AccountSetupRoute(graph: AppGraph) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(GlassRadius.card))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(GlassRadius.card))
                 .padding(GlassSpacing.md),
             verticalArrangement = Arrangement.spacedBy(GlassSpacing.md),
         ) {
@@ -127,7 +144,7 @@ fun AccountSetupRoute(graph: AppGraph) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 52.dp),
-                enabled = !state.isWorking && email.isNotBlank() && appPassword.isNotBlank(),
+                enabled = !state.isWorking && email.isNotBlank() && (appPassword.any { !it.isWhitespace() } || state.canRetrySync),
                 shape = RoundedCornerShape(GlassRadius.innerLens),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -136,13 +153,21 @@ fun AccountSetupRoute(graph: AppGraph) {
                     disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
                 ),
                 onClick = {
-                    val credential = appPassword.toCharArray()
+                    if (appPassword.isBlank()) {
+                        viewModel.retrySync(email)
+                        return@Button
+                    }
+                    val credential = appPassword.filterNot(Char::isWhitespace).toCharArray()
                     appPassword = ""
                     viewModel.connect(email, credential)
                 },
             ) {
                 Text(
-                    if (state.isWorking) "Connecting…" else "Store securely & sync",
+                    when {
+                        state.isWorking -> "Connecting…"
+                        state.canRetrySync && appPassword.none { !it.isWhitespace() } -> "Retry sync"
+                        else -> "Connect & sync"
+                    },
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -188,6 +213,7 @@ fun AccountSetupRoute(graph: AppGraph) {
             }
         }
     }
+    }
 }
 
 private const val GOOGLE_APP_PASSWORDS_URL = "https://myaccount.google.com/apppasswords"
@@ -198,7 +224,8 @@ private fun SetupField(label: String, value: String, onValueChange: (String) -> 
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(GlassRadius.sm))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .40f))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(GlassRadius.sm))
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -225,6 +252,8 @@ data class AccountSetupUiState(
     val message: String = "Enter a Gmail address and Google App Password.",
     val messageCount: Int? = null,
     val gmailExtensionsEnabled: Boolean? = null,
+    val canRetrySync: Boolean = false,
+    val connected: Boolean = false,
 )
 
 class AccountSetupViewModel(
@@ -233,33 +262,86 @@ class AccountSetupViewModel(
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(AccountSetupUiState())
     val state: StateFlow<AccountSetupUiState> = mutableState.asStateFlow()
+    private var pendingAccountId: String? = null
+    private var pendingEmail: String? = null
 
     fun connect(email: String, credential: CharArray) {
         viewModelScope.launch {
-            mutableState.value = AccountSetupUiState(isWorking = true, message = "Connecting securely…")
-            val accountId = UUID.randomUUID().toString()
-            try {
-                graph.mailRepository.createAccount(accountId, email)
-                graph.credentialStore.store(accountId, credential)
-                when (val result = syncAccount(accountId)) {
-                    is MailSyncResult.Success -> {
-                        graph.syncScheduler.schedulePeriodic(accountId)
-                        mutableState.value = AccountSetupUiState(
-                            message = "Sync completed.",
-                            messageCount = result.messageCount,
-                            gmailExtensionsEnabled = result.gmailExtensionsEnabled,
-                        )
-                    }
-                    is MailSyncResult.Failure -> mutableState.value = AccountSetupUiState(
-                        message = result.error.toUserMessage(),
-                    )
+            val normalizedEmail = email.trim()
+            val currentAccounts = graph.mailRepository.observeAccounts().first().filterNot { it.accountId == "debug-fixture" }
+            val existingAccount = currentAccounts.firstOrNull { it.email.equals(normalizedEmail, ignoreCase = true) }
+            if (existingAccount == null && currentAccounts.size >= 2) {
+                credential.fill('\u0000')
+                mutableState.value = AccountSetupUiState(message = "The free version supports up to two accounts.")
+                return@launch
+            }
+            val previousPendingId = pendingAccountId
+            if (previousPendingId != null && !pendingEmail.equals(normalizedEmail, ignoreCase = true)) {
+                graph.mailRepository.removeAccount(previousPendingId)
+                pendingAccountId = null
+                pendingEmail = null
+            }
+            val accountId = existingAccount?.accountId ?: pendingAccountId?.takeIf { pendingEmail.equals(normalizedEmail, ignoreCase = true) }
+                ?: UUID.randomUUID().toString().also {
+                    pendingAccountId = it
+                    pendingEmail = normalizedEmail
                 }
+            mutableState.value = AccountSetupUiState(isWorking = true, message = "Connecting securely…")
+            try {
+                graph.mailRepository.createAccount(accountId, normalizedEmail, syncState = "CONNECTING")
+                graph.credentialStore.store(accountId, credential)
+                completeConnection(accountId)
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
-                mutableState.value = AccountSetupUiState(message = "Secure setup could not complete.")
+                mutableState.value = AccountSetupUiState(
+                    message = "Secure setup could not complete. Check your connection and try again.",
+                    canRetrySync = true,
+                )
             } finally {
                 credential.fill('\u0000')
+            }
+        }
+    }
+
+    fun retrySync(email: String) {
+        val accountId = pendingAccountId ?: return
+        if (!pendingEmail.equals(email.trim(), ignoreCase = true)) {
+            mutableState.value = AccountSetupUiState(message = "The email changed. Enter its App Password to connect it.")
+            return
+        }
+        viewModelScope.launch {
+            mutableState.value = AccountSetupUiState(isWorking = true, message = "Retrying mailbox sync…")
+            completeConnection(accountId)
+        }
+    }
+
+    private suspend fun completeConnection(accountId: String) {
+        when (val result = syncAccount(accountId)) {
+            is MailSyncResult.Success -> {
+                graph.syncScheduler.schedulePeriodic(accountId)
+                runCatching { com.glassmail.sync.IdleServiceController.start(graph.context) }
+                mutableState.value = AccountSetupUiState(
+                    message = "Your inbox is ready.",
+                    messageCount = result.messageCount,
+                    gmailExtensionsEnabled = result.gmailExtensionsEnabled,
+                    connected = true,
+                )
+                pendingAccountId = null
+                pendingEmail = null
+            }
+            is MailSyncResult.Failure -> {
+                if (result.error == com.glassmail.core.model.MailSyncError.Authentication) {
+                    graph.mailRepository.removeAccount(accountId)
+                    pendingAccountId = null
+                    pendingEmail = null
+                    mutableState.value = AccountSetupUiState(message = result.error.toUserMessage())
+                } else {
+                    mutableState.value = AccountSetupUiState(
+                        message = result.error.toUserMessage(),
+                        canRetrySync = true,
+                    )
+                }
             }
         }
     }
@@ -268,7 +350,7 @@ class AccountSetupViewModel(
         viewModelScope.launch {
             mutableState.value = AccountSetupUiState(isWorking = true, message = "Seeding deterministic local mailbox…")
             graph.mailRepository.seedDebugMailbox(100)
-            mutableState.value = AccountSetupUiState(message = "Debug mailbox ready. Open Inbox.", messageCount = 100)
+            mutableState.value = AccountSetupUiState(message = "Debug mailbox ready.", messageCount = 100, connected = true)
         }
     }
 

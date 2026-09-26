@@ -5,230 +5,277 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Inbox
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.BackdropSource
+import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
-import com.glassmail.designsystem.glass.GlassTier
-import com.glassmail.designsystem.glass.LocalBackdropSource
 import com.glassmail.designsystem.glass.LocalGlassPreferences
-import kotlin.math.roundToInt
+import com.glassmail.designsystem.glass.LocalBackdropSource
 
-private data class DockDestination(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-
-/** One centered optical navigation object. Content beneath it is intentionally never boxed out. */
+/** Three always-visible actions with a spring lens that follows Square's continuous dock motion. */
 @Composable
 fun MorphingDock(
-    compact: Boolean,
     selectedIndex: Int,
     quality: GlassQuality,
     onSelect: (Int) -> Unit,
-    onCompose: (() -> Unit)? = null,
-    backdropKey: Any? = Unit,
-    backdropFrozen: Boolean = false,
+    onCompose: () -> Unit,
+    onInboxHold: () -> Unit = {},
+    collapseFraction: () -> Float = { 0f },
     backdropSource: BackdropSource = LocalBackdropSource.current,
     modifier: Modifier = Modifier,
 ) {
-    val destinations = if (onCompose == null) {
-        listOf(
-            DockDestination("Inbox", Icons.Outlined.Inbox),
-            DockDestination("Search", Icons.Outlined.Search),
-            DockDestination("Settings", Icons.Outlined.Settings),
-        )
-    } else {
-        listOf(
-            DockDestination("Inbox", Icons.Outlined.Inbox),
-            DockDestination("Search", Icons.Outlined.Search),
-            DockDestination("Compose", Icons.Outlined.Edit),
-            DockDestination("Settings", Icons.Outlined.Settings),
-        )
-    }
-    val preferences = LocalGlassPreferences.current
-    val width by animateDpAsState(
-        targetValue = if (compact) 230.dp else 340.dp,
-        animationSpec = if (preferences.reduceMotion) tween(100) else spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = .86f),
-        label = "floatingDockWidth",
+    val reduceMotion = LocalGlassPreferences.current.reduceMotion
+    val rawCollapse = collapseFraction().coerceIn(0f, 1f)
+    val collapseProgress by animateFloatAsState(
+        targetValue = if (reduceMotion) 0f else rawCollapse,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = 0.85f,
+        ),
+        label = "dockCollapseProgress",
     )
-    var dragActive by remember { mutableStateOf(false) }
-    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
-    var previewIndex by remember { mutableIntStateOf(selectedIndex) }
-    val haptics = LocalHapticFeedback.current
-    val density = LocalDensity.current
-
-    LaunchedEffect(selectedIndex, dragActive) {
-        if (!dragActive) previewIndex = selectedIndex
-    }
+    val dockHeight by animateDpAsState(
+        targetValue = androidx.compose.ui.unit.lerp(78.dp, 52.dp, collapseProgress),
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = 0.85f,
+        ),
+        label = "dockHeight",
+    )
+    val dockWidth by animateDpAsState(
+        targetValue = androidx.compose.ui.unit.lerp(356.dp, 216.dp, collapseProgress),
+        animationSpec = spring(
+            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = 0.85f,
+        ),
+        label = "dockWidth",
+    )
+    val dockCornerRadius = androidx.compose.ui.unit.lerp(GlassRadius.dock, 26.dp, collapseProgress)
+    val lensCornerRadius = androidx.compose.ui.unit.lerp(GlassRadius.innerLens, 20.dp, collapseProgress)
 
     Box(
         modifier
+            .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(bottom = 12.dp)
-            .width(width)
-            .height(60.dp),
+            .padding(horizontal = 10.dp)
+            .padding(bottom = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         GlassSurface(
-            material = GlassPresets.BottomBar.copy(cornerRadius = GlassRadius.dock),
-            tierOverride = when (quality) {
-                GlassQuality.FULL -> GlassTier.FULL
-                GlassQuality.BALANCED -> GlassTier.BALANCED
-                GlassQuality.LIGHT -> GlassTier.LIGHT
-                GlassQuality.OFF -> GlassTier.OFF
-            },
-            shape = RoundedCornerShape(GlassRadius.dock),
-            modifier = Modifier.fillMaxSize(),
+            material = GlassPresets.Navigation.copy(
+                opacity = 0.88f,
+                tint = MaterialTheme.colorScheme.surface,
+            ),
+            tierOverride = quality,
+            shape = RoundedCornerShape(dockCornerRadius),
+            modifier = Modifier
+                .width(dockWidth)
+                .height(dockHeight),
             backdropSampling = true,
             backdropSource = backdropSource,
-            backdropKey = backdropKey,
-            backdropFrozen = backdropFrozen,
         ) {
-            BoxWithConstraints(Modifier.fillMaxSize()) {
-                val slotWidth = maxWidth / destinations.size
-                val slotWidthPx = with(density) { slotWidth.toPx() }
-                val maxLensOffset = (slotWidthPx * (destinations.size - 1)).coerceAtLeast(0f)
-                val settledOffset by animateDpAsState(
-                    targetValue = slotWidth * selectedIndex,
-                    animationSpec = if (preferences.reduceMotion) tween(100) else GlassMotion.SpringDock,
-                    label = "dockLensSlide",
+            BoxWithConstraints(Modifier.fillMaxSize().padding(4.dp)) {
+                val slotWidth = maxWidth / 3
+                val lensTarget = if (selectedIndex == 1) maxWidth - slotWidth else 0.dp
+                val lensOffset by animateDpAsState(
+                    targetValue = lensTarget,
+                    animationSpec = if (reduceMotion) tween(0) else spring(
+                        stiffness = Spring.StiffnessMediumLow,
+                        dampingRatio = 0.86f,
+                    ),
+                    label = "dockSelectionLens",
                 )
-                val currentOffset = if (dragActive) with(density) { dragOffsetPx.toDp() } else settledOffset
-                val draggableState = rememberDraggableState { delta ->
-                    if (!dragActive) return@rememberDraggableState
-                    dragOffsetPx = (dragOffsetPx + delta).coerceIn(0f, maxLensOffset)
-                    val next = nearestDockIndex(dragOffsetPx, slotWidthPx, destinations.lastIndex)
-                    if (next != previewIndex) {
-                        previewIndex = next
-                        if (!preferences.reduceMotion) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    }
-                }
-                fun commit(index: Int) {
-                    if (onCompose != null && index == 2) onCompose()
-                    else onSelect(index)
-                }
+
                 Box(
-                    Modifier.fillMaxSize()
-                        .draggable(
-                            state = draggableState,
-                            orientation = Orientation.Horizontal,
-                            startDragImmediately = false,
-                            onDragStarted = {
-                                dragActive = true
-                                previewIndex = selectedIndex
-                                dragOffsetPx = (slotWidthPx * selectedIndex).coerceIn(0f, maxLensOffset)
-                            },
-                            onDragStopped = {
-                                val target = previewIndex
-                                dragActive = false
-                                if (target != selectedIndex) commit(target)
-                            },
-                        ),
-                ) {
-                    // A single physical lens moves inside the stable outer glass body.
-                    Box(
-                        Modifier.offset(x = currentOffset)
-                            .width(slotWidth)
-                            .fillMaxHeight()
-                            .padding(4.dp)
-                            .clip(RoundedCornerShape(GlassRadius.innerLens))
-                            .background(
-                                MaterialTheme.colorScheme.primaryContainer.copy(
-                                    alpha = if (dragActive) 0.52f else 0.40f,
-                                ),
-                            ),
+                    Modifier
+                        .offset(x = lensOffset)
+                        .width(slotWidth)
+                        .fillMaxHeight()
+                        .padding(2.dp)
+                        .clip(RoundedCornerShape(lensCornerRadius))
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.82f)),
+                )
+
+                Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                    DockTab(
+                        label = "Inbox",
+                        icon = Icons.Outlined.Inbox,
+                        selected = selectedIndex == 0,
+                        onClick = { onSelect(0) },
+                        onLongClick = onInboxHold,
+                        collapseProgress = collapseProgress,
+                        modifier = Modifier.weight(1f),
                     )
-                    Row(Modifier.fillMaxSize()) {
-                        destinations.forEachIndexed { index, destination ->
-                            val visualActive = if (dragActive) index == previewIndex else index == selectedIndex
-                            val iconScale by animateFloatAsState(
-                                targetValue = if (visualActive) 1.05f else 1f,
-                                animationSpec = if (preferences.reduceMotion) tween(80) else GlassMotion.SpringSubtle,
-                                label = "dockIconScale$index",
-                            )
-                            Box(
-                                Modifier.width(slotWidth).fillMaxHeight()
-                                    .clickable { if (!dragActive && index != selectedIndex) commit(index) }
-                                    .semantics {
-                                        contentDescription = destination.label
-                                        role = Role.Tab
-                                        selected = index == selectedIndex
-                                        stateDescription = if (index == selectedIndex) "Selected" else "Not selected"
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        destination.icon,
-                                        contentDescription = null,
-                                        tint = if (visualActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                                        modifier = Modifier.size(20.dp).scale(iconScale),
-                                    )
-                                    if (!compact && visualActive) {
-                                        Text(
-                                            destination.label,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.padding(start = 4.dp),
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    ComposeAction(
+                        onClick = onCompose,
+                        collapseProgress = collapseProgress,
+                        modifier = Modifier.weight(1f),
+                    )
+                    DockTab(
+                        label = "Settings",
+                        icon = Icons.Outlined.Settings,
+                        selected = selectedIndex == 1,
+                        onClick = { onSelect(1) },
+                        collapseProgress = collapseProgress,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }
     }
 }
 
-internal fun nearestDockIndex(offsetPx: Float, slotWidthPx: Float, lastIndex: Int): Int =
-    if (slotWidthPx <= 0f) 0 else (offsetPx / slotWidthPx).roundToInt().coerceIn(0, lastIndex)
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun DockTab(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    collapseProgress: Float = 0f,
+    modifier: Modifier = Modifier,
+) {
+    val labelHeight = ((1f - collapseProgress) * 16).dp
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(GlassRadius.innerLens))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+                onLongClickLabel = if (onLongClick == null) null else "Scroll to newest messages",
+            )
+            .semantics(mergeDescendants = true) {
+                contentDescription = label
+                role = Role.Tab
+                this.selected = selected
+                stateDescription = if (selected) "Selected" else "Not selected"
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+    ) {
+        val iconBoxSize = androidx.compose.ui.unit.lerp(38.dp, 34.dp, collapseProgress)
+        Box(Modifier.size(iconBoxSize), contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (collapseProgress < 0.98f) {
+            Box(
+                modifier = Modifier
+                    .height(labelHeight)
+                    .graphicsLayer {
+                        alpha = (1f - collapseProgress * 2.2f).coerceIn(0f, 1f)
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComposeAction(
+    onClick: () -> Unit,
+    collapseProgress: Float = 0f,
+    modifier: Modifier = Modifier,
+) {
+    val labelHeight = ((1f - collapseProgress) * 16).dp
+    val composeCircleSize = androidx.compose.ui.unit.lerp(42.dp, 36.dp, collapseProgress)
+    val composeIconSize = androidx.compose.ui.unit.lerp(22.dp, 20.dp, collapseProgress)
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Compose email"
+                role = Role.Button
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(composeCircleSize)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Edit,
+                contentDescription = null,
+                modifier = Modifier.size(composeIconSize),
+                tint = MaterialTheme.colorScheme.onPrimary,
+            )
+        }
+        if (collapseProgress < 0.98f) {
+            Box(
+                modifier = Modifier
+                    .height(labelHeight)
+                    .graphicsLayer {
+                        alpha = (1f - collapseProgress * 2.2f).coerceIn(0f, 1f)
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Compose",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}

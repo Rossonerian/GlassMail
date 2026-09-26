@@ -75,7 +75,7 @@ fun sanitizeAttachmentName(raw: String): String = raw.substringAfterLast('/').su
 fun estimatedOutgoingMessageBytes(mail: OutgoingMail): Long = mail.body.toByteArray(Charsets.UTF_8).size.toLong() +
     (mail.attachments.sumOf { it.sizeBytes.coerceAtLeast(0) } * 4 / 3) + mail.attachments.size * 1024L + 16_384
 
-enum class DraftStatus { DRAFT, SENDING, SENT, FAILED }
+enum class DraftStatus { DRAFT, QUEUED, SENDING, SENT, FAILED, UNCERTAIN }
 
 fun normalizeAddresses(raw: String): List<String> = raw.split(',', ';', '\n')
     .map(String::trim)

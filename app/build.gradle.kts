@@ -4,6 +4,16 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val releaseStorePath = providers.environmentVariable("GLASSMAIL_RELEASE_STORE_FILE").orNull
+    ?: providers.gradleProperty("glassmailReleaseStoreFile").orNull
+val releaseStorePassword = providers.environmentVariable("GLASSMAIL_RELEASE_STORE_PASSWORD").orNull
+    ?: providers.gradleProperty("glassmailReleaseStorePassword").orNull
+val releaseKeyAlias = providers.environmentVariable("GLASSMAIL_RELEASE_KEY_ALIAS").orNull
+    ?: providers.gradleProperty("glassmailReleaseKeyAlias").orNull
+val releaseKeyPassword = providers.environmentVariable("GLASSMAIL_RELEASE_KEY_PASSWORD").orNull
+    ?: providers.gradleProperty("glassmailReleaseKeyPassword").orNull
+val releaseSigningConfigured = listOf(releaseStorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.glassmail.app"
     compileSdk = 35
@@ -27,6 +37,25 @@ android {
 
     buildFeatures {
         buildConfig = true
+    }
+
+    signingConfigs {
+        create("release") {
+            if (releaseSigningConfigured) {
+                storeFile = file(releaseStorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (releaseSigningConfigured) signingConfig = signingConfigs.getByName("release")
+        }
     }
 
     packaging {
@@ -57,4 +86,5 @@ dependencies {
     implementation(project(":designsystem:glass"))
     implementation(project(":designsystem"))
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.work.runtime.ktx)
 }

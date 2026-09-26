@@ -86,7 +86,7 @@ class AccountSyncSchedulerInstrumentedTest {
         override fun search(accountId: String, query: String): Flow<List<MailListItem>> = emptyFlow()
         override fun observeMessage(messageId: String): Flow<MailMessage?> = emptyFlow()
         override fun observeThread(messageId: String): Flow<List<MailMessage>> = emptyFlow()
-        override suspend fun createAccount(accountId: String, email: String) = Unit
+        override suspend fun createAccount(accountId: String, email: String, syncState: String) = Unit
         override suspend fun removeAccount(accountId: String) = Unit
         override suspend fun synchronize(accountId: String): MailSyncResult = result
         override suspend fun applyMutation(mutation: MailMutation) = Unit

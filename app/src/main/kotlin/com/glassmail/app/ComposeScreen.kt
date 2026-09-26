@@ -29,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +52,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -90,12 +92,23 @@ fun ComposeRoute(
 ) {
     BackHandler(onBack = back)
     if (account == null) {
-        Column(Modifier.fillMaxSize().padding(24.dp)) { Text("No account is available for composing mail.") }
+        androidx.compose.material3.Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            Column(Modifier.fillMaxSize().padding(24.dp)) {
+                Text(
+                    "No account is available for composing mail.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
         return
     }
     val vm: ComposeViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         key = draftId ?: "new",
-        factory = ComposeViewModel.factory(graph.draftRepository, graph.mailSender, account, draftId, graph.contentResolver),
+        factory = ComposeViewModel.factory(graph.draftRepository, account, draftId, graph.context, graph.contentResolver, graph.appearancePreferences.read().sendDelaySeconds),
     )
     val state by vm.state.collectAsStateWithLifecycle()
     val draft = state.draft
@@ -111,23 +124,26 @@ fun ComposeRoute(
         }
         vm.addAttachments(attachments)
     }
-    var showCcBcc by remember { mutableStateOf(state.rawCc.isNotBlank() || state.rawBcc.isNotBlank()) }
+    var showCcBcc by rememberSaveable { mutableStateOf(state.rawCc.isNotBlank() || state.rawBcc.isNotBlank()) }
 
     Scaffold(
         topBar = {
             GlassMailTopCapsule(
                 title = "Compose",
                 subtitle = when (state.status) {
+                    DraftStatus.QUEUED -> if (state.undoCountdownSeconds > 0) "Sending in ${state.undoCountdownSeconds}s · tap to undo" else "Sending…"
                     DraftStatus.SENDING -> "Sending…"
                     DraftStatus.SENT -> "Sent"
+                    DraftStatus.FAILED -> "Send failed · draft saved"
+                    DraftStatus.UNCERTAIN -> "Check Sent before retrying"
                     else -> "Draft saved locally"
                 },
                 quality = quality,
                 navigationIcon = { IconButton(back) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back") } },
                 actions = {
                     Button(
-                        enabled = state.status != DraftStatus.SENDING,
-                        onClick = vm::send,
+                        enabled = state.status != DraftStatus.SENDING && state.status != DraftStatus.SENT && (state.status != DraftStatus.QUEUED || state.undoCountdownSeconds > 0),
+                        onClick = if (state.status == DraftStatus.QUEUED) vm::cancelQueuedSend else vm::send,
                         shape = RoundedCornerShape(GlassRadius.innerLens),
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -142,7 +158,14 @@ fun ComposeRoute(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            if (state.status == DraftStatus.SENDING) "Sending…" else "Send",
+                            when {
+                                state.status == DraftStatus.QUEUED && state.undoCountdownSeconds > 0 -> "Undo ${state.undoCountdownSeconds}"
+                                state.status == DraftStatus.SENDING || state.status == DraftStatus.QUEUED -> "Sending…"
+                                state.status == DraftStatus.SENT -> "Sent"
+                                state.status == DraftStatus.FAILED -> "Try again"
+                                state.status == DraftStatus.UNCERTAIN -> "Retry send"
+                                else -> "Send"
+                            },
                             style = MaterialTheme.typography.labelLarge,
                         )
                     }
@@ -161,6 +184,16 @@ fun ComposeRoute(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
+            if (state.status == DraftStatus.QUEUED && state.undoCountdownSeconds > 0) {
+                Row(
+                    Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                ) {
+                    Text("Email will send in ${state.undoCountdownSeconds} seconds", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    OutlinedButton(onClick = vm::cancelQueuedSend) { Text("Undo send") }
+                }
+            }
             // Recipient field with inline Cc/Bcc toggle
             Column(Modifier.fillMaxWidth()) {
                 Row(
@@ -318,30 +351,44 @@ data class ComposeUiState(
     val rawBcc: String = draft.bcc.joinToString(", "),
     val status: DraftStatus = DraftStatus.DRAFT,
     val error: String? = null,
+    val undoCountdownSeconds: Int = 0,
 )
 
 class ComposeViewModel(
     private val drafts: DraftRepository,
-    private val sender: MailSender,
     private val account: MailAccount,
     draftId: String?,
+    private val context: android.content.Context,
     private val contentResolver: android.content.ContentResolver,
+    private val sendDelaySeconds: Int,
 ) : ViewModel() {
     private val id = draftId ?: UUID.randomUUID().toString()
     private val _state = MutableStateFlow(ComposeUiState(MailDraft(id, account.accountId)))
     val state: StateFlow<ComposeUiState> = _state.asStateFlow()
     private var saveJob: Job? = null
+    private var countdownJob: Job? = null
 
     init {
         if (draftId != null) viewModelScope.launch {
-            drafts.observeDraft(draftId).first { it != null }?.let { loaded ->
-                _state.value = ComposeUiState(
-                    draft = loaded,
-                    rawTo = loaded.to.joinToString(", "),
-                    rawCc = loaded.cc.joinToString(", "),
-                    rawBcc = loaded.bcc.joinToString(", "),
-                    status = loaded.status,
-                )
+            var initialized = false
+            drafts.observeDraft(draftId).collect { loaded ->
+                if (loaded == null) return@collect
+                val current = _state.value
+                if (!initialized) {
+                    initialized = true
+                    _state.value = ComposeUiState(
+                        draft = loaded,
+                        rawTo = loaded.to.joinToString(", "),
+                        rawCc = loaded.cc.joinToString(", "),
+                        rawBcc = loaded.bcc.joinToString(", "),
+                        status = loaded.status,
+                    )
+                    if (loaded.status == DraftStatus.QUEUED) startCountdown(loaded.updatedAtEpochMillis)
+                } else if (loaded.status in setOf(DraftStatus.SENDING, DraftStatus.SENT, DraftStatus.FAILED, DraftStatus.UNCERTAIN) && current.status != loaded.status) {
+                    countdownJob?.cancel()
+                    _state.value = current.copy(draft = loaded, status = loaded.status, undoCountdownSeconds = 0,
+                        error = if (loaded.status == DraftStatus.UNCERTAIN) "Delivery status is unknown. Check Sent mail before retrying to avoid duplicates." else null)
+                }
             }
         }
     }
@@ -368,43 +415,65 @@ class ComposeViewModel(
 
     fun send() {
         val current = _state.value
-        if (current.status == DraftStatus.SENDING) return
+        if (current.status == DraftStatus.QUEUED) return cancelQueuedSend()
+        if (current.status == DraftStatus.SENDING || current.status == DraftStatus.SENT) return
         if (!validateAddresses(current.draft.to + current.draft.cc + current.draft.bcc)) {
             _state.value = current.copy(error = "Enter at least one valid recipient.")
             return
         }
         viewModelScope.launch {
-            val sending = current.draft.copy(status = DraftStatus.SENDING, updatedAtEpochMillis = System.currentTimeMillis())
-            _state.value = current.copy(draft = sending, status = DraftStatus.SENDING)
-            drafts.saveDraft(sending)
-            val outgoingAttachments = sending.attachments.mapNotNull { attachment ->
-                val available = runCatching { contentResolver.openInputStream(android.net.Uri.parse(attachment.uri))?.use { true } ?: false }.getOrDefault(false)
-                if (!available) return@mapNotNull null
-                com.glassmail.domain.mail.OutgoingAttachment(attachment.fileName, attachment.mimeType, attachment.sizeBytes, { contentResolver.openInputStream(android.net.Uri.parse(attachment.uri)) ?: error("Attachment is unavailable") })
-            }
-            when (val result = sender.send(account, OutgoingMail(sending.draftId, account.accountId, account.email, sending.to, sending.cc, sending.bcc, sending.subject, sending.body, sending.inReplyTo, sending.references, outgoingAttachments))) {
-                SendMailResult.Sent -> {
-                    val sent = sending.copy(status = DraftStatus.SENT, updatedAtEpochMillis = System.currentTimeMillis())
-                    drafts.saveDraft(sent)
-                    _state.value = current.copy(draft = sent, status = DraftStatus.SENT)
-                }
-                is SendMailResult.Failed -> {
-                    val failed = sending.copy(status = DraftStatus.FAILED, updatedAtEpochMillis = System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            val queued = current.draft.copy(status = DraftStatus.QUEUED, updatedAtEpochMillis = now)
+            RemoteDraftSyncWorker.cancel(context, queued.draftId)
+            drafts.saveDraft(queued)
+            runCatching { DelayedSendWorker.enqueue(context, queued.draftId, sendDelaySeconds) }
+                .onFailure {
+                    val failed = queued.copy(status = DraftStatus.FAILED)
                     drafts.saveDraft(failed)
-                    _state.value = current.copy(draft = failed, status = DraftStatus.FAILED, error = result.error.userMessage())
+                    _state.value = current.copy(draft = failed, status = DraftStatus.FAILED, error = "Could not queue this email. Try again.")
+                    return@launch
                 }
+            _state.value = current.copy(draft = queued, status = DraftStatus.QUEUED, undoCountdownSeconds = sendDelaySeconds)
+            startCountdown(now)
+        }
+    }
+
+    fun cancelQueuedSend() {
+        val current = _state.value
+        if (current.status != DraftStatus.QUEUED || current.undoCountdownSeconds <= 0) return
+        countdownJob?.cancel()
+        DelayedSendWorker.cancel(context, current.draft.draftId)
+        val restored = current.draft.copy(status = DraftStatus.DRAFT, updatedAtEpochMillis = System.currentTimeMillis())
+        _state.value = current.copy(draft = restored, status = DraftStatus.DRAFT, undoCountdownSeconds = 0, error = null)
+        viewModelScope.launch { drafts.saveDraft(restored) }
+        RemoteDraftSyncWorker.enqueue(context, restored.draftId)
+    }
+
+    private fun startCountdown(queuedAt: Long) {
+        countdownJob?.cancel()
+        countdownJob = viewModelScope.launch {
+            while (true) {
+                val remaining = ((queuedAt + sendDelaySeconds * 1_000L - System.currentTimeMillis() + 999) / 1_000L).toInt().coerceAtLeast(0)
+                _state.value = _state.value.copy(undoCountdownSeconds = remaining)
+                if (remaining == 0) break
+                delay(250)
             }
         }
     }
 
     private fun update(transform: (MailDraft) -> MailDraft) {
         val current = _state.value
+        if (current.status == DraftStatus.QUEUED) {
+            countdownJob?.cancel()
+            DelayedSendWorker.cancel(context, current.draft.draftId)
+        }
         val next = transform(current.draft).copy(updatedAtEpochMillis = System.currentTimeMillis())
-        _state.value = current.copy(draft = next, status = DraftStatus.DRAFT, error = null)
+        _state.value = current.copy(draft = next, status = DraftStatus.DRAFT, error = null, undoCountdownSeconds = 0)
         saveJob?.cancel()
         saveJob = viewModelScope.launch {
             delay(AUTOSAVE_DELAY_MILLIS)
             drafts.saveDraft(next)
+            if (next.status == DraftStatus.DRAFT) RemoteDraftSyncWorker.enqueue(context, next.draftId)
         }
     }
 
@@ -412,8 +481,8 @@ class ComposeViewModel(
         private const val AUTOSAVE_DELAY_MILLIS = 400L
         private const val MAX_SUBJECT = 998
         private const val MAX_BODY = 2_000_000
-        fun factory(drafts: DraftRepository, sender: MailSender, account: MailAccount, draftId: String?, contentResolver: android.content.ContentResolver) = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST") override fun <T : ViewModel> create(modelClass: Class<T>): T = ComposeViewModel(drafts, sender, account, draftId, contentResolver) as T
+        fun factory(drafts: DraftRepository, account: MailAccount, draftId: String?, context: android.content.Context, contentResolver: android.content.ContentResolver, sendDelaySeconds: Int) = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST") override fun <T : ViewModel> create(modelClass: Class<T>): T = ComposeViewModel(drafts, account, draftId, context, contentResolver, sendDelaySeconds) as T
         }
     }
 }

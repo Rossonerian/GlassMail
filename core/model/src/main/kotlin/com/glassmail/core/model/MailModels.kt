@@ -11,6 +11,21 @@ data class ImapSelectedMailbox(
     val messageCount: Int,
 )
 
+data class ImapStorageQuota(val usedKb: Long, val limitKb: Long)
+
+data class ImapRemoteDraft(
+    val uid: Long,
+    val draftId: String?,
+    val to: List<String>,
+    val cc: List<String>,
+    val bcc: List<String>,
+    val subject: String,
+    val body: String,
+    val inReplyTo: String?,
+    val references: List<String>,
+    val updatedAtEpochMillis: Long,
+)
+
 data class ImapMessageMetadata(
     val uid: Long,
     val flags: Set<String>,
@@ -21,6 +36,11 @@ data class ImapMessageMetadata(
     val sender: String?,
     val sentAtEpochMillis: Long?,
     val sizeBytes: Long?,
+    val hasListUnsubscribe: Boolean = false,
+    val precedence: String? = null,
+    val listId: String? = null,
+    val listUnsubscribe: String? = null,
+    val listUnsubscribePost: String? = null,
 )
 
 data class GmailInboxSnapshot(

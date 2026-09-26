@@ -8,12 +8,14 @@ import android.util.Log
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,6 +35,8 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -53,12 +57,14 @@ import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.stateDescription
@@ -283,11 +289,13 @@ fun GlassSurface(
     }
     val platformTier = resolveGlassQuality(requestedTier)
     val samplingOwnCapture = LocalBackdropCaptureSource.current === backdropSource
+    val samplingEnabled = backdropSampling && !samplingOwnCapture && backdropSource.layer != null
     val density = LocalDensity.current
     val context = LocalContext.current
     var surfaceBoundsInWindow by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
 
-    val liquidShader = remember(platformTier, context) {
+    val liquidShader = remember(platformTier, context, samplingEnabled) {
+        if (!samplingEnabled) return@remember null
         val shaderResource = when (platformTier) {
             GlassQuality.FULL -> R.raw.glass_lens_full
             GlassQuality.BALANCED -> R.raw.glass_lens_balanced
@@ -309,18 +317,25 @@ fun GlassSurface(
     val refractionHeightPx = with(density) { material.refractionHeight.toPx() }
 
     val effectiveTier = if (
+        samplingEnabled &&
         liquidShader == null && platformTier in setOf(GlassQuality.FULL, GlassQuality.BALANCED)
     ) GlassQuality.LIGHT else platformTier
 
+    val defaultSurfaceTint = if (MaterialTheme.colorScheme.surface.luminance() < 0.35f) {
+        MaterialTheme.colorScheme.surfaceVariant
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
     val resolvedTint = if (material.tint != Color.Unspecified) {
         material.tint.copy(alpha = material.opacity)
     } else {
-        MaterialTheme.colorScheme.surface.copy(
-            alpha = if (preferences.reduceTransparency) 0.98f else when (effectiveTier) {
-                GlassQuality.OFF -> 0.78f
-                GlassQuality.LIGHT -> 0.68f
-                GlassQuality.BALANCED -> 0.54f
-                GlassQuality.FULL -> material.opacity
+        defaultSurfaceTint.copy(
+            alpha = if (preferences.reduceTransparency) 0.98f else when {
+                !samplingEnabled -> 0.94f
+                effectiveTier == GlassQuality.OFF -> 0.90f
+                effectiveTier == GlassQuality.LIGHT -> 0.80f
+                effectiveTier == GlassQuality.BALANCED -> 0.64f
+                else -> material.opacity
             },
         )
     }
@@ -339,7 +354,6 @@ fun GlassSurface(
     // glass surface without touching the provider's GraphicsLayer.
     if (liquidShader != null && surfaceWidthPx > 0f && surfaceHeightPx > 0f) {
         liquidShader.setFloatUniform("resolution", surfaceWidthPx, surfaceHeightPx)
-        liquidShader.setFloatUniform("offset", relativeOffset.x, relativeOffset.y)
         liquidShader.setFloatUniform("cornerRadius", cornerRadiusPx)
         liquidShader.setFloatUniform("refractionHeight", refractionHeightPx * material.refraction.coerceAtLeast(0f))
         if (effectiveTier == GlassQuality.FULL) {
@@ -348,8 +362,8 @@ fun GlassSurface(
     }
 
     val blurRadiusPx = with(density) { material.blur.toPx() }.coerceAtLeast(1f)
-    val opticalRenderEffect = remember(effectiveTier, liquidShader, blurRadiusPx, surfaceWidthPx, surfaceHeightPx) {
-        if (surfaceWidthPx <= 0f || surfaceHeightPx <= 0f || effectiveTier == GlassQuality.OFF) {
+    val opticalRenderEffect = remember(effectiveTier, liquidShader, blurRadiusPx, samplingEnabled) {
+        if (!samplingEnabled || effectiveTier == GlassQuality.OFF) {
             null
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             runCatching {
@@ -369,11 +383,17 @@ fun GlassSurface(
         } else null
     }
 
+    val samplingCoordinatesModifier = if (samplingEnabled) {
+        Modifier.onGloballyPositioned { coordinates ->
+            surfaceBoundsInWindow = coordinates.boundsInWindow()
+        }
+    } else {
+        Modifier
+    }
+
     Box(
         modifier = modifier
-            .onGloballyPositioned { coordinates ->
-                surfaceBoundsInWindow = coordinates.boundsInWindow()
-            }
+            .then(samplingCoordinatesModifier)
             .shadow(
                 elevation = if (preferences.reduceTransparency) 4.dp else material.shadow,
                 shape = shape,
@@ -389,7 +409,7 @@ fun GlassSurface(
             ),
     ) {
         // --- Live Optical Backdrop Layer ---
-        if (!samplingOwnCapture && backdropSampling && backdropSource.layer != null && effectiveTier != GlassQuality.OFF) {
+        if (samplingEnabled && effectiveTier != GlassQuality.OFF) {
             Canvas(
                 modifier = Modifier
                     .matchParentSize()
@@ -417,10 +437,12 @@ fun GlassSurface(
                     .matchParentSize()
                     .background(
                         Brush.verticalGradient(
-                            0.0f to Color.White.copy(alpha = 0.12f),
+                            0.0f to MaterialTheme.colorScheme.primary.copy(alpha = 0.07f),
                             0.25f to Color.Transparent,
                             0.80f to Color.Transparent,
-                            1.0f to Color.Black.copy(alpha = 0.08f),
+                            1.0f to MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = if (MaterialTheme.colorScheme.surface.luminance() < 0.35f) 0.11f else 0.035f,
+                            ),
                         ),
                     ),
             )
@@ -666,6 +688,7 @@ fun <T> GlassSegmentedControl(
                         .clickable { onItemSelected(item) }
                         .semantics {
                             role = Role.RadioButton
+                            selected = isSelected
                             stateDescription = if (isSelected) "Selected" else "Not selected"
                         },
                     contentAlignment = Alignment.Center,
@@ -692,33 +715,78 @@ fun GlassSwitch(
     val preferences = LocalGlassPreferences.current
     val thumbOffset by animateFloatAsState(
         targetValue = if (checked) 22f else 2f,
-        animationSpec = if (preferences.reduceMotion) spring() else spring(stiffness = Spring.StiffnessMedium, dampingRatio = 0.8f),
+        animationSpec = if (preferences.reduceMotion) tween(0) else spring(stiffness = Spring.StiffnessMedium, dampingRatio = 0.8f),
         label = "glassSwitchThumb",
     )
     Box(
         modifier = modifier
-            .width(50.dp)
-            .height(28.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(
-                if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-            )
-            .clickable { onCheckedChange(!checked) }
-            .semantics {
-                role = Role.Switch
-                stateDescription = if (checked) "On" else "Off"
-            }
-            .padding(horizontal = 2.dp),
-        contentAlignment = Alignment.CenterStart,
+            .width(56.dp)
+            .height(48.dp)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+            .semantics { stateDescription = if (checked) "On" else "Off" },
+        contentAlignment = Alignment.Center,
     ) {
         Box(
             modifier = Modifier
-                .graphicsLayer { translationX = thumbOffset * density }
-                .size(22.dp)
-                .clip(CircleShape)
-                .background(Color.White)
-                .shadow(2.dp, CircleShape),
+                .width(50.dp)
+                .height(28.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                .padding(horizontal = 2.dp),
+            contentAlignment = Alignment.CenterStart,
         )
+        {
+            Box(
+                modifier = Modifier
+                    .graphicsLayer { translationX = thumbOffset * density }
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(if (checked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    .shadow(2.dp, CircleShape),
+            )
+        }
+    }
+}
+
+/** Compact glass slider primitive based on the Backdrop catalog control pattern. */
+@Composable
+fun GlassSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    steps: Int = 0,
+    enabled: Boolean = true,
+    label: String? = null,
+    onValueChangeFinished: (() -> Unit)? = null,
+) {
+    GlassSurface(
+        material = GlassPresets.Toolbar.copy(opacity = 0.72f, cornerRadius = 18.dp),
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        backdropSampling = false,
+    ) {
+        androidx.compose.foundation.layout.Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+            label?.let {
+                Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = enabled,
+                valueRange = valueRange,
+                steps = steps,
+                onValueChangeFinished = onValueChangeFinished,
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
+                    activeTickColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            )
+        }
     }
 }
 

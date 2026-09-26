@@ -1,0 +1,9 @@
+GlassMail is an open-source, local-first Android email client for Gmail.
+
+Read conversations in a focused thread view, search cached mail offline, and manage your inbox with configurable swipe actions. Set an undo window before outgoing mail is sent, unsubscribe from supported mailing lists, and control offline body and attachment cache limits.
+
+GlassMail supports up to two accounts and a unified inbox. It synchronizes over encrypted IMAP, uses IMAP IDLE while background sync is active, and falls back to scheduled synchronization when Android permits it. Outgoing mail uses SMTP with STARTTLS.
+
+Privacy features include Android Keystore-backed credentials, a sandboxed HTML reader, remote images disabled by default, and no analytics or telemetry.
+
+Screenshots will be added after device manual verification.

@@ -1,6 +1,5 @@
 uniform shader content;
 uniform float2 resolution;
-uniform float2 offset;
 uniform float cornerRadius;
 uniform float refractionHeight;
 
@@ -14,9 +13,9 @@ half4 main(float2 p) {
     float2 safeSize = max(resolution, float2(1.0));
     float radius = clamp(cornerRadius, 0.0, min(safeSize.x, safeSize.y) * 0.5);
 
-    // The provider offset anchors local fragments to the shared capture when a surface moves or resizes.
-    float2 providerPosition = p + offset;
-    float2 localPosition = providerPosition - offset;
+    // The capture is translated into the surface's local canvas before sampling, so these coordinates
+    // stay local to the sampled crop and do not need a second offset transform.
+    float2 localPosition = p;
     float distanceToEdge = sdRoundedBox(localPosition, safeSize, radius);
 
     // Central differences work for both straight and curved portions without a branch at the corner seam.
@@ -27,7 +26,7 @@ half4 main(float2 p) {
         sdRoundedBox(localPosition + float2(0.0, epsilon), safeSize, radius) -
             sdRoundedBox(localPosition - float2(0.0, epsilon), safeSize, radius)
     );
-    float2 normal = normalize(gradient + float2(0.00001));
+    float2 normal = gradient * inversesqrt(max(dot(gradient, gradient), 0.00001));
 
     // The displacement fades into the interior so the center remains a clear view of the backdrop.
     float rimFalloff = 1.0 - smoothstep(0.0, max(refractionHeight, 1.0), max(-distanceToEdge, 0.0));

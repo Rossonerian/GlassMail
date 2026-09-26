@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.flow.MutableStateFlow
+import com.glassmail.sync.IdleServiceController
 
 class MainActivity : ComponentActivity() {
     private val notificationMessageId = MutableStateFlow<String?>(null)
@@ -26,6 +27,11 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         notificationMessageId.value = intent.getStringExtra(EXTRA_MESSAGE_ID)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        runCatching { IdleServiceController.start(this) }
     }
 
     private fun requestNotificationPermissionOnce() {

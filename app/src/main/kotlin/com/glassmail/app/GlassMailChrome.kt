@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.runtime.Composable
@@ -56,7 +58,9 @@ fun GlassMailTopCapsule(
                 .padding(horizontal = GlassSpacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            navigationIcon?.invoke()
+            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant) {
+                navigationIcon?.invoke()
+            }
             Column(
                 Modifier
                     .weight(1f)
@@ -84,7 +88,9 @@ fun GlassMailTopCapsule(
                 horizontalArrangement = Arrangement.spacedBy(0.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                actions()
+                CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant) {
+                    actions()
+                }
             }
         }
     }
@@ -162,13 +168,21 @@ fun senderAmbient(sender: String): Color = when ((sender.hashCode() and Int.MAX_
     else -> com.glassmail.designsystem.GlassMailPalette.Newsletters.first
 }
 
-fun syncStatus(state: String): String = if (state.contains("offline", ignoreCase = true) || state.contains("network", ignoreCase = true)) {
-    "Offline — showing cached mail"
-} else if (state.equals("READY", ignoreCase = true)) {
-    "Synced and up to date"
-} else if (state.equals("SYNCING", ignoreCase = true)) {
-    "Synchronizing mail…"
-} else state
+fun syncStatus(state: String): String = when (state.uppercase()) {
+    "IDLE", "READY" -> "Synced · waiting for new mail"
+    "CONNECTING" -> "Connecting to Gmail…"
+    "SYNCING" -> "Syncing your mailbox…"
+    "ERROR_AUTHENTICATION" -> "Google rejected the App Password. Update it in Settings, then sync again."
+    "ERROR_NETWORK" -> "Could not reach Gmail. Check your connection and sync again."
+    "ERROR_PROTOCOL" -> "Gmail returned an unexpected response. Check IMAP access and retry."
+    "ERROR_MISSINGCREDENTIAL" -> "App Password is missing. Update it in Settings, then sync again."
+    else -> when {
+        state.contains("offline", ignoreCase = true) -> "Offline · showing cached mail"
+        state.contains("network", ignoreCase = true) -> "Could not reach Gmail. Check your connection and sync again."
+        state.startsWith("ERROR_", ignoreCase = true) -> "Sync failed. Check the account settings and retry."
+        else -> "Waiting to sync your mailbox"
+    }
+}
 
 fun replyDraft(
     message: com.glassmail.domain.mail.MailMessage,

@@ -57,7 +57,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableIntStateOf
@@ -143,26 +145,30 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
     val appearance by vm.appearance.collectAsStateWithLifecycle()
     val drafts by vm.drafts.collectAsStateWithLifecycle()
     val navController = rememberNavController()
-    var paletteOpen by remember { mutableStateOf(false) }
-    var dockCompact by remember { mutableStateOf(false) }
-    var dockBackdropFrozen by remember { mutableStateOf(false) }
-    var dockBackdropKey by remember { mutableStateOf<Any?>(0) }
+    var paletteOpen by rememberSaveable { mutableStateOf(false) }
+    var inboxSearchExpanded by rememberSaveable { mutableStateOf(false) }
+    val inboxListState = rememberLazyListState()
+    val searchListState = rememberLazyListState()
+    val dockCoroutineScope = rememberCoroutineScope()
+    val dockCollapseState = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     val currentRoute by navController.currentBackStackEntryAsState()
     val notificationId by notificationMessageId.collectAsStateWithLifecycle()
     val route = currentRoute?.destination?.route
+    LaunchedEffect(route) {
+        if (route != ROUTE_INBOX) inboxSearchExpanded = false
+    }
     val dark = when (appearance.theme) {
         ThemeChoice.DARK -> true
         ThemeChoice.LIGHT -> false
         ThemeChoice.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
     }
     val ambient = when {
-        route == ROUTE_SEARCH -> GlassMailPalette.Updates
         route == ROUTE_SETTINGS -> GlassMailPalette.Personal
         route?.startsWith(ROUTE_READER) == true -> GlassMailPalette.Personal
         else -> GlassMailPalette.Priority
     }
     fun openCompose(seed: MailDraft? = null) {
-        val account = accounts.firstOrNull() ?: return
+        val account = seed?.let { draft -> accounts.firstOrNull { it.accountId == draft.accountId } } ?: vm.currentAccount() ?: return
         val draft = seed ?: MailDraft(UUID.randomUUID().toString(), account.accountId)
         vm.saveDraft(draft)
         navController.navigate("$ROUTE_COMPOSE/${draft.draftId}")
@@ -173,8 +179,6 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
         val current = navController.currentBackStackEntry?.destination?.route
         if (accounts.isEmpty() && current != ROUTE_SETUP) {
             navController.navigate(ROUTE_SETUP) { popUpTo(ROUTE_INBOX) { inclusive = true } }
-        } else if (accounts.isNotEmpty() && current == ROUTE_SETUP) {
-            navController.navigate(ROUTE_INBOX) { popUpTo(ROUTE_SETUP) { inclusive = true } }
         }
     }
     androidx.compose.runtime.LaunchedEffect(notificationId, accounts.isNotEmpty()) {
@@ -199,35 +203,34 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
         Box(Modifier.fillMaxSize()) {
             BackdropProvider(backdrop = rootBackdrop, modifier = Modifier.fillMaxSize()) {
                     NavHost(navController = navController, startDestination = ROUTE_INBOX) {
-                        composable(ROUTE_SETUP) { AccountSetupRoute(graph) }
+                        composable(ROUTE_SETUP) {
+                            AccountSetupRoute(graph) {
+                                navController.navigate(ROUTE_INBOX) {
+                                    popUpTo(ROUTE_SETUP) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        }
                         composable(ROUTE_INBOX) {
                             InboxScreen(
                                 vm = vm,
-                                account = accounts.firstOrNull(),
+                                account = if (appearance.unifiedInbox) null else vm.currentAccount(),
                                 quality = appearance.glassQuality,
                                 open = { navController.navigate("$ROUTE_READER/$it") },
-                                search = { navController.navigate(ROUTE_SEARCH) },
-                                settings = { navController.navigate(ROUTE_SETTINGS) },
                                 openPalette = { paletteOpen = true },
-                                onDockCompactChanged = { dockCompact = it },
-                                onDockBackdropChanged = { key, frozen -> dockBackdropKey = key; dockBackdropFrozen = frozen },
-                            )
-                        }
-                        composable(ROUTE_SEARCH) {
-                            SearchScreen(
-                                vm = vm,
-                                account = accounts.firstOrNull(),
-                                quality = appearance.glassQuality,
-                                open = { navController.navigate("$ROUTE_READER/$it") },
-                                back = { navController.popBackStack() },
-                                openPalette = { paletteOpen = true },
+                                onDockCollapseChanged = { dockCollapseState.floatValue = it },
+                                listState = inboxListState,
+                                searchListState = searchListState,
+                                searchExpanded = inboxSearchExpanded,
+                                onSearchExpandedChange = { inboxSearchExpanded = it },
+                                onAddAccount = { navController.navigate(ROUTE_SETUP) },
                             )
                         }
                         composable(ROUTE_SETTINGS) {
                             SettingsScreen(
                                 graph = graph,
                                 vm = vm,
-                                account = accounts.firstOrNull(),
+                                account = vm.currentAccount(),
                                 back = { navController.popBackStack() },
                                 openPalette = { paletteOpen = true },
                                 openLab = { navController.navigate(ROUTE_GLASS_LAB) },
@@ -240,11 +243,14 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
                             )
                         }
                         composable("$ROUTE_COMPOSE/{draftId}") { entry ->
+                            val draftId = entry.arguments?.getString("draftId")?.takeUnless { it == "new" }
+                            val draftAccount = drafts.firstOrNull { it.draftId == draftId }
+                                ?.let { draft -> accounts.firstOrNull { it.accountId == draft.accountId } }
                             ComposeRoute(
                                 graph = graph,
-                                account = accounts.firstOrNull(),
+                                account = draftAccount ?: vm.currentAccount(),
                                 quality = appearance.glassQuality,
-                                draftId = entry.arguments?.getString("draftId")?.takeUnless { it == "new" },
+                                draftId = draftId,
                                 back = { navController.popBackStack() },
                             )
                         }
@@ -254,7 +260,7 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
                         ) { entry ->
                             ReaderScreen(
                                 vm = vm,
-                                account = accounts.firstOrNull(),
+                                account = entry.arguments?.getString("messageId")?.let(vm::accountForMessage),
                                 id = entry.arguments?.getString("messageId").orEmpty(),
                                 quality = appearance.glassQuality,
                                 back = { navController.popBackStack() },
@@ -268,27 +274,27 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
 
             val dockSelectedIndex = when (route) {
                 ROUTE_INBOX -> 0
-                ROUTE_SEARCH -> 1
-                ROUTE_SETTINGS, ROUTE_GLASS_LAB -> 3
+                ROUTE_SETTINGS, ROUTE_GLASS_LAB -> 1
                 else -> null
             }
             if (dockSelectedIndex != null) {
                 MorphingDock(
-                    compact = route == ROUTE_INBOX && dockCompact,
                     selectedIndex = dockSelectedIndex,
                     quality = appearance.glassQuality,
                     onSelect = { destination ->
                         val target = when (destination) {
                             0 -> ROUTE_INBOX
-                            1 -> ROUTE_SEARCH
-                            3 -> ROUTE_SETTINGS
+                            1 -> ROUTE_SETTINGS
                             else -> return@MorphingDock
                         }
                         if (route != target) navController.navigate(target) { launchSingleTop = true }
                     },
                     onCompose = { openCompose() },
-                    backdropKey = route to dockBackdropKey,
-                    backdropFrozen = route == ROUTE_INBOX && dockBackdropFrozen,
+                    onInboxHold = {
+                        inboxSearchExpanded = false
+                        dockCoroutineScope.launch { inboxListState.animateScrollToItem(0) }
+                    },
+                    collapseFraction = { if (route == ROUTE_INBOX) dockCollapseState.floatValue else 0f },
                     backdropSource = rootBackdrop,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
@@ -297,7 +303,6 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
                 val selected = if (route?.startsWith(ROUTE_READER) == true) vm.readerUiState.collectAsStateWithLifecycle().value.selected else null
                 val actions = buildList {
                     add(CommandPaletteAction("inbox", "Inbox", "Open cached mailbox") { paletteOpen = false; navController.navigate(ROUTE_INBOX) })
-                    add(CommandPaletteAction("search", "Search", "Search cached mail") { paletteOpen = false; navController.navigate(ROUTE_SEARCH) })
                     add(CommandPaletteAction("settings", "Settings", "Appearance and account") { paletteOpen = false; navController.navigate(ROUTE_SETTINGS) })
                     add(CommandPaletteAction("lab", "Glass Optical Lab", "Interactive shader sandbox") { paletteOpen = false; navController.navigate(ROUTE_GLASS_LAB) })
                     add(CommandPaletteAction("refresh", "Refresh", "Synchronize the current account") { paletteOpen = false; vm.refresh() })
@@ -324,7 +329,6 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
 
 private const val ROUTE_SETUP = "setup"
 private const val ROUTE_INBOX = "inbox"
-private const val ROUTE_SEARCH = "search"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_READER = "reader"
 private const val ROUTE_COMPOSE = "compose"

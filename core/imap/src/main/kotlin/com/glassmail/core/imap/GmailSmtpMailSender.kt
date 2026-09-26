@@ -8,6 +8,7 @@ import com.glassmail.domain.mail.SendMailResult
 import com.glassmail.domain.mail.validateAddresses
 import com.glassmail.domain.mail.estimatedOutgoingMessageBytes
 import java.util.Properties
+import java.io.ByteArrayOutputStream
 import javax.mail.Message
 import javax.mail.AuthenticationFailedException
 import javax.mail.MessagingException
@@ -31,6 +32,7 @@ interface SmtpCredentialProvider {
 
 class GmailSmtpMailSender(
     private val credentialProvider: SmtpCredentialProvider,
+    private val imapClient: GmailImapClient? = null,
     private val host: String = "smtp.gmail.com",
     private val port: Int = 587,
 ) : MailSender {
@@ -56,33 +58,11 @@ class GmailSmtpMailSender(
                     if (estimatedOutgoingMessageBytes(mail) > MAX_ESTIMATED_MESSAGE_BYTES) {
                         return@withContext SendMailResult.Failed(SendMailError.InvalidMessage)
                     }
-                    val message = MimeMessage(session).apply {
-                        setFrom(InternetAddress(mail.from, true))
-                        setRecipients(Message.RecipientType.TO, mail.to.map(::InternetAddress).toTypedArray())
-                        if (mail.cc.isNotEmpty()) setRecipients(Message.RecipientType.CC, mail.cc.map(::InternetAddress).toTypedArray())
-                        if (mail.bcc.isNotEmpty()) setRecipients(Message.RecipientType.BCC, mail.bcc.map(::InternetAddress).toTypedArray())
-                        subject = mail.subject
-                        if (mail.attachments.isEmpty()) {
-                            setText(mail.body, Charsets.UTF_8.name())
-                        } else {
-                            val body = MimeBodyPart().apply { setText(mail.body, Charsets.UTF_8.name()) }
-                            val multipart: Multipart = javax.mail.internet.MimeMultipart().apply { addBodyPart(body) }
-                            mail.attachments.forEach { attachment ->
-                                val part = MimeBodyPart()
-                                part.dataHandler = DataHandler(object : javax.activation.DataSource {
-                                    override fun getInputStream() = attachment.openStream()
-                                    override fun getOutputStream() = throw UnsupportedOperationException("read-only attachment")
-                                    override fun getContentType() = attachment.mimeType.ifBlank { "application/octet-stream" }
-                                    override fun getName() = attachment.fileName
-                                })
-                                part.fileName = attachment.fileName.replace(Regex("[\\r\\n\\u0000]"), "_")
-                                multipart.addBodyPart(part)
-                            }
-                            setContent(multipart)
-                        }
-                        mail.inReplyTo?.let { setHeader("In-Reply-To", it) }
-                        if (mail.references.isNotEmpty()) setHeader("References", mail.references.joinToString(" "))
-                        setHeader("Message-ID", "<${mail.operationId}@glassmail.local>")
+                    val message = createMimeMessage(session, mail)
+                    message.saveChanges()
+                    val rawMessage = ByteArrayOutputStream().use { output ->
+                        message.writeTo(output)
+                        output.toByteArray()
                     }
                     session.getTransport("smtp").apply {
                         try {
@@ -91,6 +71,12 @@ class GmailSmtpMailSender(
                         } finally {
                             close()
                         }
+                    }
+                    // SMTP has accepted the message at this point. Filing it is best-effort:
+                    // an APPEND failure must not prompt the user to resend a delivered message.
+                    if (imapClient != null) {
+                        runCatching { imapClient.deleteRemoteDraft(account.email, password, mail.operationId) }
+                        runCatching { imapClient.appendSent(account.email, password, rawMessage) }
                     }
                     coroutineContext.ensureActive()
                     SendMailResult.Sent
@@ -114,4 +100,43 @@ class GmailSmtpMailSender(
         const val MAX_ESTIMATED_MESSAGE_BYTES = 24L * 1024 * 1024
 
     }
+}
+
+/** Shared RFC 822 encoder for SMTP submission and IMAP draft synchronization. */
+object Rfc822MessageEncoder {
+    fun encode(mail: OutgoingMail): ByteArray = ByteArrayOutputStream().use { output ->
+        val message = createMimeMessage(Session.getInstance(Properties()), mail)
+        message.saveChanges()
+        message.writeTo(output)
+        output.toByteArray()
+    }
+}
+
+private fun createMimeMessage(session: Session, mail: OutgoingMail): MimeMessage = MimeMessage(session).apply {
+    setFrom(InternetAddress(mail.from, true))
+    if (mail.to.isNotEmpty()) setRecipients(Message.RecipientType.TO, mail.to.map(::InternetAddress).toTypedArray())
+    if (mail.cc.isNotEmpty()) setRecipients(Message.RecipientType.CC, mail.cc.map(::InternetAddress).toTypedArray())
+    if (mail.bcc.isNotEmpty()) setRecipients(Message.RecipientType.BCC, mail.bcc.map(::InternetAddress).toTypedArray())
+    subject = mail.subject
+    if (mail.attachments.isEmpty()) {
+        setText(mail.body, Charsets.UTF_8.name())
+    } else {
+        val body = MimeBodyPart().apply { setText(mail.body, Charsets.UTF_8.name()) }
+        val multipart: Multipart = javax.mail.internet.MimeMultipart().apply { addBodyPart(body) }
+        mail.attachments.forEach { attachment ->
+            val part = MimeBodyPart()
+            part.dataHandler = DataHandler(object : javax.activation.DataSource {
+                override fun getInputStream() = attachment.openStream()
+                override fun getOutputStream() = throw UnsupportedOperationException("read-only attachment")
+                override fun getContentType() = attachment.mimeType.ifBlank { "application/octet-stream" }
+                override fun getName() = attachment.fileName
+            })
+            part.fileName = attachment.fileName.replace(Regex("[\\r\\n\\u0000]"), "_")
+            multipart.addBodyPart(part)
+        }
+        setContent(multipart)
+    }
+    mail.inReplyTo?.let { setHeader("In-Reply-To", it) }
+    if (mail.references.isNotEmpty()) setHeader("References", mail.references.joinToString(" "))
+    setHeader("Message-ID", "<${mail.operationId}@glassmail.local>")
 }

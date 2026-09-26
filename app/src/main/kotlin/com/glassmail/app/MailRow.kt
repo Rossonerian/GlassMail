@@ -2,6 +2,7 @@ package com.glassmail.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,9 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.glassmail.designsystem.GlassRadius
 import com.glassmail.designsystem.GlassSpacing
 import com.glassmail.designsystem.glass.GlassPresets
@@ -63,6 +66,10 @@ fun MailRow(
     modifier: Modifier = Modifier,
 ) {
     var menuOpen by remember(row.messageId) { mutableStateOf(false) }
+    val appearance by vm.appearance.collectAsStateWithLifecycle()
+    val timestamp = remember(row.sentAtEpochMillis) { timeLabel(row.sentAtEpochMillis) }
+
+    val displayName = remember(row.sender) { parseSenderDisplayName(row.sender) }
 
     GlassSurface(
         material = GlassPresets.Card,
@@ -74,6 +81,30 @@ fun MailRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 80.dp)
+                .pointerInput(row.messageId, appearance.shortSwipeLeft, appearance.longSwipeLeft, appearance.shortSwipeRight, appearance.longSwipeRight) {
+                    var horizontalDistance = 0f
+                    val shortThreshold = 64.dp.toPx()
+                    val longThreshold = 144.dp.toPx()
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, dragAmount ->
+                            horizontalDistance += dragAmount
+                            change.consume()
+                        },
+                        onDragEnd = {
+                            val distance = horizontalDistance
+                            horizontalDistance = 0f
+                            val action = when {
+                                distance <= -longThreshold -> appearance.longSwipeLeft
+                                distance <= -shortThreshold -> appearance.shortSwipeLeft
+                                distance >= longThreshold -> appearance.longSwipeRight
+                                distance >= shortThreshold -> appearance.shortSwipeRight
+                                else -> null
+                            }
+                            action?.let { vm.mutation(row, it.asMutationType()) }
+                        },
+                        onDragCancel = { horizontalDistance = 0f },
+                    )
+                }
                 .clickable(
                     onClickLabel = "Open message",
                     onClick = { open(row.messageId) },
@@ -99,30 +130,35 @@ fun MailRow(
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
-                    text = row.sender,
-                    style = if (row.unread) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
+                    text = displayName,
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = if (row.unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = row.subject.ifBlank { "(No subject)" },
-                    style = if (row.unread) {
-                        MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
-                    } else {
-                        MaterialTheme.typography.bodyMedium
-                    },
+                    style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = if (row.unread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(
-                    text = row.preview,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-                )
+                if (row.messageCount > 1) {
+                    Text(
+                        text = "${row.messageCount} messages · ${row.participantCount} participants",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                if (row.preview.isNotBlank()) {
+                    Text(
+                        text = row.preview,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
 
                 val visibleLabel = row.labels.firstOrNull { !it.equals("INBOX", ignoreCase = true) }
                 if (visibleLabel != null || row.hasAttachment) {
@@ -165,7 +201,7 @@ fun MailRow(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
-                    text = timeLabel(row.sentAtEpochMillis),
+                    text = timestamp,
                     style = MaterialTheme.typography.labelSmall,
                     color = if (row.unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -249,6 +285,13 @@ fun MailRow(
     }
 }
 
+private fun SwipeAction.asMutationType(): String = when (this) {
+    SwipeAction.MARK_READ -> "read"
+    SwipeAction.ARCHIVE -> "archive"
+    SwipeAction.DELETE -> "delete"
+    SwipeAction.STAR -> "star"
+}
+
 fun timeLabel(epochMillis: Long?): String = epochMillis?.let {
     val zonedDateTime = Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault())
     val today = java.time.LocalDate.now(ZoneId.systemDefault())
@@ -263,3 +306,13 @@ fun timeLabel(epochMillis: Long?): String = epochMillis?.let {
         zonedDateTime.format(formatter)
     }
 } ?: "—"
+
+fun parseSenderDisplayName(sender: String): String {
+    if (sender.contains('<') && sender.contains('>')) {
+        val name = sender.substringBefore('<').trim().removeSurrounding("\"").trim()
+        if (name.isNotBlank()) return name
+        val email = sender.substringAfter('<').substringBefore('>').trim()
+        if (email.isNotBlank()) return email
+    }
+    return sender
+}

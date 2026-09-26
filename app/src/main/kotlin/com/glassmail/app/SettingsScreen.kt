@@ -32,6 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -86,8 +87,11 @@ fun SettingsScreen(
 ) {
     BackHandler(onBack = back)
     val appearance by vm.appearance.collectAsStateWithLifecycle()
+    val cacheSettings by vm.cacheSettings.collectAsStateWithLifecycle()
+    val storageQuota by vm.storageQuota.collectAsStateWithLifecycle()
     var credentialDialogOpen by remember { mutableStateOf(false) }
     var credentialText by remember { mutableStateOf("") }
+    var removeAccountDialogOpen by remember { mutableStateOf(false) }
     val selectableGlassQualities = remember {
         GlassQuality.entries.filter { quality -> resolveGlassQuality(quality) == quality }
     }
@@ -160,8 +164,48 @@ fun SettingsScreen(
                 }
                 item {
                     SettingsActionRow("Remove Account", "Delete local mailbox metadata and credential", destructive = true) {
-                        vm.removeAccount()
+                        removeAccountDialogOpen = true
                     }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(GlassSpacing.xs))
+                Text("Cache & storage", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(GlassSpacing.md)) {
+                    ChoiceSection("Offline message bodies", listOf(50, 100, 200, 500, 1_000, 2_000, 5_000), cacheSettings.offlineMessageCount) { count ->
+                        vm.updateCacheSettings { it.copy(offlineMessageCount = count) }
+                    }
+                    ChoiceSection("Attachment cache limit", listOf(100, 250, 500, 1_000, 2_000), cacheSettings.attachmentCacheLimitMb) { limit ->
+                        vm.updateCacheSettings { it.copy(attachmentCacheLimitMb = limit) }
+                    }
+                    ChoiceSection("Read body retention", listOf(30, 60, 90), cacheSettings.autoEvictReadOlderThanDays) { days ->
+                        vm.updateCacheSettings { it.copy(autoEvictReadOlderThanDays = days) }
+                    }
+                    PreferenceRow("Prefetch unread bodies", cacheSettings.prefetchUnreadBodies) {
+                        vm.updateCacheSettings { it.copy(prefetchUnreadBodies = !it.prefetchUnreadBodies) }
+                    }
+                }
+            }
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(GlassRadius.card))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)).padding(GlassSpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(GlassSpacing.xs),
+                ) {
+                    Text("Gmail storage", style = MaterialTheme.typography.titleSmall)
+                    if (storageQuota == null) {
+                        Text("Quota not available yet", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        val quota = storageQuota!!
+                        val fraction = (quota.usedKb.toFloat() / quota.limitKb.coerceAtLeast(1)).coerceIn(0f, 1f)
+                        LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+                        Text("${formatStorage(quota.usedKb)} of ${formatStorage(quota.limitKb)} (${(fraction * 100).toInt()}%)", style = MaterialTheme.typography.bodySmall)
+                        Text("Gmail storage is shared with Drive and Photos.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(onClick = vm::refreshStorageQuota) { Text("Refresh quota") }
                 }
             }
 
@@ -310,6 +354,38 @@ fun SettingsScreen(
                 }
             }
 
+            item {
+                Spacer(Modifier.height(GlassSpacing.xs))
+                Text("Send safety", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            item {
+                ChoiceSection("Undo send window", listOf(5, 10, 15, 30), appearance.sendDelaySeconds) { seconds ->
+                    vm.updateAppearance { it.copy(sendDelaySeconds = seconds) }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(GlassSpacing.xs))
+                Text("Swipe actions", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(GlassSpacing.md)) {
+                    Text("Short swipes are under 144 dp; longer swipes use the extended action.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ChoiceSection("Swipe left", SwipeAction.entries, appearance.shortSwipeLeft) { action ->
+                        vm.updateAppearance { it.copy(shortSwipeLeft = action) }
+                    }
+                    ChoiceSection("Swipe left farther", SwipeAction.entries, appearance.longSwipeLeft) { action ->
+                        vm.updateAppearance { it.copy(longSwipeLeft = action) }
+                    }
+                    ChoiceSection("Swipe right", SwipeAction.entries, appearance.shortSwipeRight) { action ->
+                        vm.updateAppearance { it.copy(shortSwipeRight = action) }
+                    }
+                    ChoiceSection("Swipe right farther", SwipeAction.entries, appearance.longSwipeRight) { action ->
+                        vm.updateAppearance { it.copy(longSwipeRight = action) }
+                    }
+                }
+            }
+
             // Section 4: Notifications
             item {
                 Spacer(Modifier.height(GlassSpacing.xs))
@@ -447,6 +523,43 @@ fun SettingsScreen(
             },
         )
     }
+
+    if (removeAccountDialogOpen && account != null) {
+        AlertDialog(
+            onDismissRequest = { removeAccountDialogOpen = false },
+            title = { Text("Remove Account") },
+            text = {
+                Text(
+                    "Are you sure you want to remove ${account.email}? All locally cached messages, credentials, and offline data will be permanently deleted from this device.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            confirmButton = {
+                Button(
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
+                    onClick = {
+                        removeAccountDialogOpen = false
+                        vm.removeAccount()
+                    },
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { removeAccountDialogOpen = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+}
+
+private fun formatStorage(kb: Long): String {
+    val gib = kb / (1024.0 * 1024.0)
+    return if (gib >= 1.0) "%.1f GB".format(java.util.Locale.US, gib) else "${kb / 1024} MB"
 }
 
 @Composable

@@ -1,4 +1,4 @@
-@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
 
 package com.glassmail.app
 
@@ -18,18 +18,23 @@ import com.glassmail.domain.mail.MailDraft
 import com.glassmail.domain.mail.MailListItem
 import com.glassmail.domain.mail.MailMessage
 import com.glassmail.domain.mail.MailMutation
+import com.glassmail.domain.mail.MailCategory
 import com.glassmail.domain.mail.MailRepository
+import com.glassmail.domain.mail.MailCacheSettings
+import com.glassmail.domain.mail.StorageQuota
 import com.glassmail.sync.AccountSyncScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.UUID
 
 class AppViewModel(
     private val context: Context,
@@ -46,26 +51,70 @@ class AppViewModel(
     val accountsLoaded: StateFlow<Boolean> = repository.observeAccounts()
         .map { true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-    private val accountId = accounts.map { it.firstOrNull()?.accountId }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
-    val drafts: StateFlow<List<MailDraft>> = accountId.flatMapLatest { id ->
-        if (id == null) flowOf(emptyList()) else draftRepository.observeDrafts(id)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    private val inboxItems = accountId.flatMapLatest { id ->
-        if (id == null) flowOf(emptyList()) else repository.observeInbox(id)
+    private val accountId = combine(accounts, _appearance) { available, settings ->
+        settings.selectedAccountId?.takeIf { chosen -> available.any { it.accountId == chosen } } ?: available.firstOrNull()?.accountId
     }
-    val inboxUiState: StateFlow<InboxUiState> = combine(accounts, inboxItems) { availableAccounts, messages ->
-        InboxUiState(account = availableAccounts.firstOrNull(), messages = messages)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val drafts: StateFlow<List<MailDraft>> = accounts.flatMapLatest { available ->
+        if (available.isEmpty()) flowOf(emptyList()) else combine(available.map { draftRepository.observeDrafts(it.accountId) }) { lists ->
+            lists.flatMap { it }.filter { it.status != com.glassmail.domain.mail.DraftStatus.SENT }
+                .sortedByDescending(MailDraft::updatedAtEpochMillis)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val cacheSettings: StateFlow<MailCacheSettings> = accountId.flatMapLatest { id ->
+        if (id == null) flowOf(MailCacheSettings()) else repository.observeCacheSettings(id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MailCacheSettings())
+    val storageQuota: StateFlow<StorageQuota?> = accountId.flatMapLatest { id ->
+        if (id == null) flowOf(null) else repository.observeStorageQuota(id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private val selectedCategory = MutableStateFlow(MailCategory.PRIMARY)
+    private val inboxData = combine(accounts, accountId, selectedCategory, _appearance.map { it.unifiedInbox }) { available, id, category, unified ->
+        InboxInputs(available, id, category, unified)
+    }.flatMapLatest { input ->
+            val ids = input.accounts.map { it.accountId }
+            if (input.unified) combine(
+                repository.observeUnifiedInbox(ids, input.category),
+                repository.observeUnifiedCategoryUnreadCounts(ids),
+            ) { messages, unreadCounts -> InboxData(messages, unreadCounts) }
+            else if (input.accountId == null) flowOf(InboxData())
+            else combine(
+                repository.observeInbox(input.accountId, input.category),
+                repository.observeCategoryUnreadCounts(input.accountId),
+            ) { messages, unreadCounts -> InboxData(messages, unreadCounts) }
+        }
+    val inboxUiState: StateFlow<InboxUiState> = combine(accounts, accountId, selectedCategory, inboxData, _appearance.map { it.unifiedInbox }) { availableAccounts, selectedId, category, data, unified ->
+        InboxUiState(
+            account = if (unified) null else availableAccounts.firstOrNull { it.accountId == selectedId },
+            accounts = availableAccounts,
+            unifiedInbox = unified,
+            messages = data.messages,
+            selectedCategory = category,
+            unreadByCategory = data.unreadByCategory,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InboxUiState())
 
     private val searchQuery = MutableStateFlow("")
-    val searchUiState: StateFlow<SearchUiState> = combine(accountId, searchQuery) { id, query -> id to query }
-        .flatMapLatest { (id, query) ->
-            if (id == null || query.isBlank()) flowOf(SearchUiState(query = query))
-            else repository.search(id, query).map { SearchUiState(query = query, messages = it) }
+    private val searchResults: StateFlow<SearchUiState> = combine(accounts, accountId, _appearance.map { it.unifiedInbox }, searchQuery.debounce(250)) { available, id, unified, query ->
+        SearchInputs(available.map { it.accountId }, id, unified, query)
+    }.flatMapLatest { input ->
+            if (input.query.isBlank() || (input.accountId == null && !input.unified)) flowOf(SearchUiState(query = input.query))
+            else (if (input.unified) repository.searchUnified(input.accountIds, input.query) else repository.search(input.accountId!!, input.query))
+                .map { SearchUiState(query = input.query, messages = it) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
+    val searchUiState: StateFlow<SearchUiState> = combine(searchQuery, searchResults) { query, result ->
+        when {
+            query.isBlank() -> SearchUiState()
+            query == result.query -> result.copy(isLoading = false)
+            else -> SearchUiState(query = query, isLoading = true)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchUiState())
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+    private val _undoableArchive = MutableStateFlow<UndoableArchive?>(null)
+    val undoableArchive: StateFlow<UndoableArchive?> = _undoableArchive
 
     private val readerMessageId = MutableStateFlow<String?>(null)
     val readerUiState: StateFlow<ReaderUiState> = readerMessageId.flatMapLatest { messageId ->
@@ -76,42 +125,103 @@ class AppViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReaderUiState())
 
     fun mutation(item: MailListItem, type: String) = viewModelScope.launch {
-        val account = accounts.value.firstOrNull() ?: return@launch
-        val inboxId = "${account.accountId}:INBOX"
-        repository.applyMutation(
-            when (type) {
-                "star" -> MailMutation.Star(account.accountId, item.messageId, inboxId, !item.starred)
-                "read" -> MailMutation.MarkRead(account.accountId, item.messageId, inboxId, item.unread)
-                "archive" -> MailMutation.Archive(account.accountId, item.messageId, inboxId)
-                else -> MailMutation.Delete(account.accountId, item.messageId, inboxId)
+        val threadIds = item.threadMessageIds.ifEmpty { listOf(item.messageId) }
+        threadIds.forEach { messageId ->
+            val account = accountForMessage(messageId) ?: return@forEach
+            val inboxId = "${account.accountId}:INBOX"
+            repository.applyMutation(
+                when (type) {
+                    "star" -> MailMutation.Star(account.accountId, messageId, inboxId, !item.starred)
+                    "read" -> MailMutation.MarkRead(account.accountId, messageId, inboxId, item.unread)
+                    "archive" -> MailMutation.Archive(account.accountId, messageId, inboxId)
+                    else -> MailMutation.Delete(account.accountId, messageId, inboxId)
+                }
+            )
+        }
+        if (type == "archive") _undoableArchive.value = UndoableArchive(UUID.randomUUID().toString(), threadIds)
+    }
+
+    fun threadMutation(messageIds: List<String>, type: String) = viewModelScope.launch {
+        val messages = messageIds.distinct()
+        val currentThread = messages.mapNotNull { id -> readerUiState.value.thread.firstOrNull { it.messageId == id } }
+        val star = type == "star" && currentThread.any { !it.starred }
+        messages.forEach { messageId ->
+            val account = accountForMessage(messageId) ?: return@forEach
+            val inboxId = "${account.accountId}:INBOX"
+            val mutation = when (type) {
+                "star" -> MailMutation.Star(account.accountId, messageId, inboxId, star)
+                "archive", "mute" -> MailMutation.Archive(account.accountId, messageId, inboxId)
+                else -> MailMutation.Delete(account.accountId, messageId, inboxId)
             }
-        )
+            repository.applyMutation(mutation)
+        }
+    }
+
+    fun undoArchive(actionId: String) = viewModelScope.launch {
+        val action = _undoableArchive.value?.takeIf { it.actionId == actionId } ?: return@launch
+        action.messageIds.forEach { repository.undoPendingArchive(it) }
+        if (_undoableArchive.value?.actionId == actionId) _undoableArchive.value = null
+    }
+
+    fun dismissUndoArchive(actionId: String) {
+        if (_undoableArchive.value?.actionId == actionId) _undoableArchive.value = null
+    }
+
+    fun accountForMessage(messageId: String): MailAccount? = accounts.value.firstOrNull { account ->
+        messageId.startsWith("gmail:${account.accountId}:") || messageId.startsWith("imap:${account.accountId}:")
+    } ?: accounts.value.firstOrNull { it.accountId == accountId.value }
+
+    fun currentAccount(): MailAccount? = accounts.value.firstOrNull { it.accountId == accountId.value } ?: accounts.value.firstOrNull()
+
+    fun selectAccount(accountId: String) {
+        updateAppearance { it.copy(selectedAccountId = accountId, unifiedInbox = false) }
+    }
+
+    fun setUnifiedInbox(enabled: Boolean) {
+        updateAppearance { it.copy(unifiedInbox = enabled) }
     }
 
     fun setLabel(messageId: String, label: String, add: Boolean) = viewModelScope.launch {
-        accounts.value.firstOrNull()?.let { repository.applyMutation(MailMutation.Label(it.accountId, messageId, null, label, add)) }
+        accountForMessage(messageId)?.let { repository.applyMutation(MailMutation.Label(it.accountId, messageId, null, label, add)) }
     }
 
     fun seed(n: Int) = viewModelScope.launch { repository.seedDebugMailbox(n) }
     fun clear() = viewModelScope.launch { repository.clearDebugMailbox() }
 
     fun removeAccount() = viewModelScope.launch {
-        accounts.value.firstOrNull()?.let {
+        accounts.value.firstOrNull { it.accountId == accountId.value }?.let {
             syncScheduler.cancel(it.accountId)
             repository.removeAccount(it.accountId)
+            runCatching { com.glassmail.sync.IdleServiceController.start(context) }
         }
     }
 
     fun refresh() = viewModelScope.launch {
-        accounts.value.firstOrNull()?.let { repository.synchronize(it.accountId) }
+        if (_isRefreshing.value) return@launch
+        _isRefreshing.value = true
+        try {
+            val selected = if (_appearance.value.unifiedInbox) accounts.value else listOfNotNull(accounts.value.firstOrNull { it.accountId == accountId.value })
+            selected.forEach { repository.synchronize(it.accountId) }
+        } finally {
+            _isRefreshing.value = false
+        }
     }
 
     fun setSearchQuery(query: String) {
         searchQuery.value = query
     }
 
+    fun selectCategory(category: String) {
+        if (category in MailCategory.all) selectedCategory.value = category
+    }
+
     fun selectReaderMessage(messageId: String) {
         readerMessageId.value = messageId
+        loadMessageBody(messageId)
+    }
+
+    fun loadMessageBody(messageId: String) = viewModelScope.launch {
+        repository.loadMessageBody(messageId)
     }
 
     fun updateAppearance(update: (AppearanceSettings) -> AppearanceSettings) {
@@ -119,12 +229,22 @@ class AppViewModel(
         appearancePreferences.write(_appearance.value)
     }
 
+    fun updateCacheSettings(update: (MailCacheSettings) -> MailCacheSettings) = viewModelScope.launch {
+        accountId.value?.let { repository.saveCacheSettings(it, update(cacheSettings.value)) }
+    }
+
+    fun refreshStorageQuota() = viewModelScope.launch {
+        val targets = if (_appearance.value.unifiedInbox) accounts.value else listOfNotNull(currentAccount())
+        targets.forEach { repository.refreshStorageQuota(it.accountId) }
+    }
+
     fun saveDraft(draft: MailDraft) = viewModelScope.launch {
         draftRepository.saveDraft(draft)
+        if (draft.status == com.glassmail.domain.mail.DraftStatus.DRAFT) RemoteDraftSyncWorker.enqueue(context, draft.draftId)
     }
 
     fun downloadAttachment(attachment: MailAttachment) = viewModelScope.launch {
-        val account = accounts.value.firstOrNull() ?: return@launch
+        val account = accountForMessage(attachment.attachmentId.substringBeforeLast(':')) ?: accounts.value.firstOrNull { it.accountId == accountId.value } ?: return@launch
         val transfer = repository as? AttachmentRepository ?: return@launch
         transfer.downloadAttachment(account.accountId, attachment.attachmentId).onSuccess { file ->
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", File(file.filePath))
@@ -178,13 +298,28 @@ fun MailMessage.toListItem() = MailListItem(
 /** Immutable Room-derived inbox state; Compose never owns a second mail list. */
 data class InboxUiState(
     val account: MailAccount? = null,
+    val accounts: List<MailAccount> = emptyList(),
+    val unifiedInbox: Boolean = false,
     val messages: List<MailListItem> = emptyList(),
+    val selectedCategory: String = MailCategory.PRIMARY,
+    val unreadByCategory: Map<String, Int> = emptyMap(),
 )
+
+private data class InboxData(
+    val messages: List<MailListItem> = emptyList(),
+    val unreadByCategory: Map<String, Int> = emptyMap(),
+)
+
+private data class InboxInputs(val accounts: List<MailAccount>, val accountId: String?, val category: String, val unified: Boolean)
+private data class SearchInputs(val accountIds: List<String>, val accountId: String?, val unified: Boolean, val query: String)
 
 data class SearchUiState(
     val query: String = "",
     val messages: List<MailListItem> = emptyList(),
+    val isLoading: Boolean = false,
 )
+
+data class UndoableArchive(val actionId: String, val messageIds: List<String>)
 
 data class ReaderUiState(
     val selected: MailMessage? = null,

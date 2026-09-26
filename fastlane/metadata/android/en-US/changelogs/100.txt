@@ -1,0 +1,5 @@
+Initial v1 release candidate.
+
+Threaded inbox, categories, offline search, private reader, configurable swipe actions, undo send, draft and sent sync, unsubscribe, two accounts, cache controls, quota display, and IMAP IDLE.
+
+Device verification is pending.

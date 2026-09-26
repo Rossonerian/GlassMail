@@ -26,7 +26,7 @@ fun ImapValue.listValue(): List<ImapValue> = (this as? ImapValue.List)?.values.o
 
 fun List<ImapValue>.attribute(name: String): ImapValue? {
     val index = indexOfFirst { it.atomValue()?.equals(name, ignoreCase = true) == true }
-    return getOrNull(index + 1)
+    return if (index < 0) null else getOrNull(index + 1)
 }
 
 object ImapResponseParser {
@@ -53,6 +53,7 @@ object ImapResponseParser {
         private val literals: List<ByteArray>,
     ) {
         private var position = 0
+        private var bracketedResponseCodeDepth = 0
 
         fun parseAll(): List<ImapValue> = buildList {
             skipWhitespace()
@@ -64,9 +65,27 @@ object ImapResponseParser {
 
         private fun parseValue(): ImapValue = when (input[position]) {
             '(' -> parseList()
+            '[' -> parseBracketedResponseCode()
             '"' -> ImapValue.Quoted(parseQuoted())
             '\u0000' -> parseLiteralReference()
             else -> parseAtom()
+        }
+
+        /** IMAP status response codes use square brackets, unlike the lists in FETCH data. */
+        private fun parseBracketedResponseCode(): ImapValue.List {
+            position++
+            bracketedResponseCodeDepth++
+            val values = buildList {
+                skipWhitespace()
+                while (position < input.length && input[position] != ']') {
+                    add(parseValue())
+                    skipWhitespace()
+                }
+            }
+            require(position < input.length && input[position] == ']') { "Unterminated IMAP response code" }
+            position++
+            bracketedResponseCodeDepth--
+            return ImapValue.List(values)
         }
 
         private fun parseList(): ImapValue.List {
@@ -111,10 +130,29 @@ object ImapResponseParser {
 
         private fun parseAtom(): ImapValue {
             val start = position
-            while (position < input.length && !input[position].isWhitespace() && input[position] !in "()") {
+            var sectionDepth = 0
+            while (
+                position < input.length
+            ) {
+                val character = input[position]
+                if (sectionDepth > 0) {
+                    when (character) {
+                        '[' -> sectionDepth++
+                        ']' -> sectionDepth--
+                    }
+                    position++
+                    continue
+                }
+                if (bracketedResponseCodeDepth == 0 && character == '[') {
+                    sectionDepth = 1
+                    position++
+                    continue
+                }
+                if (character.isWhitespace() || character in "()" || (bracketedResponseCodeDepth > 0 && character == ']')) break
                 position++
             }
             require(start != position) { "Invalid IMAP atom" }
+            require(sectionDepth == 0) { "Unterminated IMAP body section" }
             val value = input.substring(start, position)
             return if (value.equals("NIL", ignoreCase = true)) ImapValue.Nil else ImapValue.Atom(value)
         }
