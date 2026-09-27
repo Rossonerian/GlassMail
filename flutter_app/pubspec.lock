@@ -17,15 +17,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "14.4.0"
-  apple_liquid_glass:
-    dependency: "direct main"
-    description:
-      path: "packages/apple_liquid_glass"
-      ref: HEAD
-      resolved-ref: ad3bcff22549f17f67bf87a01f80ed1f06cf9a0e
-      url: "https://github.com/whynotmake-it/flutter_liquid_glass.git"
-    source: git
-    version: "0.2.0-dev.4"
   args:
     dependency: transitive
     description:
@@ -649,10 +640,10 @@ packages:
     source: hosted
     version: "6.1.0"
   liquid_glass_renderer:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
       path: "packages/liquid_glass_renderer"
-      ref: HEAD
+      ref: ad3bcff22549f17f67bf87a01f80ed1f06cf9a0e
       resolved-ref: ad3bcff22549f17f67bf87a01f80ed1f06cf9a0e
       url: "https://github.com/whynotmake-it/flutter_liquid_glass.git"
     source: git

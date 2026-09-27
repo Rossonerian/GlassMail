@@ -2295,7 +2295,7 @@ class _SettingsRoute extends StatelessWidget {
                 child: Text('Balanced (Standard)'),
               ),
               DropdownMenuItem(
-                value: GlassMailTier.light,
+                value: GlassMailTier.lite,
                 child: Text('Light (Minimal)'),
               ),
               DropdownMenuItem(

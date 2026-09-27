@@ -294,7 +294,7 @@ class _GlassLabScreenState extends State<GlassLabScreen> {
                           child: Text('BALANCED'),
                         ),
                         DropdownMenuItem(
-                          value: GlassMailTier.light,
+                          value: GlassMailTier.lite,
                           child: Text('LIGHT'),
                         ),
                         DropdownMenuItem(

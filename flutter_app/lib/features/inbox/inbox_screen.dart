@@ -1,3 +1,4 @@
+import "package:liquid_glass_renderer/liquid_glass_renderer.dart";
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
@@ -341,63 +342,68 @@ class _MorphingMailDockState extends State<MorphingMailDock>
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: LayoutBuilder(
-            builder: (context, constraints) {
-              final progress = Curves.easeOutCubic.transform(_controller.value);
-              final width = lerpDouble(constraints.maxWidth, 156, progress)!;
-              return Center(
-                child: SizedBox(
-                  key: ValueKey(
-                    widget.collapsed
-                        ? 'mail-dock-compact'
-                        : 'mail-dock-expanded',
-                  ),
-                  width: width,
-                  child: GlassMailGlass(
-                    material: GlassPresets.bottomBar,
-                    child: SizedBox(
-                      height: dockHeight,
-                      child: ClipRect(
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            OverflowBox(
-                              minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth,
-                              child: ExcludeSemantics(
-                                excluding: widget.collapsed,
-                                child: IgnorePointer(
-                                  ignoring: widget.collapsed,
-                                  child: Opacity(
-                                    opacity: 1 - progress,
-                                    child: _expandedContents(context),
+              builder: (context, constraints) {
+                final progress = Curves.easeOutCubic.transform(
+                  _controller.value,
+                );
+                final width = lerpDouble(constraints.maxWidth, 156, progress)!;
+                return Center(
+                  child: SizedBox(
+                    key: ValueKey(
+                      widget.collapsed
+                          ? 'mail-dock-compact'
+                          : 'mail-dock-expanded',
+                    ),
+                    width: width,
+                    child: GlassMailGlass(
+                      material: GlassPresets.bottomBar,
+                      child: SizedBox(
+                        height: dockHeight,
+                        child: ClipRect(
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              OverflowBox(
+                                minWidth: constraints.maxWidth,
+                                maxWidth: constraints.maxWidth,
+                                child: ExcludeSemantics(
+                                  excluding: widget.collapsed,
+                                  child: IgnorePointer(
+                                    ignoring: widget.collapsed,
+                                    child: Opacity(
+                                      opacity: 1 - progress,
+                                      child: _expandedContents(context),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            OverflowBox(
-                              minWidth: 156, maxWidth: 156,
-                              child: ExcludeSemantics(
-                                excluding: !widget.collapsed,
-                                child: IgnorePointer(
-                                  ignoring: !widget.collapsed,
-                                  child: Opacity(
-                                    opacity: progress,
-                                    child: _compactContents(context),
+                              OverflowBox(
+                                minWidth: 156,
+                                maxWidth: 156,
+                                child: ExcludeSemantics(
+                                  excluding: !widget.collapsed,
+                                  child: IgnorePointer(
+                                    ignoring: !widget.collapsed,
+                                    child: Opacity(
+                                      opacity: progress,
+                                      child: _compactContents(context),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),
-    ));
+    );
   }
 
   Widget _expandedContents(BuildContext context) => Row(
@@ -485,33 +491,41 @@ class _DockItem extends StatelessWidget {
       button: true,
       selected: selected,
       label: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: SizedBox(
-          width: 68,
-          height: dockHeight - 4,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: selected ? colors.primary : colors.onSurfaceVariant,
+      child: LiquidStretch(
+        child: GlassGlow(
+          glowColor: colors.primary.withValues(alpha: 0.15),
+          glowRadius: 1.0,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: SizedBox(
+              width: 68,
+              height: dockHeight - 4,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: selected ? colors.primary : colors.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: selected
+                          ? colors.primary
+                          : colors.onSurfaceVariant,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 1),
-              Text(
-                label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: selected ? colors.primary : colors.onSurfaceVariant,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 10,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

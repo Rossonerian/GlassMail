@@ -28,10 +28,11 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  apple_liquid_glass:
+  liquid_glass_renderer:
     git:
       url: https://github.com/whynotmake-it/flutter_liquid_glass.git
-      path: packages/apple_liquid_glass
+      path: packages/liquid_glass_renderer
+      ref: ad3bcff22549f17f67bf87a01f80ed1f06cf9a0e
   flutter:
     sdk: flutter
   html: ^0.15.7
@@ -124,8 +125,4 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-dependency_overrides:
-  liquid_glass_renderer:
-    git:
-      url: https://github.com/whynotmake-it/flutter_liquid_glass.git
-      path: packages/liquid_glass_renderer
+

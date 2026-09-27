@@ -1,11 +1,9 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
-import 'package:apple_liquid_glass/apple_liquid_glass.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 import 'glass_material.dart';
 
-enum GlassMailTier { full, balanced, light, off }
+enum GlassMailTier { full, balanced, lite, off }
 
 class MailGlassAccessibility extends InheritedWidget {
   const MailGlassAccessibility({
@@ -36,7 +34,6 @@ class MailGlassAccessibility extends InheritedWidget {
       reduceTransparency != oldWidget.reduceTransparency;
 }
 
-/// Cache key for LiquidGlassSettings
 @immutable
 class _GlassSettingsKey {
   const _GlassSettingsKey(this.material, this.tier, this.tint);
@@ -58,7 +55,6 @@ class _GlassSettingsKey {
 
 final _settingsCache = <_GlassSettingsKey, LiquidGlassSettings>{};
 
-/// GlassMail-owned boundary around the optional renderer and opaque fallback.
 class GlassMailGlass extends StatelessWidget {
   const GlassMailGlass({
     required this.child,
@@ -67,7 +63,6 @@ class GlassMailGlass extends StatelessWidget {
     this.reduceTransparency = false,
     this.padding,
     this.alignment,
-    this.useOwnLayer = true,
     super.key,
   });
 
@@ -77,7 +72,6 @@ class GlassMailGlass extends StatelessWidget {
   final bool reduceTransparency;
   final EdgeInsetsGeometry? padding;
   final AlignmentGeometry? alignment;
-  final bool useOwnLayer;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +79,6 @@ class GlassMailGlass extends StatelessWidget {
     final highContrast = MediaQuery.highContrastOf(context);
     final disableAnimations = MediaQuery.disableAnimationsOf(context);
 
-    // Auto-degrade tier on low-end/battery saver indicated by disabled animations.
     var activeTier = tier ?? MailGlassAccessibility.tierOf(context);
     if (disableAnimations && activeTier == GlassMailTier.full) {
       activeTier = GlassMailTier.balanced;
@@ -96,6 +89,7 @@ class GlassMailGlass extends StatelessWidget {
         reduceTransparency ||
         MailGlassAccessibility.reduceTransparencyOf(context) ||
         highContrast;
+
     final radius = BorderRadius.circular(material.cornerRadius);
     final content = Padding(
       padding: padding ?? EdgeInsets.zero,
@@ -118,29 +112,46 @@ class GlassMailGlass extends StatelessWidget {
 
     final tint = material.tint ?? colors.surface;
     final key = _GlassSettingsKey(material, activeTier, tint);
+    
     final settings = _settingsCache.putIfAbsent(
       key,
       () => LiquidGlassSettings(
-        blur: activeTier == GlassMailTier.light
-            ? math.min(material.blur, 12)
+        blur: activeTier == GlassMailTier.lite
+            ? (material.blur > 12 ? 12.0 : material.blur)
             : material.blur,
         glassColor: tint.withValues(alpha: material.opacity),
-        thickness: material.refractionHeight + material.refraction * 12,
-        refractiveIndex: 1 + material.refraction * .2,
-        chromaticAberration: material.dispersion * 4,
+        thickness: activeTier == GlassMailTier.full 
+            ? material.refractionHeight + material.refraction * 12
+            : material.refractionHeight, 
+        refractiveIndex: activeTier == GlassMailTier.full 
+            ? 1 + material.refraction * 0.2
+            : 1 + material.refraction * 0.1, // Less refraction in balanced
+        chromaticAberration: activeTier == GlassMailTier.full ? material.dispersion * 4 : 0.0,
         lightAngle: material.specularAngle,
-        lightIntensity: material.specularIntensity,
+        lightIntensity: activeTier == GlassMailTier.full ? material.specularIntensity : material.specularIntensity * 0.5,
         ambientStrength: material.luminanceAdaptation,
         saturation: material.saturation,
       ),
     );
 
+    final shape = LiquidRoundedSuperellipse(borderRadius: material.cornerRadius);
+    final shadows = _shadows(material, colors);
+
+    if (activeTier == GlassMailTier.lite) {
+      // FakeGlass doesn't use auto, it requires wrapping if needed, but FakeGlass IS the highly performant fallback.
+      // FakeGlass doesn't need a LiquidGlassLayer parent, it uses platform BackdropFilter internally.
+      return FakeGlass(
+        shape: shape,
+        settings: settings,
+        shadows: shadows,
+        child: content,
+      );
+    }
+
     return LiquidGlass.auto(
-      shape: LiquidRoundedSuperellipse(
-        borderRadius: material.cornerRadius,
-      ),
+      shape: shape,
       settings: settings,
-      shadows: _shadows(material, colors),
+      shadows: shadows,
       clipBehavior: Clip.antiAlias,
       child: content,
     );
