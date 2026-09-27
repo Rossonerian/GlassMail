@@ -289,6 +289,43 @@ private class TlsImapConnection private constructor(private val socket: SSLSocke
         output.flush()
     }
 
+    fun writeLogin(tag: String, email: String, password: CharArray) {
+        require(email.none { it == '\r' || it == '\n' || it.code < 0x20 }) { "Invalid IMAP credential" }
+        val prefix = "$tag LOGIN \"${email.replace("\\", "\\\\").replace("\"", "\\\"")}\" "
+        output.write(prefix.toByteArray(StandardCharsets.UTF_8))
+
+        var escapeCount = 0
+        for (c in password) {
+            require(c != '\r' && c != '\n') { "Invalid IMAP credential" }
+            if (c == '\\' || c == '"') {
+                escapeCount++
+            }
+        }
+
+        val escapedPassword = CharArray(password.size + escapeCount + 2)
+        escapedPassword[0] = '"'
+        var i = 1
+        for (c in password) {
+            if (c == '\\' || c == '"') {
+                escapedPassword[i++] = '\\'
+            }
+            escapedPassword[i++] = c
+        }
+        escapedPassword[i] = '"'
+
+        val charBuffer = java.nio.CharBuffer.wrap(escapedPassword)
+        val byteBuffer = StandardCharsets.UTF_8.encode(charBuffer)
+
+        try {
+            output.write(byteBuffer.array(), byteBuffer.arrayOffset() + byteBuffer.position(), byteBuffer.remaining())
+            output.write("\r\n".toByteArray(StandardCharsets.UTF_8))
+            output.flush()
+        } finally {
+            byteBuffer.array().fill(0.toByte())
+            escapedPassword.fill('\u0000')
+        }
+    }
+
     fun writeLiteral(bytes: ByteArray) {
         output.write(bytes)
         output.write("\r\n".toByteArray(StandardCharsets.US_ASCII))
@@ -378,7 +415,23 @@ private class ImapCommandClient(private val connection: TlsImapConnection) {
     }.map { it.uppercase() }.toSet()
 
     fun login(email: String, password: CharArray) {
-        execute("LOGIN ${quote(email)} ${quote(String(password))}", authenticationCommand = true)
+        val tag = "G${commandNumber++.toString().padStart(4, '0')}"
+        connection.writeLogin(tag, email, password)
+        while (true) {
+            when (val response = connection.readResponse()) {
+                is ImapResponse.Continuation -> throw ImapException.Protocol("Unsupported IMAP continuation")
+                is ImapResponse.Untagged -> Unit
+                is ImapResponse.Tagged -> if (response.tag == tag) {
+                    when (response.status.uppercase()) {
+                        "OK" -> return
+                        "NO", "BAD" -> throw ImapException.Authentication()
+                        else -> throw ImapException.Protocol("Unknown IMAP completion status")
+                    }
+                } else {
+                    throw ImapException.Protocol("Unexpected IMAP command tag")
+                }
+            }
+        }
     }
 
     fun listMailboxes(): List<ImapMailbox> = execute("LIST \"\" \"*\"").mapNotNull { response ->
