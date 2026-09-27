@@ -30,9 +30,11 @@ bool _valueEquals(Object? a, Object? b) {
   }
   if (a is Map && b is Map) {
     return a.length == b.length &&
-        a.entries.every((entry) =>
-            b.containsKey(entry.key) &&
-            _valueEquals(entry.value, b[entry.key]));
+        a.entries.every(
+          (entry) =>
+              b.containsKey(entry.key) &&
+              _valueEquals(entry.value, b[entry.key]),
+        );
   }
   return a == b;
 }
@@ -44,9 +46,11 @@ int _valueHash(Object? value) {
   if (value is List) return _sequenceHash(value);
   if (value is Set) return Object.hashAllUnordered(value.map(_valueHash));
   if (value is Map) {
-    return Object.hashAllUnordered(value.entries.map(
-      (entry) => Object.hash(_valueHash(entry.key), _valueHash(entry.value)),
-    ));
+    return Object.hashAllUnordered(
+      value.entries.map(
+        (entry) => Object.hash(_valueHash(entry.key), _valueHash(entry.value)),
+      ),
+    );
   }
   return value.hashCode;
 }

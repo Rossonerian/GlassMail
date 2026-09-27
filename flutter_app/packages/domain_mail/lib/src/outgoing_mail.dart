@@ -16,11 +16,11 @@ final class OutgoingMail with MailValueEquality {
     this.inReplyTo,
     List<String> references = const [],
     List<OutgoingAttachment> attachments = const [],
-  })  : to = List.unmodifiable(to),
-        cc = List.unmodifiable(cc),
-        bcc = List.unmodifiable(bcc),
-        references = List.unmodifiable(references),
-        attachments = List.unmodifiable(attachments);
+  }) : to = List.unmodifiable(to),
+       cc = List.unmodifiable(cc),
+       bcc = List.unmodifiable(bcc),
+       references = List.unmodifiable(references),
+       attachments = List.unmodifiable(attachments);
 
   final String operationId;
   final String accountId;
@@ -36,18 +36,18 @@ final class OutgoingMail with MailValueEquality {
 
   @override
   List<Object?> get equalityProps => [
-        operationId,
-        accountId,
-        from,
-        to,
-        cc,
-        bcc,
-        subject,
-        body,
-        inReplyTo,
-        references,
-        attachments,
-      ];
+    operationId,
+    accountId,
+    from,
+    to,
+    cc,
+    bcc,
+    subject,
+    body,
+    inReplyTo,
+    references,
+    attachments,
+  ];
 }
 
 final class OutgoingAttachment with MailValueEquality {
@@ -67,8 +67,13 @@ final class OutgoingAttachment with MailValueEquality {
   final String? uri;
 
   @override
-  List<Object?> get equalityProps =>
-      [fileName, mimeType, sizeBytes, openStream, uri];
+  List<Object?> get equalityProps => [
+    fileName,
+    mimeType,
+    sizeBytes,
+    openStream,
+    uri,
+  ];
 }
 
 sealed class SendMailResult {
@@ -95,7 +100,7 @@ enum SendMailError {
   network,
   protocol,
   invalidMessage,
-  uncertain
+  uncertain,
 }
 
 abstract interface class MailSender {
@@ -124,11 +129,11 @@ final class MailDraft with MailValueEquality {
     this.status = DraftStatus.draft,
     this.updatedAtEpochMillis = 0,
     List<DraftAttachment> attachments = const [],
-  })  : to = List.unmodifiable(to),
-        cc = List.unmodifiable(cc),
-        bcc = List.unmodifiable(bcc),
-        references = List.unmodifiable(references),
-        attachments = List.unmodifiable(attachments);
+  }) : to = List.unmodifiable(to),
+       cc = List.unmodifiable(cc),
+       bcc = List.unmodifiable(bcc),
+       references = List.unmodifiable(references),
+       attachments = List.unmodifiable(attachments);
 
   final String draftId;
   final String accountId;
@@ -145,19 +150,19 @@ final class MailDraft with MailValueEquality {
 
   @override
   List<Object?> get equalityProps => [
-        draftId,
-        accountId,
-        to,
-        cc,
-        bcc,
-        subject,
-        body,
-        inReplyTo,
-        references,
-        status,
-        updatedAtEpochMillis,
-        attachments,
-      ];
+    draftId,
+    accountId,
+    to,
+    cc,
+    bcc,
+    subject,
+    body,
+    inReplyTo,
+    references,
+    status,
+    updatedAtEpochMillis,
+    attachments,
+  ];
 }
 
 final class DraftAttachment with MailValueEquality {
@@ -187,21 +192,22 @@ enum DraftStatus {
   String get storageValue => name.toUpperCase();
 
   static DraftStatus fromStorageValue(String value) => switch (value) {
-        'DRAFT' => DraftStatus.draft,
-        'QUEUED' => DraftStatus.queued,
-        'SENDING' => DraftStatus.sending,
-        'SENT' => DraftStatus.sent,
-        'FAILED' => DraftStatus.failed,
-        'UNCERTAIN' => DraftStatus.uncertain,
-        _ => throw FormatException('Unknown draft status: $value'),
-      };
+    'DRAFT' => DraftStatus.draft,
+    'QUEUED' => DraftStatus.queued,
+    'SENDING' => DraftStatus.sending,
+    'SENT' => DraftStatus.sent,
+    'FAILED' => DraftStatus.failed,
+    'UNCERTAIN' => DraftStatus.uncertain,
+    _ => throw FormatException('Unknown draft status: $value'),
+  };
 }
 
 String sanitizeAttachmentName(String raw) {
   final name = raw.split(RegExp(r'[/\\]')).last;
   final sanitized = name.replaceAll(RegExp(r'[^A-Za-z0-9._ -]'), '_');
-  final bounded =
-      sanitized.length > 120 ? sanitized.substring(0, 120) : sanitized;
+  final bounded = sanitized.length > 120
+      ? sanitized.substring(0, 120)
+      : sanitized;
   return bounded.trim().isEmpty ? 'attachment' : bounded;
 }
 
@@ -217,10 +223,10 @@ int estimatedOutgoingMessageBytes(OutgoingMail mail) =>
     16384;
 
 List<String> normalizeAddresses(String raw) => raw
-        .split(RegExp(r'[,;\n]'))
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty)
-        .fold(<String>[], (items, value) {
+    .split(RegExp(r'[,;\n]'))
+    .map((value) => value.trim())
+    .where((value) => value.isNotEmpty)
+    .fold(<String>[], (items, value) {
       if (!items.any((item) => item.toLowerCase() == value.toLowerCase())) {
         items.add(value);
       }
@@ -248,12 +254,11 @@ List<String> replyRecipients(MailMessage message, String ownAddress) =>
 List<String> replyAllRecipients(
   ReceivedMailHeaders message,
   String ownAddress,
-) =>
-    _uniqueRecipients([
-      ...message.replyTo,
-      ...message.to,
-      ...message.cc,
-    ], ownAddress);
+) => _uniqueRecipients([
+  ...message.replyTo,
+  ...message.to,
+  ...message.cc,
+], ownAddress);
 
 final class ReceivedMailHeaders with MailValueEquality {
   ReceivedMailHeaders({
@@ -262,10 +267,10 @@ final class ReceivedMailHeaders with MailValueEquality {
     List<String> cc = const [],
     this.messageId,
     List<String> references = const [],
-  })  : replyTo = List.unmodifiable(replyTo),
-        to = List.unmodifiable(to),
-        cc = List.unmodifiable(cc),
-        references = List.unmodifiable(references);
+  }) : replyTo = List.unmodifiable(replyTo),
+       to = List.unmodifiable(to),
+       cc = List.unmodifiable(cc),
+       references = List.unmodifiable(references);
 
   final List<String> replyTo;
   final List<String> to;

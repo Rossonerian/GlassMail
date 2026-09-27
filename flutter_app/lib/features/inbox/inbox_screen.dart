@@ -198,8 +198,9 @@ class _InboxScreenState extends State<InboxScreen> {
                   child: Center(
                     child: Text(
                       'Sample inbox · no mail account connected',
-                      style: Theme.of(context).textTheme.labelMedium
-                          ?.copyWith(color: colors.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
@@ -687,8 +688,9 @@ class _MailRow extends StatelessWidget {
                       message.preview,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(color: colors.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),

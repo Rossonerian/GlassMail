@@ -132,14 +132,16 @@ class _GlassLabScreenState extends State<GlassLabScreen> {
         children: [
           Text(
             'A small, bounded glass preview',
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 5),
           Text(
             'Scroll the colors behind the surface and compare the app-owned fallback.',
-            style: Theme.of(context).textTheme.bodyMedium
-                ?.copyWith(color: colors.onSurfaceVariant),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
           DecoratedBox(

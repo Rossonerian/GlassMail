@@ -8,105 +8,143 @@ class Accounts extends Table with TableInfo<Accounts, Account> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   Accounts(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _accountIdMeta =
-      const VerificationMeta('accountId');
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
   late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
-      'accountId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL PRIMARY KEY');
+    'accountId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
   static const VerificationMeta _emailMeta = const VerificationMeta('email');
   late final GeneratedColumn<String> email = GeneratedColumn<String>(
-      'email', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'email',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _createdAtEpochMillisMeta =
       const VerificationMeta('createdAtEpochMillis');
   late final GeneratedColumn<int> createdAtEpochMillis = GeneratedColumn<int>(
-      'createdAtEpochMillis', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _syncStateMeta =
-      const VerificationMeta('syncState');
+    'createdAtEpochMillis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _syncStateMeta = const VerificationMeta(
+    'syncState',
+  );
   late final GeneratedColumn<String> syncState = GeneratedColumn<String>(
-      'syncState', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'syncState',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _gmailExtensionsEnabledMeta =
       const VerificationMeta('gmailExtensionsEnabled');
   late final GeneratedColumn<int> gmailExtensionsEnabled = GeneratedColumn<int>(
-      'gmailExtensionsEnabled', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'gmailExtensionsEnabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _lastSyncedAtEpochMillisMeta =
       const VerificationMeta('lastSyncedAtEpochMillis');
   late final GeneratedColumn<int> lastSyncedAtEpochMillis =
-      GeneratedColumn<int>('lastSyncedAtEpochMillis', aliasedName, true,
-          type: DriftSqlType.int,
-          requiredDuringInsert: false,
-          $customConstraints: '');
+      GeneratedColumn<int>(
+        'lastSyncedAtEpochMillis',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      );
   @override
   List<GeneratedColumn> get $columns => [
-        accountId,
-        email,
-        createdAtEpochMillis,
-        syncState,
-        gmailExtensionsEnabled,
-        lastSyncedAtEpochMillis
-      ];
+    accountId,
+    email,
+    createdAtEpochMillis,
+    syncState,
+    gmailExtensionsEnabled,
+    lastSyncedAtEpochMillis,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'accounts';
   @override
-  VerificationContext validateIntegrity(Insertable<Account> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<Account> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('accountId')) {
-      context.handle(_accountIdMeta,
-          accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta));
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_accountIdMeta);
     }
     if (data.containsKey('email')) {
       context.handle(
-          _emailMeta, email.isAcceptableOrUnknown(data['email']!, _emailMeta));
+        _emailMeta,
+        email.isAcceptableOrUnknown(data['email']!, _emailMeta),
+      );
     } else if (isInserting) {
       context.missing(_emailMeta);
     }
     if (data.containsKey('createdAtEpochMillis')) {
       context.handle(
+        _createdAtEpochMillisMeta,
+        createdAtEpochMillis.isAcceptableOrUnknown(
+          data['createdAtEpochMillis']!,
           _createdAtEpochMillisMeta,
-          createdAtEpochMillis.isAcceptableOrUnknown(
-              data['createdAtEpochMillis']!, _createdAtEpochMillisMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_createdAtEpochMillisMeta);
     }
     if (data.containsKey('syncState')) {
-      context.handle(_syncStateMeta,
-          syncState.isAcceptableOrUnknown(data['syncState']!, _syncStateMeta));
+      context.handle(
+        _syncStateMeta,
+        syncState.isAcceptableOrUnknown(data['syncState']!, _syncStateMeta),
+      );
     } else if (isInserting) {
       context.missing(_syncStateMeta);
     }
     if (data.containsKey('gmailExtensionsEnabled')) {
       context.handle(
+        _gmailExtensionsEnabledMeta,
+        gmailExtensionsEnabled.isAcceptableOrUnknown(
+          data['gmailExtensionsEnabled']!,
           _gmailExtensionsEnabledMeta,
-          gmailExtensionsEnabled.isAcceptableOrUnknown(
-              data['gmailExtensionsEnabled']!, _gmailExtensionsEnabledMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_gmailExtensionsEnabledMeta);
     }
     if (data.containsKey('lastSyncedAtEpochMillis')) {
       context.handle(
+        _lastSyncedAtEpochMillisMeta,
+        lastSyncedAtEpochMillis.isAcceptableOrUnknown(
+          data['lastSyncedAtEpochMillis']!,
           _lastSyncedAtEpochMillisMeta,
-          lastSyncedAtEpochMillis.isAcceptableOrUnknown(
-              data['lastSyncedAtEpochMillis']!, _lastSyncedAtEpochMillisMeta));
+        ),
+      );
     }
     return context;
   }
@@ -117,18 +155,30 @@ class Accounts extends Table with TableInfo<Accounts, Account> {
   Account map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Account(
-      accountId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}accountId'])!,
-      email: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}email'])!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accountId'],
+      )!,
+      email: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}email'],
+      )!,
       createdAtEpochMillis: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}createdAtEpochMillis'])!,
-      syncState: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}syncState'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}createdAtEpochMillis'],
+      )!,
+      syncState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}syncState'],
+      )!,
       gmailExtensionsEnabled: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}gmailExtensionsEnabled'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}gmailExtensionsEnabled'],
+      )!,
       lastSyncedAtEpochMillis: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}lastSyncedAtEpochMillis']),
+        DriftSqlType.int,
+        data['${effectivePrefix}lastSyncedAtEpochMillis'],
+      ),
     );
   }
 
@@ -148,13 +198,14 @@ class Account extends DataClass implements Insertable<Account> {
   final String syncState;
   final int gmailExtensionsEnabled;
   final int? lastSyncedAtEpochMillis;
-  const Account(
-      {required this.accountId,
-      required this.email,
-      required this.createdAtEpochMillis,
-      required this.syncState,
-      required this.gmailExtensionsEnabled,
-      this.lastSyncedAtEpochMillis});
+  const Account({
+    required this.accountId,
+    required this.email,
+    required this.createdAtEpochMillis,
+    required this.syncState,
+    required this.gmailExtensionsEnabled,
+    this.lastSyncedAtEpochMillis,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -182,19 +233,24 @@ class Account extends DataClass implements Insertable<Account> {
     );
   }
 
-  factory Account.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory Account.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Account(
       accountId: serializer.fromJson<String>(json['accountId']),
       email: serializer.fromJson<String>(json['email']),
-      createdAtEpochMillis:
-          serializer.fromJson<int>(json['createdAtEpochMillis']),
+      createdAtEpochMillis: serializer.fromJson<int>(
+        json['createdAtEpochMillis'],
+      ),
       syncState: serializer.fromJson<String>(json['syncState']),
-      gmailExtensionsEnabled:
-          serializer.fromJson<int>(json['gmailExtensionsEnabled']),
-      lastSyncedAtEpochMillis:
-          serializer.fromJson<int?>(json['lastSyncedAtEpochMillis']),
+      gmailExtensionsEnabled: serializer.fromJson<int>(
+        json['gmailExtensionsEnabled'],
+      ),
+      lastSyncedAtEpochMillis: serializer.fromJson<int?>(
+        json['lastSyncedAtEpochMillis'],
+      ),
     );
   }
   @override
@@ -206,29 +262,30 @@ class Account extends DataClass implements Insertable<Account> {
       'createdAtEpochMillis': serializer.toJson<int>(createdAtEpochMillis),
       'syncState': serializer.toJson<String>(syncState),
       'gmailExtensionsEnabled': serializer.toJson<int>(gmailExtensionsEnabled),
-      'lastSyncedAtEpochMillis':
-          serializer.toJson<int?>(lastSyncedAtEpochMillis),
+      'lastSyncedAtEpochMillis': serializer.toJson<int?>(
+        lastSyncedAtEpochMillis,
+      ),
     };
   }
 
-  Account copyWith(
-          {String? accountId,
-          String? email,
-          int? createdAtEpochMillis,
-          String? syncState,
-          int? gmailExtensionsEnabled,
-          Value<int?> lastSyncedAtEpochMillis = const Value.absent()}) =>
-      Account(
-        accountId: accountId ?? this.accountId,
-        email: email ?? this.email,
-        createdAtEpochMillis: createdAtEpochMillis ?? this.createdAtEpochMillis,
-        syncState: syncState ?? this.syncState,
-        gmailExtensionsEnabled:
-            gmailExtensionsEnabled ?? this.gmailExtensionsEnabled,
-        lastSyncedAtEpochMillis: lastSyncedAtEpochMillis.present
-            ? lastSyncedAtEpochMillis.value
-            : this.lastSyncedAtEpochMillis,
-      );
+  Account copyWith({
+    String? accountId,
+    String? email,
+    int? createdAtEpochMillis,
+    String? syncState,
+    int? gmailExtensionsEnabled,
+    Value<int?> lastSyncedAtEpochMillis = const Value.absent(),
+  }) => Account(
+    accountId: accountId ?? this.accountId,
+    email: email ?? this.email,
+    createdAtEpochMillis: createdAtEpochMillis ?? this.createdAtEpochMillis,
+    syncState: syncState ?? this.syncState,
+    gmailExtensionsEnabled:
+        gmailExtensionsEnabled ?? this.gmailExtensionsEnabled,
+    lastSyncedAtEpochMillis: lastSyncedAtEpochMillis.present
+        ? lastSyncedAtEpochMillis.value
+        : this.lastSyncedAtEpochMillis,
+  );
   Account copyWithCompanion(AccountsCompanion data) {
     return Account(
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
@@ -260,8 +317,14 @@ class Account extends DataClass implements Insertable<Account> {
   }
 
   @override
-  int get hashCode => Object.hash(accountId, email, createdAtEpochMillis,
-      syncState, gmailExtensionsEnabled, lastSyncedAtEpochMillis);
+  int get hashCode => Object.hash(
+    accountId,
+    email,
+    createdAtEpochMillis,
+    syncState,
+    gmailExtensionsEnabled,
+    lastSyncedAtEpochMillis,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -299,11 +362,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     required int gmailExtensionsEnabled,
     this.lastSyncedAtEpochMillis = const Value.absent(),
     this.rowid = const Value.absent(),
-  })  : accountId = Value(accountId),
-        email = Value(email),
-        createdAtEpochMillis = Value(createdAtEpochMillis),
-        syncState = Value(syncState),
-        gmailExtensionsEnabled = Value(gmailExtensionsEnabled);
+  }) : accountId = Value(accountId),
+       email = Value(email),
+       createdAtEpochMillis = Value(createdAtEpochMillis),
+       syncState = Value(syncState),
+       gmailExtensionsEnabled = Value(gmailExtensionsEnabled);
   static Insertable<Account> custom({
     Expression<String>? accountId,
     Expression<String>? email,
@@ -327,14 +390,15 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     });
   }
 
-  AccountsCompanion copyWith(
-      {Value<String>? accountId,
-      Value<String>? email,
-      Value<int>? createdAtEpochMillis,
-      Value<String>? syncState,
-      Value<int>? gmailExtensionsEnabled,
-      Value<int?>? lastSyncedAtEpochMillis,
-      Value<int>? rowid}) {
+  AccountsCompanion copyWith({
+    Value<String>? accountId,
+    Value<String>? email,
+    Value<int>? createdAtEpochMillis,
+    Value<String>? syncState,
+    Value<int>? gmailExtensionsEnabled,
+    Value<int?>? lastSyncedAtEpochMillis,
+    Value<int>? rowid,
+  }) {
     return AccountsCompanion(
       accountId: accountId ?? this.accountId,
       email: email ?? this.email,
@@ -364,12 +428,14 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       map['syncState'] = Variable<String>(syncState.value);
     }
     if (gmailExtensionsEnabled.present) {
-      map['gmailExtensionsEnabled'] =
-          Variable<int>(gmailExtensionsEnabled.value);
+      map['gmailExtensionsEnabled'] = Variable<int>(
+        gmailExtensionsEnabled.value,
+      );
     }
     if (lastSyncedAtEpochMillis.present) {
-      map['lastSyncedAtEpochMillis'] =
-          Variable<int>(lastSyncedAtEpochMillis.value);
+      map['lastSyncedAtEpochMillis'] = Variable<int>(
+        lastSyncedAtEpochMillis.value,
+      );
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -397,101 +463,145 @@ class Mailboxes extends Table with TableInfo<Mailboxes, Mailboxe> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   Mailboxes(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _mailboxIdMeta =
-      const VerificationMeta('mailboxId');
+  static const VerificationMeta _mailboxIdMeta = const VerificationMeta(
+    'mailboxId',
+  );
   late final GeneratedColumn<String> mailboxId = GeneratedColumn<String>(
-      'mailboxId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL PRIMARY KEY');
-  static const VerificationMeta _accountIdMeta =
-      const VerificationMeta('accountId');
+    'mailboxId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
   late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
-      'accountId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL REFERENCES accounts(accountId)ON DELETE CASCADE');
-  static const VerificationMeta _remoteNameMeta =
-      const VerificationMeta('remoteName');
+    'accountId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES accounts(accountId)ON DELETE CASCADE',
+  );
+  static const VerificationMeta _remoteNameMeta = const VerificationMeta(
+    'remoteName',
+  );
   late final GeneratedColumn<String> remoteName = GeneratedColumn<String>(
-      'remoteName', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _uidValidityMeta =
-      const VerificationMeta('uidValidity');
+    'remoteName',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _uidValidityMeta = const VerificationMeta(
+    'uidValidity',
+  );
   late final GeneratedColumn<int> uidValidity = GeneratedColumn<int>(
-      'uidValidity', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _uidNextMeta =
-      const VerificationMeta('uidNext');
+    'uidValidity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _uidNextMeta = const VerificationMeta(
+    'uidNext',
+  );
   late final GeneratedColumn<int> uidNext = GeneratedColumn<int>(
-      'uidNext', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _messageCountMeta =
-      const VerificationMeta('messageCount');
+    'uidNext',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _messageCountMeta = const VerificationMeta(
+    'messageCount',
+  );
   late final GeneratedColumn<int> messageCount = GeneratedColumn<int>(
-      'messageCount', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'messageCount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   @override
-  List<GeneratedColumn> get $columns =>
-      [mailboxId, accountId, remoteName, uidValidity, uidNext, messageCount];
+  List<GeneratedColumn> get $columns => [
+    mailboxId,
+    accountId,
+    remoteName,
+    uidValidity,
+    uidNext,
+    messageCount,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'mailboxes';
   @override
-  VerificationContext validateIntegrity(Insertable<Mailboxe> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<Mailboxe> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('mailboxId')) {
-      context.handle(_mailboxIdMeta,
-          mailboxId.isAcceptableOrUnknown(data['mailboxId']!, _mailboxIdMeta));
+      context.handle(
+        _mailboxIdMeta,
+        mailboxId.isAcceptableOrUnknown(data['mailboxId']!, _mailboxIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_mailboxIdMeta);
     }
     if (data.containsKey('accountId')) {
-      context.handle(_accountIdMeta,
-          accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta));
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_accountIdMeta);
     }
     if (data.containsKey('remoteName')) {
       context.handle(
-          _remoteNameMeta,
-          remoteName.isAcceptableOrUnknown(
-              data['remoteName']!, _remoteNameMeta));
+        _remoteNameMeta,
+        remoteName.isAcceptableOrUnknown(data['remoteName']!, _remoteNameMeta),
+      );
     } else if (isInserting) {
       context.missing(_remoteNameMeta);
     }
     if (data.containsKey('uidValidity')) {
       context.handle(
+        _uidValidityMeta,
+        uidValidity.isAcceptableOrUnknown(
+          data['uidValidity']!,
           _uidValidityMeta,
-          uidValidity.isAcceptableOrUnknown(
-              data['uidValidity']!, _uidValidityMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_uidValidityMeta);
     }
     if (data.containsKey('uidNext')) {
-      context.handle(_uidNextMeta,
-          uidNext.isAcceptableOrUnknown(data['uidNext']!, _uidNextMeta));
+      context.handle(
+        _uidNextMeta,
+        uidNext.isAcceptableOrUnknown(data['uidNext']!, _uidNextMeta),
+      );
     } else if (isInserting) {
       context.missing(_uidNextMeta);
     }
     if (data.containsKey('messageCount')) {
       context.handle(
+        _messageCountMeta,
+        messageCount.isAcceptableOrUnknown(
+          data['messageCount']!,
           _messageCountMeta,
-          messageCount.isAcceptableOrUnknown(
-              data['messageCount']!, _messageCountMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_messageCountMeta);
     }
@@ -504,18 +614,30 @@ class Mailboxes extends Table with TableInfo<Mailboxes, Mailboxe> {
   Mailboxe map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Mailboxe(
-      mailboxId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}mailboxId'])!,
-      accountId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}accountId'])!,
-      remoteName: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}remoteName'])!,
-      uidValidity: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}uidValidity'])!,
-      uidNext: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}uidNext'])!,
-      messageCount: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}messageCount'])!,
+      mailboxId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mailboxId'],
+      )!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accountId'],
+      )!,
+      remoteName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remoteName'],
+      )!,
+      uidValidity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}uidValidity'],
+      )!,
+      uidNext: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}uidNext'],
+      )!,
+      messageCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}messageCount'],
+      )!,
     );
   }
 
@@ -535,13 +657,14 @@ class Mailboxe extends DataClass implements Insertable<Mailboxe> {
   final int uidValidity;
   final int uidNext;
   final int messageCount;
-  const Mailboxe(
-      {required this.mailboxId,
-      required this.accountId,
-      required this.remoteName,
-      required this.uidValidity,
-      required this.uidNext,
-      required this.messageCount});
+  const Mailboxe({
+    required this.mailboxId,
+    required this.accountId,
+    required this.remoteName,
+    required this.uidValidity,
+    required this.uidNext,
+    required this.messageCount,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -565,8 +688,10 @@ class Mailboxe extends DataClass implements Insertable<Mailboxe> {
     );
   }
 
-  factory Mailboxe.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory Mailboxe.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Mailboxe(
       mailboxId: serializer.fromJson<String>(json['mailboxId']),
@@ -590,29 +715,31 @@ class Mailboxe extends DataClass implements Insertable<Mailboxe> {
     };
   }
 
-  Mailboxe copyWith(
-          {String? mailboxId,
-          String? accountId,
-          String? remoteName,
-          int? uidValidity,
-          int? uidNext,
-          int? messageCount}) =>
-      Mailboxe(
-        mailboxId: mailboxId ?? this.mailboxId,
-        accountId: accountId ?? this.accountId,
-        remoteName: remoteName ?? this.remoteName,
-        uidValidity: uidValidity ?? this.uidValidity,
-        uidNext: uidNext ?? this.uidNext,
-        messageCount: messageCount ?? this.messageCount,
-      );
+  Mailboxe copyWith({
+    String? mailboxId,
+    String? accountId,
+    String? remoteName,
+    int? uidValidity,
+    int? uidNext,
+    int? messageCount,
+  }) => Mailboxe(
+    mailboxId: mailboxId ?? this.mailboxId,
+    accountId: accountId ?? this.accountId,
+    remoteName: remoteName ?? this.remoteName,
+    uidValidity: uidValidity ?? this.uidValidity,
+    uidNext: uidNext ?? this.uidNext,
+    messageCount: messageCount ?? this.messageCount,
+  );
   Mailboxe copyWithCompanion(MailboxesCompanion data) {
     return Mailboxe(
       mailboxId: data.mailboxId.present ? data.mailboxId.value : this.mailboxId,
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
-      remoteName:
-          data.remoteName.present ? data.remoteName.value : this.remoteName,
-      uidValidity:
-          data.uidValidity.present ? data.uidValidity.value : this.uidValidity,
+      remoteName: data.remoteName.present
+          ? data.remoteName.value
+          : this.remoteName,
+      uidValidity: data.uidValidity.present
+          ? data.uidValidity.value
+          : this.uidValidity,
       uidNext: data.uidNext.present ? data.uidNext.value : this.uidNext,
       messageCount: data.messageCount.present
           ? data.messageCount.value
@@ -635,7 +762,13 @@ class Mailboxe extends DataClass implements Insertable<Mailboxe> {
 
   @override
   int get hashCode => Object.hash(
-      mailboxId, accountId, remoteName, uidValidity, uidNext, messageCount);
+    mailboxId,
+    accountId,
+    remoteName,
+    uidValidity,
+    uidNext,
+    messageCount,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -673,12 +806,12 @@ class MailboxesCompanion extends UpdateCompanion<Mailboxe> {
     required int uidNext,
     required int messageCount,
     this.rowid = const Value.absent(),
-  })  : mailboxId = Value(mailboxId),
-        accountId = Value(accountId),
-        remoteName = Value(remoteName),
-        uidValidity = Value(uidValidity),
-        uidNext = Value(uidNext),
-        messageCount = Value(messageCount);
+  }) : mailboxId = Value(mailboxId),
+       accountId = Value(accountId),
+       remoteName = Value(remoteName),
+       uidValidity = Value(uidValidity),
+       uidNext = Value(uidNext),
+       messageCount = Value(messageCount);
   static Insertable<Mailboxe> custom({
     Expression<String>? mailboxId,
     Expression<String>? accountId,
@@ -699,14 +832,15 @@ class MailboxesCompanion extends UpdateCompanion<Mailboxe> {
     });
   }
 
-  MailboxesCompanion copyWith(
-      {Value<String>? mailboxId,
-      Value<String>? accountId,
-      Value<String>? remoteName,
-      Value<int>? uidValidity,
-      Value<int>? uidNext,
-      Value<int>? messageCount,
-      Value<int>? rowid}) {
+  MailboxesCompanion copyWith({
+    Value<String>? mailboxId,
+    Value<String>? accountId,
+    Value<String>? remoteName,
+    Value<int>? uidValidity,
+    Value<int>? uidNext,
+    Value<int>? messageCount,
+    Value<int>? rowid,
+  }) {
     return MailboxesCompanion(
       mailboxId: mailboxId ?? this.mailboxId,
       accountId: accountId ?? this.accountId,
@@ -765,220 +899,318 @@ class Messages extends Table with TableInfo<Messages, Message> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   Messages(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _messageIdMeta =
-      const VerificationMeta('messageId');
+  static const VerificationMeta _messageIdMeta = const VerificationMeta(
+    'messageId',
+  );
   late final GeneratedColumn<String> messageId = GeneratedColumn<String>(
-      'messageId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL PRIMARY KEY');
-  static const VerificationMeta _accountIdMeta =
-      const VerificationMeta('accountId');
+    'messageId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
   late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
-      'accountId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL REFERENCES accounts(accountId)ON DELETE CASCADE');
-  static const VerificationMeta _gmailMessageIdMeta =
-      const VerificationMeta('gmailMessageId');
+    'accountId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES accounts(accountId)ON DELETE CASCADE',
+  );
+  static const VerificationMeta _gmailMessageIdMeta = const VerificationMeta(
+    'gmailMessageId',
+  );
   late final GeneratedColumn<String> gmailMessageId = GeneratedColumn<String>(
-      'gmailMessageId', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _gmailThreadIdMeta =
-      const VerificationMeta('gmailThreadId');
+    'gmailMessageId',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _gmailThreadIdMeta = const VerificationMeta(
+    'gmailThreadId',
+  );
   late final GeneratedColumn<String> gmailThreadId = GeneratedColumn<String>(
-      'gmailThreadId', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _subjectMeta =
-      const VerificationMeta('subject');
+    'gmailThreadId',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _subjectMeta = const VerificationMeta(
+    'subject',
+  );
   late final GeneratedColumn<String> subject = GeneratedColumn<String>(
-      'subject', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
+    'subject',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _senderMeta = const VerificationMeta('sender');
   late final GeneratedColumn<String> sender = GeneratedColumn<String>(
-      'sender', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _sentAtEpochMillisMeta =
-      const VerificationMeta('sentAtEpochMillis');
+    'sender',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _sentAtEpochMillisMeta = const VerificationMeta(
+    'sentAtEpochMillis',
+  );
   late final GeneratedColumn<int> sentAtEpochMillis = GeneratedColumn<int>(
-      'sentAtEpochMillis', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _sizeBytesMeta =
-      const VerificationMeta('sizeBytes');
+    'sentAtEpochMillis',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
   late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
-      'sizeBytes', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _categoryMeta =
-      const VerificationMeta('category');
+    'sizeBytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
   late final GeneratedColumn<String> category = GeneratedColumn<String>(
-      'category', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: 'NOT NULL DEFAULT \'PRIMARY\'',
-      defaultValue: const CustomExpression('\'PRIMARY\''));
-  static const VerificationMeta _previewMeta =
-      const VerificationMeta('preview');
+    'category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT \'PRIMARY\'',
+    defaultValue: const CustomExpression('\'PRIMARY\''),
+  );
+  static const VerificationMeta _previewMeta = const VerificationMeta(
+    'preview',
+  );
   late final GeneratedColumn<String> preview = GeneratedColumn<String>(
-      'preview', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
+    'preview',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _bodyMeta = const VerificationMeta('body');
   late final GeneratedColumn<String> body = GeneratedColumn<String>(
-      'body', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _contentKindMeta =
-      const VerificationMeta('contentKind');
+    'body',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _contentKindMeta = const VerificationMeta(
+    'contentKind',
+  );
   late final GeneratedColumn<String> contentKind = GeneratedColumn<String>(
-      'contentKind', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _bodyDownloadStateMeta =
-      const VerificationMeta('bodyDownloadState');
+    'contentKind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _bodyDownloadStateMeta = const VerificationMeta(
+    'bodyDownloadState',
+  );
   late final GeneratedColumn<String> bodyDownloadState =
-      GeneratedColumn<String>('bodyDownloadState', aliasedName, false,
-          type: DriftSqlType.string,
-          requiredDuringInsert: true,
-          $customConstraints: 'NOT NULL');
-  static const VerificationMeta _listUnsubscribeMeta =
-      const VerificationMeta('listUnsubscribe');
+      GeneratedColumn<String>(
+        'bodyDownloadState',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL',
+      );
+  static const VerificationMeta _listUnsubscribeMeta = const VerificationMeta(
+    'listUnsubscribe',
+  );
   late final GeneratedColumn<String> listUnsubscribe = GeneratedColumn<String>(
-      'listUnsubscribe', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
+    'listUnsubscribe',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _listUnsubscribePostMeta =
       const VerificationMeta('listUnsubscribePost');
   late final GeneratedColumn<String> listUnsubscribePost =
-      GeneratedColumn<String>('listUnsubscribePost', aliasedName, true,
-          type: DriftSqlType.string,
-          requiredDuringInsert: false,
-          $customConstraints: '');
+      GeneratedColumn<String>(
+        'listUnsubscribePost',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      );
   @override
   List<GeneratedColumn> get $columns => [
-        messageId,
-        accountId,
-        gmailMessageId,
-        gmailThreadId,
-        subject,
-        sender,
-        sentAtEpochMillis,
-        sizeBytes,
-        category,
-        preview,
-        body,
-        contentKind,
-        bodyDownloadState,
-        listUnsubscribe,
-        listUnsubscribePost
-      ];
+    messageId,
+    accountId,
+    gmailMessageId,
+    gmailThreadId,
+    subject,
+    sender,
+    sentAtEpochMillis,
+    sizeBytes,
+    category,
+    preview,
+    body,
+    contentKind,
+    bodyDownloadState,
+    listUnsubscribe,
+    listUnsubscribePost,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'messages';
   @override
-  VerificationContext validateIntegrity(Insertable<Message> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<Message> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('messageId')) {
-      context.handle(_messageIdMeta,
-          messageId.isAcceptableOrUnknown(data['messageId']!, _messageIdMeta));
+      context.handle(
+        _messageIdMeta,
+        messageId.isAcceptableOrUnknown(data['messageId']!, _messageIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_messageIdMeta);
     }
     if (data.containsKey('accountId')) {
-      context.handle(_accountIdMeta,
-          accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta));
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_accountIdMeta);
     }
     if (data.containsKey('gmailMessageId')) {
       context.handle(
+        _gmailMessageIdMeta,
+        gmailMessageId.isAcceptableOrUnknown(
+          data['gmailMessageId']!,
           _gmailMessageIdMeta,
-          gmailMessageId.isAcceptableOrUnknown(
-              data['gmailMessageId']!, _gmailMessageIdMeta));
+        ),
+      );
     }
     if (data.containsKey('gmailThreadId')) {
       context.handle(
+        _gmailThreadIdMeta,
+        gmailThreadId.isAcceptableOrUnknown(
+          data['gmailThreadId']!,
           _gmailThreadIdMeta,
-          gmailThreadId.isAcceptableOrUnknown(
-              data['gmailThreadId']!, _gmailThreadIdMeta));
+        ),
+      );
     }
     if (data.containsKey('subject')) {
-      context.handle(_subjectMeta,
-          subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta));
+      context.handle(
+        _subjectMeta,
+        subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta),
+      );
     }
     if (data.containsKey('sender')) {
-      context.handle(_senderMeta,
-          sender.isAcceptableOrUnknown(data['sender']!, _senderMeta));
+      context.handle(
+        _senderMeta,
+        sender.isAcceptableOrUnknown(data['sender']!, _senderMeta),
+      );
     }
     if (data.containsKey('sentAtEpochMillis')) {
       context.handle(
+        _sentAtEpochMillisMeta,
+        sentAtEpochMillis.isAcceptableOrUnknown(
+          data['sentAtEpochMillis']!,
           _sentAtEpochMillisMeta,
-          sentAtEpochMillis.isAcceptableOrUnknown(
-              data['sentAtEpochMillis']!, _sentAtEpochMillisMeta));
+        ),
+      );
     }
     if (data.containsKey('sizeBytes')) {
-      context.handle(_sizeBytesMeta,
-          sizeBytes.isAcceptableOrUnknown(data['sizeBytes']!, _sizeBytesMeta));
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['sizeBytes']!, _sizeBytesMeta),
+      );
     }
     if (data.containsKey('category')) {
-      context.handle(_categoryMeta,
-          category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
     }
     if (data.containsKey('preview')) {
-      context.handle(_previewMeta,
-          preview.isAcceptableOrUnknown(data['preview']!, _previewMeta));
+      context.handle(
+        _previewMeta,
+        preview.isAcceptableOrUnknown(data['preview']!, _previewMeta),
+      );
     }
     if (data.containsKey('body')) {
       context.handle(
-          _bodyMeta, body.isAcceptableOrUnknown(data['body']!, _bodyMeta));
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
     }
     if (data.containsKey('contentKind')) {
       context.handle(
+        _contentKindMeta,
+        contentKind.isAcceptableOrUnknown(
+          data['contentKind']!,
           _contentKindMeta,
-          contentKind.isAcceptableOrUnknown(
-              data['contentKind']!, _contentKindMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_contentKindMeta);
     }
     if (data.containsKey('bodyDownloadState')) {
       context.handle(
+        _bodyDownloadStateMeta,
+        bodyDownloadState.isAcceptableOrUnknown(
+          data['bodyDownloadState']!,
           _bodyDownloadStateMeta,
-          bodyDownloadState.isAcceptableOrUnknown(
-              data['bodyDownloadState']!, _bodyDownloadStateMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_bodyDownloadStateMeta);
     }
     if (data.containsKey('listUnsubscribe')) {
       context.handle(
+        _listUnsubscribeMeta,
+        listUnsubscribe.isAcceptableOrUnknown(
+          data['listUnsubscribe']!,
           _listUnsubscribeMeta,
-          listUnsubscribe.isAcceptableOrUnknown(
-              data['listUnsubscribe']!, _listUnsubscribeMeta));
+        ),
+      );
     }
     if (data.containsKey('listUnsubscribePost')) {
       context.handle(
+        _listUnsubscribePostMeta,
+        listUnsubscribePost.isAcceptableOrUnknown(
+          data['listUnsubscribePost']!,
           _listUnsubscribePostMeta,
-          listUnsubscribePost.isAcceptableOrUnknown(
-              data['listUnsubscribePost']!, _listUnsubscribePostMeta));
+        ),
+      );
     }
     return context;
   }
@@ -989,36 +1221,66 @@ class Messages extends Table with TableInfo<Messages, Message> {
   Message map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Message(
-      messageId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}messageId'])!,
-      accountId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}accountId'])!,
-      gmailMessageId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}gmailMessageId']),
-      gmailThreadId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}gmailThreadId']),
-      subject: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}subject']),
-      sender: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}sender']),
-      sentAtEpochMillis: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}sentAtEpochMillis']),
-      sizeBytes: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}sizeBytes']),
-      category: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}category'])!,
-      preview: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}preview']),
-      body: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}body']),
-      contentKind: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}contentKind'])!,
+      messageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}messageId'],
+      )!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accountId'],
+      )!,
+      gmailMessageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gmailMessageId'],
+      ),
+      gmailThreadId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gmailThreadId'],
+      ),
+      subject: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject'],
+      ),
+      sender: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sender'],
+      ),
+      sentAtEpochMillis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sentAtEpochMillis'],
+      ),
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sizeBytes'],
+      ),
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      preview: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}preview'],
+      ),
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      ),
+      contentKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contentKind'],
+      )!,
       bodyDownloadState: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}bodyDownloadState'])!,
-      listUnsubscribe: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}listUnsubscribe']),
+        DriftSqlType.string,
+        data['${effectivePrefix}bodyDownloadState'],
+      )!,
+      listUnsubscribe: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}listUnsubscribe'],
+      ),
       listUnsubscribePost: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}listUnsubscribePost']),
+        DriftSqlType.string,
+        data['${effectivePrefix}listUnsubscribePost'],
+      ),
     );
   }
 
@@ -1047,22 +1309,23 @@ class Message extends DataClass implements Insertable<Message> {
   final String bodyDownloadState;
   final String? listUnsubscribe;
   final String? listUnsubscribePost;
-  const Message(
-      {required this.messageId,
-      required this.accountId,
-      this.gmailMessageId,
-      this.gmailThreadId,
-      this.subject,
-      this.sender,
-      this.sentAtEpochMillis,
-      this.sizeBytes,
-      required this.category,
-      this.preview,
-      this.body,
-      required this.contentKind,
-      required this.bodyDownloadState,
-      this.listUnsubscribe,
-      this.listUnsubscribePost});
+  const Message({
+    required this.messageId,
+    required this.accountId,
+    this.gmailMessageId,
+    this.gmailThreadId,
+    this.subject,
+    this.sender,
+    this.sentAtEpochMillis,
+    this.sizeBytes,
+    required this.category,
+    this.preview,
+    this.body,
+    required this.contentKind,
+    required this.bodyDownloadState,
+    this.listUnsubscribe,
+    this.listUnsubscribePost,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1117,8 +1380,9 @@ class Message extends DataClass implements Insertable<Message> {
       subject: subject == null && nullToAbsent
           ? const Value.absent()
           : Value(subject),
-      sender:
-          sender == null && nullToAbsent ? const Value.absent() : Value(sender),
+      sender: sender == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sender),
       sentAtEpochMillis: sentAtEpochMillis == null && nullToAbsent
           ? const Value.absent()
           : Value(sentAtEpochMillis),
@@ -1141,8 +1405,10 @@ class Message extends DataClass implements Insertable<Message> {
     );
   }
 
-  factory Message.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory Message.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Message(
       messageId: serializer.fromJson<String>(json['messageId']),
@@ -1159,8 +1425,9 @@ class Message extends DataClass implements Insertable<Message> {
       contentKind: serializer.fromJson<String>(json['contentKind']),
       bodyDownloadState: serializer.fromJson<String>(json['bodyDownloadState']),
       listUnsubscribe: serializer.fromJson<String?>(json['listUnsubscribe']),
-      listUnsubscribePost:
-          serializer.fromJson<String?>(json['listUnsubscribePost']),
+      listUnsubscribePost: serializer.fromJson<String?>(
+        json['listUnsubscribePost'],
+      ),
     );
   }
   @override
@@ -1185,47 +1452,49 @@ class Message extends DataClass implements Insertable<Message> {
     };
   }
 
-  Message copyWith(
-          {String? messageId,
-          String? accountId,
-          Value<String?> gmailMessageId = const Value.absent(),
-          Value<String?> gmailThreadId = const Value.absent(),
-          Value<String?> subject = const Value.absent(),
-          Value<String?> sender = const Value.absent(),
-          Value<int?> sentAtEpochMillis = const Value.absent(),
-          Value<int?> sizeBytes = const Value.absent(),
-          String? category,
-          Value<String?> preview = const Value.absent(),
-          Value<String?> body = const Value.absent(),
-          String? contentKind,
-          String? bodyDownloadState,
-          Value<String?> listUnsubscribe = const Value.absent(),
-          Value<String?> listUnsubscribePost = const Value.absent()}) =>
-      Message(
-        messageId: messageId ?? this.messageId,
-        accountId: accountId ?? this.accountId,
-        gmailMessageId:
-            gmailMessageId.present ? gmailMessageId.value : this.gmailMessageId,
-        gmailThreadId:
-            gmailThreadId.present ? gmailThreadId.value : this.gmailThreadId,
-        subject: subject.present ? subject.value : this.subject,
-        sender: sender.present ? sender.value : this.sender,
-        sentAtEpochMillis: sentAtEpochMillis.present
-            ? sentAtEpochMillis.value
-            : this.sentAtEpochMillis,
-        sizeBytes: sizeBytes.present ? sizeBytes.value : this.sizeBytes,
-        category: category ?? this.category,
-        preview: preview.present ? preview.value : this.preview,
-        body: body.present ? body.value : this.body,
-        contentKind: contentKind ?? this.contentKind,
-        bodyDownloadState: bodyDownloadState ?? this.bodyDownloadState,
-        listUnsubscribe: listUnsubscribe.present
-            ? listUnsubscribe.value
-            : this.listUnsubscribe,
-        listUnsubscribePost: listUnsubscribePost.present
-            ? listUnsubscribePost.value
-            : this.listUnsubscribePost,
-      );
+  Message copyWith({
+    String? messageId,
+    String? accountId,
+    Value<String?> gmailMessageId = const Value.absent(),
+    Value<String?> gmailThreadId = const Value.absent(),
+    Value<String?> subject = const Value.absent(),
+    Value<String?> sender = const Value.absent(),
+    Value<int?> sentAtEpochMillis = const Value.absent(),
+    Value<int?> sizeBytes = const Value.absent(),
+    String? category,
+    Value<String?> preview = const Value.absent(),
+    Value<String?> body = const Value.absent(),
+    String? contentKind,
+    String? bodyDownloadState,
+    Value<String?> listUnsubscribe = const Value.absent(),
+    Value<String?> listUnsubscribePost = const Value.absent(),
+  }) => Message(
+    messageId: messageId ?? this.messageId,
+    accountId: accountId ?? this.accountId,
+    gmailMessageId: gmailMessageId.present
+        ? gmailMessageId.value
+        : this.gmailMessageId,
+    gmailThreadId: gmailThreadId.present
+        ? gmailThreadId.value
+        : this.gmailThreadId,
+    subject: subject.present ? subject.value : this.subject,
+    sender: sender.present ? sender.value : this.sender,
+    sentAtEpochMillis: sentAtEpochMillis.present
+        ? sentAtEpochMillis.value
+        : this.sentAtEpochMillis,
+    sizeBytes: sizeBytes.present ? sizeBytes.value : this.sizeBytes,
+    category: category ?? this.category,
+    preview: preview.present ? preview.value : this.preview,
+    body: body.present ? body.value : this.body,
+    contentKind: contentKind ?? this.contentKind,
+    bodyDownloadState: bodyDownloadState ?? this.bodyDownloadState,
+    listUnsubscribe: listUnsubscribe.present
+        ? listUnsubscribe.value
+        : this.listUnsubscribe,
+    listUnsubscribePost: listUnsubscribePost.present
+        ? listUnsubscribePost.value
+        : this.listUnsubscribePost,
+  );
   Message copyWithCompanion(MessagesCompanion data) {
     return Message(
       messageId: data.messageId.present ? data.messageId.value : this.messageId,
@@ -1245,8 +1514,9 @@ class Message extends DataClass implements Insertable<Message> {
       category: data.category.present ? data.category.value : this.category,
       preview: data.preview.present ? data.preview.value : this.preview,
       body: data.body.present ? data.body.value : this.body,
-      contentKind:
-          data.contentKind.present ? data.contentKind.value : this.contentKind,
+      contentKind: data.contentKind.present
+          ? data.contentKind.value
+          : this.contentKind,
       bodyDownloadState: data.bodyDownloadState.present
           ? data.bodyDownloadState.value
           : this.bodyDownloadState,
@@ -1283,21 +1553,22 @@ class Message extends DataClass implements Insertable<Message> {
 
   @override
   int get hashCode => Object.hash(
-      messageId,
-      accountId,
-      gmailMessageId,
-      gmailThreadId,
-      subject,
-      sender,
-      sentAtEpochMillis,
-      sizeBytes,
-      category,
-      preview,
-      body,
-      contentKind,
-      bodyDownloadState,
-      listUnsubscribe,
-      listUnsubscribePost);
+    messageId,
+    accountId,
+    gmailMessageId,
+    gmailThreadId,
+    subject,
+    sender,
+    sentAtEpochMillis,
+    sizeBytes,
+    category,
+    preview,
+    body,
+    contentKind,
+    bodyDownloadState,
+    listUnsubscribe,
+    listUnsubscribePost,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1371,10 +1642,10 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     this.listUnsubscribe = const Value.absent(),
     this.listUnsubscribePost = const Value.absent(),
     this.rowid = const Value.absent(),
-  })  : messageId = Value(messageId),
-        accountId = Value(accountId),
-        contentKind = Value(contentKind),
-        bodyDownloadState = Value(bodyDownloadState);
+  }) : messageId = Value(messageId),
+       accountId = Value(accountId),
+       contentKind = Value(contentKind),
+       bodyDownloadState = Value(bodyDownloadState);
   static Insertable<Message> custom({
     Expression<String>? messageId,
     Expression<String>? accountId,
@@ -1414,23 +1685,24 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     });
   }
 
-  MessagesCompanion copyWith(
-      {Value<String>? messageId,
-      Value<String>? accountId,
-      Value<String?>? gmailMessageId,
-      Value<String?>? gmailThreadId,
-      Value<String?>? subject,
-      Value<String?>? sender,
-      Value<int?>? sentAtEpochMillis,
-      Value<int?>? sizeBytes,
-      Value<String>? category,
-      Value<String?>? preview,
-      Value<String?>? body,
-      Value<String>? contentKind,
-      Value<String>? bodyDownloadState,
-      Value<String?>? listUnsubscribe,
-      Value<String?>? listUnsubscribePost,
-      Value<int>? rowid}) {
+  MessagesCompanion copyWith({
+    Value<String>? messageId,
+    Value<String>? accountId,
+    Value<String?>? gmailMessageId,
+    Value<String?>? gmailThreadId,
+    Value<String?>? subject,
+    Value<String?>? sender,
+    Value<int?>? sentAtEpochMillis,
+    Value<int?>? sizeBytes,
+    Value<String>? category,
+    Value<String?>? preview,
+    Value<String?>? body,
+    Value<String>? contentKind,
+    Value<String>? bodyDownloadState,
+    Value<String?>? listUnsubscribe,
+    Value<String?>? listUnsubscribePost,
+    Value<int>? rowid,
+  }) {
     return MessagesCompanion(
       messageId: messageId ?? this.messageId,
       accountId: accountId ?? this.accountId,
@@ -1535,80 +1807,114 @@ class MailboxMessages extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   MailboxMessages(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _mailboxIdMeta =
-      const VerificationMeta('mailboxId');
+  static const VerificationMeta _mailboxIdMeta = const VerificationMeta(
+    'mailboxId',
+  );
   late final GeneratedColumn<String> mailboxId = GeneratedColumn<String>(
-      'mailboxId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL REFERENCES mailboxes(mailboxId)ON DELETE CASCADE');
+    'mailboxId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES mailboxes(mailboxId)ON DELETE CASCADE',
+  );
   static const VerificationMeta _uidMeta = const VerificationMeta('uid');
   late final GeneratedColumn<int> uid = GeneratedColumn<int>(
-      'uid', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _messageIdMeta =
-      const VerificationMeta('messageId');
+    'uid',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _messageIdMeta = const VerificationMeta(
+    'messageId',
+  );
   late final GeneratedColumn<String> messageId = GeneratedColumn<String>(
-      'messageId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL REFERENCES messages(messageId)ON DELETE CASCADE');
+    'messageId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES messages(messageId)ON DELETE CASCADE',
+  );
   static const VerificationMeta _flagsMeta = const VerificationMeta('flags');
   late final GeneratedColumn<String> flags = GeneratedColumn<String>(
-      'flags', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'flags',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _labelsMeta = const VerificationMeta('labels');
   late final GeneratedColumn<String> labels = GeneratedColumn<String>(
-      'labels', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'labels',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   @override
-  List<GeneratedColumn> get $columns =>
-      [mailboxId, uid, messageId, flags, labels];
+  List<GeneratedColumn> get $columns => [
+    mailboxId,
+    uid,
+    messageId,
+    flags,
+    labels,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'mailbox_messages';
   @override
-  VerificationContext validateIntegrity(Insertable<MailboxMessage> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<MailboxMessage> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('mailboxId')) {
-      context.handle(_mailboxIdMeta,
-          mailboxId.isAcceptableOrUnknown(data['mailboxId']!, _mailboxIdMeta));
+      context.handle(
+        _mailboxIdMeta,
+        mailboxId.isAcceptableOrUnknown(data['mailboxId']!, _mailboxIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_mailboxIdMeta);
     }
     if (data.containsKey('uid')) {
       context.handle(
-          _uidMeta, uid.isAcceptableOrUnknown(data['uid']!, _uidMeta));
+        _uidMeta,
+        uid.isAcceptableOrUnknown(data['uid']!, _uidMeta),
+      );
     } else if (isInserting) {
       context.missing(_uidMeta);
     }
     if (data.containsKey('messageId')) {
-      context.handle(_messageIdMeta,
-          messageId.isAcceptableOrUnknown(data['messageId']!, _messageIdMeta));
+      context.handle(
+        _messageIdMeta,
+        messageId.isAcceptableOrUnknown(data['messageId']!, _messageIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_messageIdMeta);
     }
     if (data.containsKey('flags')) {
       context.handle(
-          _flagsMeta, flags.isAcceptableOrUnknown(data['flags']!, _flagsMeta));
+        _flagsMeta,
+        flags.isAcceptableOrUnknown(data['flags']!, _flagsMeta),
+      );
     } else if (isInserting) {
       context.missing(_flagsMeta);
     }
     if (data.containsKey('labels')) {
-      context.handle(_labelsMeta,
-          labels.isAcceptableOrUnknown(data['labels']!, _labelsMeta));
+      context.handle(
+        _labelsMeta,
+        labels.isAcceptableOrUnknown(data['labels']!, _labelsMeta),
+      );
     } else if (isInserting) {
       context.missing(_labelsMeta);
     }
@@ -1621,16 +1927,26 @@ class MailboxMessages extends Table
   MailboxMessage map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return MailboxMessage(
-      mailboxId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}mailboxId'])!,
-      uid: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}uid'])!,
-      messageId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}messageId'])!,
-      flags: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}flags'])!,
-      labels: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}labels'])!,
+      mailboxId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mailboxId'],
+      )!,
+      uid: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}uid'],
+      )!,
+      messageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}messageId'],
+      )!,
+      flags: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}flags'],
+      )!,
+      labels: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}labels'],
+      )!,
     );
   }
 
@@ -1651,12 +1967,13 @@ class MailboxMessage extends DataClass implements Insertable<MailboxMessage> {
   final String messageId;
   final String flags;
   final String labels;
-  const MailboxMessage(
-      {required this.mailboxId,
-      required this.uid,
-      required this.messageId,
-      required this.flags,
-      required this.labels});
+  const MailboxMessage({
+    required this.mailboxId,
+    required this.uid,
+    required this.messageId,
+    required this.flags,
+    required this.labels,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1678,8 +1995,10 @@ class MailboxMessage extends DataClass implements Insertable<MailboxMessage> {
     );
   }
 
-  factory MailboxMessage.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory MailboxMessage.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return MailboxMessage(
       mailboxId: serializer.fromJson<String>(json['mailboxId']),
@@ -1701,19 +2020,19 @@ class MailboxMessage extends DataClass implements Insertable<MailboxMessage> {
     };
   }
 
-  MailboxMessage copyWith(
-          {String? mailboxId,
-          int? uid,
-          String? messageId,
-          String? flags,
-          String? labels}) =>
-      MailboxMessage(
-        mailboxId: mailboxId ?? this.mailboxId,
-        uid: uid ?? this.uid,
-        messageId: messageId ?? this.messageId,
-        flags: flags ?? this.flags,
-        labels: labels ?? this.labels,
-      );
+  MailboxMessage copyWith({
+    String? mailboxId,
+    int? uid,
+    String? messageId,
+    String? flags,
+    String? labels,
+  }) => MailboxMessage(
+    mailboxId: mailboxId ?? this.mailboxId,
+    uid: uid ?? this.uid,
+    messageId: messageId ?? this.messageId,
+    flags: flags ?? this.flags,
+    labels: labels ?? this.labels,
+  );
   MailboxMessage copyWithCompanion(MailboxMessagesCompanion data) {
     return MailboxMessage(
       mailboxId: data.mailboxId.present ? data.mailboxId.value : this.mailboxId,
@@ -1771,11 +2090,11 @@ class MailboxMessagesCompanion extends UpdateCompanion<MailboxMessage> {
     required String flags,
     required String labels,
     this.rowid = const Value.absent(),
-  })  : mailboxId = Value(mailboxId),
-        uid = Value(uid),
-        messageId = Value(messageId),
-        flags = Value(flags),
-        labels = Value(labels);
+  }) : mailboxId = Value(mailboxId),
+       uid = Value(uid),
+       messageId = Value(messageId),
+       flags = Value(flags),
+       labels = Value(labels);
   static Insertable<MailboxMessage> custom({
     Expression<String>? mailboxId,
     Expression<int>? uid,
@@ -1794,13 +2113,14 @@ class MailboxMessagesCompanion extends UpdateCompanion<MailboxMessage> {
     });
   }
 
-  MailboxMessagesCompanion copyWith(
-      {Value<String>? mailboxId,
-      Value<int>? uid,
-      Value<String>? messageId,
-      Value<String>? flags,
-      Value<String>? labels,
-      Value<int>? rowid}) {
+  MailboxMessagesCompanion copyWith({
+    Value<String>? mailboxId,
+    Value<int>? uid,
+    Value<String>? messageId,
+    Value<String>? flags,
+    Value<String>? labels,
+    Value<int>? rowid,
+  }) {
     return MailboxMessagesCompanion(
       mailboxId: mailboxId ?? this.mailboxId,
       uid: uid ?? this.uid,
@@ -1854,20 +2174,27 @@ class MessageLabels extends Table with TableInfo<MessageLabels, MessageLabel> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   MessageLabels(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _messageIdMeta =
-      const VerificationMeta('messageId');
+  static const VerificationMeta _messageIdMeta = const VerificationMeta(
+    'messageId',
+  );
   late final GeneratedColumn<String> messageId = GeneratedColumn<String>(
-      'messageId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL REFERENCES messages(messageId)ON DELETE CASCADE');
+    'messageId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES messages(messageId)ON DELETE CASCADE',
+  );
   static const VerificationMeta _labelMeta = const VerificationMeta('label');
   late final GeneratedColumn<String> label = GeneratedColumn<String>(
-      'label', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   @override
   List<GeneratedColumn> get $columns => [messageId, label];
   @override
@@ -1876,19 +2203,25 @@ class MessageLabels extends Table with TableInfo<MessageLabels, MessageLabel> {
   String get actualTableName => $name;
   static const String $name = 'message_labels';
   @override
-  VerificationContext validateIntegrity(Insertable<MessageLabel> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<MessageLabel> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('messageId')) {
-      context.handle(_messageIdMeta,
-          messageId.isAcceptableOrUnknown(data['messageId']!, _messageIdMeta));
+      context.handle(
+        _messageIdMeta,
+        messageId.isAcceptableOrUnknown(data['messageId']!, _messageIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_messageIdMeta);
     }
     if (data.containsKey('label')) {
       context.handle(
-          _labelMeta, label.isAcceptableOrUnknown(data['label']!, _labelMeta));
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
     } else if (isInserting) {
       context.missing(_labelMeta);
     }
@@ -1901,10 +2234,14 @@ class MessageLabels extends Table with TableInfo<MessageLabels, MessageLabel> {
   MessageLabel map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return MessageLabel(
-      messageId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}messageId'])!,
-      label: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}label'])!,
+      messageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}messageId'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
     );
   }
 
@@ -1938,8 +2275,10 @@ class MessageLabel extends DataClass implements Insertable<MessageLabel> {
     );
   }
 
-  factory MessageLabel.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory MessageLabel.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return MessageLabel(
       messageId: serializer.fromJson<String>(json['messageId']),
@@ -1956,9 +2295,9 @@ class MessageLabel extends DataClass implements Insertable<MessageLabel> {
   }
 
   MessageLabel copyWith({String? messageId, String? label}) => MessageLabel(
-        messageId: messageId ?? this.messageId,
-        label: label ?? this.label,
-      );
+    messageId: messageId ?? this.messageId,
+    label: label ?? this.label,
+  );
   MessageLabel copyWithCompanion(MessageLabelsCompanion data) {
     return MessageLabel(
       messageId: data.messageId.present ? data.messageId.value : this.messageId,
@@ -1998,8 +2337,8 @@ class MessageLabelsCompanion extends UpdateCompanion<MessageLabel> {
     required String messageId,
     required String label,
     this.rowid = const Value.absent(),
-  })  : messageId = Value(messageId),
-        label = Value(label);
+  }) : messageId = Value(messageId),
+       label = Value(label);
   static Insertable<MessageLabel> custom({
     Expression<String>? messageId,
     Expression<String>? label,
@@ -2012,8 +2351,11 @@ class MessageLabelsCompanion extends UpdateCompanion<MessageLabel> {
     });
   }
 
-  MessageLabelsCompanion copyWith(
-      {Value<String>? messageId, Value<String>? label, Value<int>? rowid}) {
+  MessageLabelsCompanion copyWith({
+    Value<String>? messageId,
+    Value<String>? label,
+    Value<int>? rowid,
+  }) {
     return MessageLabelsCompanion(
       messageId: messageId ?? this.messageId,
       label: label ?? this.label,
@@ -2052,130 +2394,181 @@ class Attachments extends Table with TableInfo<Attachments, Attachment> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   Attachments(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _attachmentIdMeta =
-      const VerificationMeta('attachmentId');
+  static const VerificationMeta _attachmentIdMeta = const VerificationMeta(
+    'attachmentId',
+  );
   late final GeneratedColumn<String> attachmentId = GeneratedColumn<String>(
-      'attachmentId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL PRIMARY KEY');
-  static const VerificationMeta _messageIdMeta =
-      const VerificationMeta('messageId');
+    'attachmentId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
+  static const VerificationMeta _messageIdMeta = const VerificationMeta(
+    'messageId',
+  );
   late final GeneratedColumn<String> messageId = GeneratedColumn<String>(
-      'messageId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL REFERENCES messages(messageId)ON DELETE CASCADE');
+    'messageId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES messages(messageId)ON DELETE CASCADE',
+  );
   static const VerificationMeta _partIdMeta = const VerificationMeta('partId');
   late final GeneratedColumn<String> partId = GeneratedColumn<String>(
-      'partId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _fileNameMeta =
-      const VerificationMeta('fileName');
+    'partId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _fileNameMeta = const VerificationMeta(
+    'fileName',
+  );
   late final GeneratedColumn<String> fileName = GeneratedColumn<String>(
-      'fileName', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _mimeTypeMeta =
-      const VerificationMeta('mimeType');
+    'fileName',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _mimeTypeMeta = const VerificationMeta(
+    'mimeType',
+  );
   late final GeneratedColumn<String> mimeType = GeneratedColumn<String>(
-      'mimeType', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _sizeBytesMeta =
-      const VerificationMeta('sizeBytes');
+    'mimeType',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
   late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
-      'sizeBytes', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _downloadStateMeta =
-      const VerificationMeta('downloadState');
+    'sizeBytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _downloadStateMeta = const VerificationMeta(
+    'downloadState',
+  );
   late final GeneratedColumn<String> downloadState = GeneratedColumn<String>(
-      'downloadState', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'downloadState',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _lastAccessedAtEpochMillisMeta =
       const VerificationMeta('lastAccessedAtEpochMillis');
   late final GeneratedColumn<int> lastAccessedAtEpochMillis =
-      GeneratedColumn<int>('lastAccessedAtEpochMillis', aliasedName, false,
-          type: DriftSqlType.int,
-          requiredDuringInsert: false,
-          $customConstraints: 'NOT NULL DEFAULT 0',
-          defaultValue: const CustomExpression('0'));
+      GeneratedColumn<int>(
+        'lastAccessedAtEpochMillis',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        $customConstraints: 'NOT NULL DEFAULT 0',
+        defaultValue: const CustomExpression('0'),
+      );
   @override
   List<GeneratedColumn> get $columns => [
-        attachmentId,
-        messageId,
-        partId,
-        fileName,
-        mimeType,
-        sizeBytes,
-        downloadState,
-        lastAccessedAtEpochMillis
-      ];
+    attachmentId,
+    messageId,
+    partId,
+    fileName,
+    mimeType,
+    sizeBytes,
+    downloadState,
+    lastAccessedAtEpochMillis,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'attachments';
   @override
-  VerificationContext validateIntegrity(Insertable<Attachment> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<Attachment> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('attachmentId')) {
       context.handle(
+        _attachmentIdMeta,
+        attachmentId.isAcceptableOrUnknown(
+          data['attachmentId']!,
           _attachmentIdMeta,
-          attachmentId.isAcceptableOrUnknown(
-              data['attachmentId']!, _attachmentIdMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_attachmentIdMeta);
     }
     if (data.containsKey('messageId')) {
-      context.handle(_messageIdMeta,
-          messageId.isAcceptableOrUnknown(data['messageId']!, _messageIdMeta));
+      context.handle(
+        _messageIdMeta,
+        messageId.isAcceptableOrUnknown(data['messageId']!, _messageIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_messageIdMeta);
     }
     if (data.containsKey('partId')) {
-      context.handle(_partIdMeta,
-          partId.isAcceptableOrUnknown(data['partId']!, _partIdMeta));
+      context.handle(
+        _partIdMeta,
+        partId.isAcceptableOrUnknown(data['partId']!, _partIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_partIdMeta);
     }
     if (data.containsKey('fileName')) {
-      context.handle(_fileNameMeta,
-          fileName.isAcceptableOrUnknown(data['fileName']!, _fileNameMeta));
+      context.handle(
+        _fileNameMeta,
+        fileName.isAcceptableOrUnknown(data['fileName']!, _fileNameMeta),
+      );
     }
     if (data.containsKey('mimeType')) {
-      context.handle(_mimeTypeMeta,
-          mimeType.isAcceptableOrUnknown(data['mimeType']!, _mimeTypeMeta));
+      context.handle(
+        _mimeTypeMeta,
+        mimeType.isAcceptableOrUnknown(data['mimeType']!, _mimeTypeMeta),
+      );
     }
     if (data.containsKey('sizeBytes')) {
-      context.handle(_sizeBytesMeta,
-          sizeBytes.isAcceptableOrUnknown(data['sizeBytes']!, _sizeBytesMeta));
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['sizeBytes']!, _sizeBytesMeta),
+      );
     }
     if (data.containsKey('downloadState')) {
       context.handle(
+        _downloadStateMeta,
+        downloadState.isAcceptableOrUnknown(
+          data['downloadState']!,
           _downloadStateMeta,
-          downloadState.isAcceptableOrUnknown(
-              data['downloadState']!, _downloadStateMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_downloadStateMeta);
     }
     if (data.containsKey('lastAccessedAtEpochMillis')) {
       context.handle(
+        _lastAccessedAtEpochMillisMeta,
+        lastAccessedAtEpochMillis.isAcceptableOrUnknown(
+          data['lastAccessedAtEpochMillis']!,
           _lastAccessedAtEpochMillisMeta,
-          lastAccessedAtEpochMillis.isAcceptableOrUnknown(
-              data['lastAccessedAtEpochMillis']!,
-              _lastAccessedAtEpochMillisMeta));
+        ),
+      );
     }
     return context;
   }
@@ -2186,23 +2579,38 @@ class Attachments extends Table with TableInfo<Attachments, Attachment> {
   Attachment map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Attachment(
-      attachmentId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}attachmentId'])!,
-      messageId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}messageId'])!,
-      partId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}partId'])!,
-      fileName: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}fileName']),
-      mimeType: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}mimeType']),
-      sizeBytes: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}sizeBytes']),
-      downloadState: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}downloadState'])!,
+      attachmentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}attachmentId'],
+      )!,
+      messageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}messageId'],
+      )!,
+      partId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}partId'],
+      )!,
+      fileName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fileName'],
+      ),
+      mimeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mimeType'],
+      ),
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sizeBytes'],
+      ),
+      downloadState: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}downloadState'],
+      )!,
       lastAccessedAtEpochMillis: attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}lastAccessedAtEpochMillis'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}lastAccessedAtEpochMillis'],
+      )!,
     );
   }
 
@@ -2224,15 +2632,16 @@ class Attachment extends DataClass implements Insertable<Attachment> {
   final int? sizeBytes;
   final String downloadState;
   final int lastAccessedAtEpochMillis;
-  const Attachment(
-      {required this.attachmentId,
-      required this.messageId,
-      required this.partId,
-      this.fileName,
-      this.mimeType,
-      this.sizeBytes,
-      required this.downloadState,
-      required this.lastAccessedAtEpochMillis});
+  const Attachment({
+    required this.attachmentId,
+    required this.messageId,
+    required this.partId,
+    this.fileName,
+    this.mimeType,
+    this.sizeBytes,
+    required this.downloadState,
+    required this.lastAccessedAtEpochMillis,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2272,8 +2681,10 @@ class Attachment extends DataClass implements Insertable<Attachment> {
     );
   }
 
-  factory Attachment.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory Attachment.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Attachment(
       attachmentId: serializer.fromJson<String>(json['attachmentId']),
@@ -2283,8 +2694,9 @@ class Attachment extends DataClass implements Insertable<Attachment> {
       mimeType: serializer.fromJson<String?>(json['mimeType']),
       sizeBytes: serializer.fromJson<int?>(json['sizeBytes']),
       downloadState: serializer.fromJson<String>(json['downloadState']),
-      lastAccessedAtEpochMillis:
-          serializer.fromJson<int>(json['lastAccessedAtEpochMillis']),
+      lastAccessedAtEpochMillis: serializer.fromJson<int>(
+        json['lastAccessedAtEpochMillis'],
+      ),
     );
   }
   @override
@@ -2298,31 +2710,32 @@ class Attachment extends DataClass implements Insertable<Attachment> {
       'mimeType': serializer.toJson<String?>(mimeType),
       'sizeBytes': serializer.toJson<int?>(sizeBytes),
       'downloadState': serializer.toJson<String>(downloadState),
-      'lastAccessedAtEpochMillis':
-          serializer.toJson<int>(lastAccessedAtEpochMillis),
+      'lastAccessedAtEpochMillis': serializer.toJson<int>(
+        lastAccessedAtEpochMillis,
+      ),
     };
   }
 
-  Attachment copyWith(
-          {String? attachmentId,
-          String? messageId,
-          String? partId,
-          Value<String?> fileName = const Value.absent(),
-          Value<String?> mimeType = const Value.absent(),
-          Value<int?> sizeBytes = const Value.absent(),
-          String? downloadState,
-          int? lastAccessedAtEpochMillis}) =>
-      Attachment(
-        attachmentId: attachmentId ?? this.attachmentId,
-        messageId: messageId ?? this.messageId,
-        partId: partId ?? this.partId,
-        fileName: fileName.present ? fileName.value : this.fileName,
-        mimeType: mimeType.present ? mimeType.value : this.mimeType,
-        sizeBytes: sizeBytes.present ? sizeBytes.value : this.sizeBytes,
-        downloadState: downloadState ?? this.downloadState,
-        lastAccessedAtEpochMillis:
-            lastAccessedAtEpochMillis ?? this.lastAccessedAtEpochMillis,
-      );
+  Attachment copyWith({
+    String? attachmentId,
+    String? messageId,
+    String? partId,
+    Value<String?> fileName = const Value.absent(),
+    Value<String?> mimeType = const Value.absent(),
+    Value<int?> sizeBytes = const Value.absent(),
+    String? downloadState,
+    int? lastAccessedAtEpochMillis,
+  }) => Attachment(
+    attachmentId: attachmentId ?? this.attachmentId,
+    messageId: messageId ?? this.messageId,
+    partId: partId ?? this.partId,
+    fileName: fileName.present ? fileName.value : this.fileName,
+    mimeType: mimeType.present ? mimeType.value : this.mimeType,
+    sizeBytes: sizeBytes.present ? sizeBytes.value : this.sizeBytes,
+    downloadState: downloadState ?? this.downloadState,
+    lastAccessedAtEpochMillis:
+        lastAccessedAtEpochMillis ?? this.lastAccessedAtEpochMillis,
+  );
   Attachment copyWithCompanion(AttachmentsCompanion data) {
     return Attachment(
       attachmentId: data.attachmentId.present
@@ -2358,8 +2771,16 @@ class Attachment extends DataClass implements Insertable<Attachment> {
   }
 
   @override
-  int get hashCode => Object.hash(attachmentId, messageId, partId, fileName,
-      mimeType, sizeBytes, downloadState, lastAccessedAtEpochMillis);
+  int get hashCode => Object.hash(
+    attachmentId,
+    messageId,
+    partId,
+    fileName,
+    mimeType,
+    sizeBytes,
+    downloadState,
+    lastAccessedAtEpochMillis,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2405,10 +2826,10 @@ class AttachmentsCompanion extends UpdateCompanion<Attachment> {
     required String downloadState,
     this.lastAccessedAtEpochMillis = const Value.absent(),
     this.rowid = const Value.absent(),
-  })  : attachmentId = Value(attachmentId),
-        messageId = Value(messageId),
-        partId = Value(partId),
-        downloadState = Value(downloadState);
+  }) : attachmentId = Value(attachmentId),
+       messageId = Value(messageId),
+       partId = Value(partId),
+       downloadState = Value(downloadState);
   static Insertable<Attachment> custom({
     Expression<String>? attachmentId,
     Expression<String>? messageId,
@@ -2434,16 +2855,17 @@ class AttachmentsCompanion extends UpdateCompanion<Attachment> {
     });
   }
 
-  AttachmentsCompanion copyWith(
-      {Value<String>? attachmentId,
-      Value<String>? messageId,
-      Value<String>? partId,
-      Value<String?>? fileName,
-      Value<String?>? mimeType,
-      Value<int?>? sizeBytes,
-      Value<String>? downloadState,
-      Value<int>? lastAccessedAtEpochMillis,
-      Value<int>? rowid}) {
+  AttachmentsCompanion copyWith({
+    Value<String>? attachmentId,
+    Value<String>? messageId,
+    Value<String>? partId,
+    Value<String?>? fileName,
+    Value<String?>? mimeType,
+    Value<int?>? sizeBytes,
+    Value<String>? downloadState,
+    Value<int>? lastAccessedAtEpochMillis,
+    Value<int>? rowid,
+  }) {
     return AttachmentsCompanion(
       attachmentId: attachmentId ?? this.attachmentId,
       messageId: messageId ?? this.messageId,
@@ -2483,8 +2905,9 @@ class AttachmentsCompanion extends UpdateCompanion<Attachment> {
       map['downloadState'] = Variable<String>(downloadState.value);
     }
     if (lastAccessedAtEpochMillis.present) {
-      map['lastAccessedAtEpochMillis'] =
-          Variable<int>(lastAccessedAtEpochMillis.value);
+      map['lastAccessedAtEpochMillis'] = Variable<int>(
+        lastAccessedAtEpochMillis.value,
+      );
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -2514,93 +2937,125 @@ class CacheConfig extends Table with TableInfo<CacheConfig, CacheConfigData> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   CacheConfig(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _accountIdMeta =
-      const VerificationMeta('accountId');
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
   late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
-      'accountId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL PRIMARY KEY');
+    'accountId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
   static const VerificationMeta _offlineMessageCountMeta =
       const VerificationMeta('offlineMessageCount');
   late final GeneratedColumn<int> offlineMessageCount = GeneratedColumn<int>(
-      'offlineMessageCount', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'NOT NULL DEFAULT 200',
-      defaultValue: const CustomExpression('200'));
+    'offlineMessageCount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 200',
+    defaultValue: const CustomExpression('200'),
+  );
   static const VerificationMeta _attachmentCacheLimitMbMeta =
       const VerificationMeta('attachmentCacheLimitMb');
   late final GeneratedColumn<int> attachmentCacheLimitMb = GeneratedColumn<int>(
-      'attachmentCacheLimitMb', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'NOT NULL DEFAULT 500',
-      defaultValue: const CustomExpression('500'));
+    'attachmentCacheLimitMb',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 500',
+    defaultValue: const CustomExpression('500'),
+  );
   static const VerificationMeta _autoEvictReadOlderThanDaysMeta =
       const VerificationMeta('autoEvictReadOlderThanDays');
   late final GeneratedColumn<int> autoEvictReadOlderThanDays =
-      GeneratedColumn<int>('autoEvictReadOlderThanDays', aliasedName, false,
-          type: DriftSqlType.int,
-          requiredDuringInsert: false,
-          $customConstraints: 'NOT NULL DEFAULT 60',
-          defaultValue: const CustomExpression('60'));
+      GeneratedColumn<int>(
+        'autoEvictReadOlderThanDays',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        $customConstraints: 'NOT NULL DEFAULT 60',
+        defaultValue: const CustomExpression('60'),
+      );
   static const VerificationMeta _prefetchUnreadBodiesMeta =
       const VerificationMeta('prefetchUnreadBodies');
   late final GeneratedColumn<int> prefetchUnreadBodies = GeneratedColumn<int>(
-      'prefetchUnreadBodies', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: 'NOT NULL DEFAULT 1',
-      defaultValue: const CustomExpression('1'));
+    'prefetchUnreadBodies',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT 1',
+    defaultValue: const CustomExpression('1'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
-        accountId,
-        offlineMessageCount,
-        attachmentCacheLimitMb,
-        autoEvictReadOlderThanDays,
-        prefetchUnreadBodies
-      ];
+    accountId,
+    offlineMessageCount,
+    attachmentCacheLimitMb,
+    autoEvictReadOlderThanDays,
+    prefetchUnreadBodies,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'cache_config';
   @override
-  VerificationContext validateIntegrity(Insertable<CacheConfigData> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<CacheConfigData> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('accountId')) {
-      context.handle(_accountIdMeta,
-          accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta));
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_accountIdMeta);
     }
     if (data.containsKey('offlineMessageCount')) {
       context.handle(
+        _offlineMessageCountMeta,
+        offlineMessageCount.isAcceptableOrUnknown(
+          data['offlineMessageCount']!,
           _offlineMessageCountMeta,
-          offlineMessageCount.isAcceptableOrUnknown(
-              data['offlineMessageCount']!, _offlineMessageCountMeta));
+        ),
+      );
     }
     if (data.containsKey('attachmentCacheLimitMb')) {
       context.handle(
+        _attachmentCacheLimitMbMeta,
+        attachmentCacheLimitMb.isAcceptableOrUnknown(
+          data['attachmentCacheLimitMb']!,
           _attachmentCacheLimitMbMeta,
-          attachmentCacheLimitMb.isAcceptableOrUnknown(
-              data['attachmentCacheLimitMb']!, _attachmentCacheLimitMbMeta));
+        ),
+      );
     }
     if (data.containsKey('autoEvictReadOlderThanDays')) {
       context.handle(
+        _autoEvictReadOlderThanDaysMeta,
+        autoEvictReadOlderThanDays.isAcceptableOrUnknown(
+          data['autoEvictReadOlderThanDays']!,
           _autoEvictReadOlderThanDaysMeta,
-          autoEvictReadOlderThanDays.isAcceptableOrUnknown(
-              data['autoEvictReadOlderThanDays']!,
-              _autoEvictReadOlderThanDaysMeta));
+        ),
+      );
     }
     if (data.containsKey('prefetchUnreadBodies')) {
       context.handle(
+        _prefetchUnreadBodiesMeta,
+        prefetchUnreadBodies.isAcceptableOrUnknown(
+          data['prefetchUnreadBodies']!,
           _prefetchUnreadBodiesMeta,
-          prefetchUnreadBodies.isAcceptableOrUnknown(
-              data['prefetchUnreadBodies']!, _prefetchUnreadBodiesMeta));
+        ),
+      );
     }
     return context;
   }
@@ -2611,17 +3066,26 @@ class CacheConfig extends Table with TableInfo<CacheConfig, CacheConfigData> {
   CacheConfigData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CacheConfigData(
-      accountId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}accountId'])!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accountId'],
+      )!,
       offlineMessageCount: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}offlineMessageCount'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}offlineMessageCount'],
+      )!,
       attachmentCacheLimitMb: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}attachmentCacheLimitMb'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}attachmentCacheLimitMb'],
+      )!,
       autoEvictReadOlderThanDays: attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}autoEvictReadOlderThanDays'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}autoEvictReadOlderThanDays'],
+      )!,
       prefetchUnreadBodies: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}prefetchUnreadBodies'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}prefetchUnreadBodies'],
+      )!,
     );
   }
 
@@ -2640,20 +3104,22 @@ class CacheConfigData extends DataClass implements Insertable<CacheConfigData> {
   final int attachmentCacheLimitMb;
   final int autoEvictReadOlderThanDays;
   final int prefetchUnreadBodies;
-  const CacheConfigData(
-      {required this.accountId,
-      required this.offlineMessageCount,
-      required this.attachmentCacheLimitMb,
-      required this.autoEvictReadOlderThanDays,
-      required this.prefetchUnreadBodies});
+  const CacheConfigData({
+    required this.accountId,
+    required this.offlineMessageCount,
+    required this.attachmentCacheLimitMb,
+    required this.autoEvictReadOlderThanDays,
+    required this.prefetchUnreadBodies,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['accountId'] = Variable<String>(accountId);
     map['offlineMessageCount'] = Variable<int>(offlineMessageCount);
     map['attachmentCacheLimitMb'] = Variable<int>(attachmentCacheLimitMb);
-    map['autoEvictReadOlderThanDays'] =
-        Variable<int>(autoEvictReadOlderThanDays);
+    map['autoEvictReadOlderThanDays'] = Variable<int>(
+      autoEvictReadOlderThanDays,
+    );
     map['prefetchUnreadBodies'] = Variable<int>(prefetchUnreadBodies);
     return map;
   }
@@ -2668,19 +3134,25 @@ class CacheConfigData extends DataClass implements Insertable<CacheConfigData> {
     );
   }
 
-  factory CacheConfigData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory CacheConfigData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CacheConfigData(
       accountId: serializer.fromJson<String>(json['accountId']),
-      offlineMessageCount:
-          serializer.fromJson<int>(json['offlineMessageCount']),
-      attachmentCacheLimitMb:
-          serializer.fromJson<int>(json['attachmentCacheLimitMb']),
-      autoEvictReadOlderThanDays:
-          serializer.fromJson<int>(json['autoEvictReadOlderThanDays']),
-      prefetchUnreadBodies:
-          serializer.fromJson<int>(json['prefetchUnreadBodies']),
+      offlineMessageCount: serializer.fromJson<int>(
+        json['offlineMessageCount'],
+      ),
+      attachmentCacheLimitMb: serializer.fromJson<int>(
+        json['attachmentCacheLimitMb'],
+      ),
+      autoEvictReadOlderThanDays: serializer.fromJson<int>(
+        json['autoEvictReadOlderThanDays'],
+      ),
+      prefetchUnreadBodies: serializer.fromJson<int>(
+        json['prefetchUnreadBodies'],
+      ),
     );
   }
   @override
@@ -2690,27 +3162,28 @@ class CacheConfigData extends DataClass implements Insertable<CacheConfigData> {
       'accountId': serializer.toJson<String>(accountId),
       'offlineMessageCount': serializer.toJson<int>(offlineMessageCount),
       'attachmentCacheLimitMb': serializer.toJson<int>(attachmentCacheLimitMb),
-      'autoEvictReadOlderThanDays':
-          serializer.toJson<int>(autoEvictReadOlderThanDays),
+      'autoEvictReadOlderThanDays': serializer.toJson<int>(
+        autoEvictReadOlderThanDays,
+      ),
       'prefetchUnreadBodies': serializer.toJson<int>(prefetchUnreadBodies),
     };
   }
 
-  CacheConfigData copyWith(
-          {String? accountId,
-          int? offlineMessageCount,
-          int? attachmentCacheLimitMb,
-          int? autoEvictReadOlderThanDays,
-          int? prefetchUnreadBodies}) =>
-      CacheConfigData(
-        accountId: accountId ?? this.accountId,
-        offlineMessageCount: offlineMessageCount ?? this.offlineMessageCount,
-        attachmentCacheLimitMb:
-            attachmentCacheLimitMb ?? this.attachmentCacheLimitMb,
-        autoEvictReadOlderThanDays:
-            autoEvictReadOlderThanDays ?? this.autoEvictReadOlderThanDays,
-        prefetchUnreadBodies: prefetchUnreadBodies ?? this.prefetchUnreadBodies,
-      );
+  CacheConfigData copyWith({
+    String? accountId,
+    int? offlineMessageCount,
+    int? attachmentCacheLimitMb,
+    int? autoEvictReadOlderThanDays,
+    int? prefetchUnreadBodies,
+  }) => CacheConfigData(
+    accountId: accountId ?? this.accountId,
+    offlineMessageCount: offlineMessageCount ?? this.offlineMessageCount,
+    attachmentCacheLimitMb:
+        attachmentCacheLimitMb ?? this.attachmentCacheLimitMb,
+    autoEvictReadOlderThanDays:
+        autoEvictReadOlderThanDays ?? this.autoEvictReadOlderThanDays,
+    prefetchUnreadBodies: prefetchUnreadBodies ?? this.prefetchUnreadBodies,
+  );
   CacheConfigData copyWithCompanion(CacheConfigCompanion data) {
     return CacheConfigData(
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
@@ -2742,8 +3215,13 @@ class CacheConfigData extends DataClass implements Insertable<CacheConfigData> {
   }
 
   @override
-  int get hashCode => Object.hash(accountId, offlineMessageCount,
-      attachmentCacheLimitMb, autoEvictReadOlderThanDays, prefetchUnreadBodies);
+  int get hashCode => Object.hash(
+    accountId,
+    offlineMessageCount,
+    attachmentCacheLimitMb,
+    autoEvictReadOlderThanDays,
+    prefetchUnreadBodies,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2800,13 +3278,14 @@ class CacheConfigCompanion extends UpdateCompanion<CacheConfigData> {
     });
   }
 
-  CacheConfigCompanion copyWith(
-      {Value<String>? accountId,
-      Value<int>? offlineMessageCount,
-      Value<int>? attachmentCacheLimitMb,
-      Value<int>? autoEvictReadOlderThanDays,
-      Value<int>? prefetchUnreadBodies,
-      Value<int>? rowid}) {
+  CacheConfigCompanion copyWith({
+    Value<String>? accountId,
+    Value<int>? offlineMessageCount,
+    Value<int>? attachmentCacheLimitMb,
+    Value<int>? autoEvictReadOlderThanDays,
+    Value<int>? prefetchUnreadBodies,
+    Value<int>? rowid,
+  }) {
     return CacheConfigCompanion(
       accountId: accountId ?? this.accountId,
       offlineMessageCount: offlineMessageCount ?? this.offlineMessageCount,
@@ -2829,12 +3308,14 @@ class CacheConfigCompanion extends UpdateCompanion<CacheConfigData> {
       map['offlineMessageCount'] = Variable<int>(offlineMessageCount.value);
     }
     if (attachmentCacheLimitMb.present) {
-      map['attachmentCacheLimitMb'] =
-          Variable<int>(attachmentCacheLimitMb.value);
+      map['attachmentCacheLimitMb'] = Variable<int>(
+        attachmentCacheLimitMb.value,
+      );
     }
     if (autoEvictReadOlderThanDays.present) {
-      map['autoEvictReadOlderThanDays'] =
-          Variable<int>(autoEvictReadOlderThanDays.value);
+      map['autoEvictReadOlderThanDays'] = Variable<int>(
+        autoEvictReadOlderThanDays.value,
+      );
     }
     if (prefetchUnreadBodies.present) {
       map['prefetchUnreadBodies'] = Variable<int>(prefetchUnreadBodies.value);
@@ -2865,69 +3346,98 @@ class StorageQuota extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   StorageQuota(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _accountIdMeta =
-      const VerificationMeta('accountId');
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
   late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
-      'accountId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL PRIMARY KEY');
+    'accountId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
   static const VerificationMeta _usedKbMeta = const VerificationMeta('usedKb');
   late final GeneratedColumn<int> usedKb = GeneratedColumn<int>(
-      'usedKb', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _limitKbMeta =
-      const VerificationMeta('limitKb');
+    'usedKb',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _limitKbMeta = const VerificationMeta(
+    'limitKb',
+  );
   late final GeneratedColumn<int> limitKb = GeneratedColumn<int>(
-      'limitKb', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'limitKb',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _checkedAtEpochMillisMeta =
       const VerificationMeta('checkedAtEpochMillis');
   late final GeneratedColumn<int> checkedAtEpochMillis = GeneratedColumn<int>(
-      'checkedAtEpochMillis', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'checkedAtEpochMillis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   @override
-  List<GeneratedColumn> get $columns =>
-      [accountId, usedKb, limitKb, checkedAtEpochMillis];
+  List<GeneratedColumn> get $columns => [
+    accountId,
+    usedKb,
+    limitKb,
+    checkedAtEpochMillis,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'storage_quota';
   @override
-  VerificationContext validateIntegrity(Insertable<StorageQuotaData> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<StorageQuotaData> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('accountId')) {
-      context.handle(_accountIdMeta,
-          accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta));
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_accountIdMeta);
     }
     if (data.containsKey('usedKb')) {
-      context.handle(_usedKbMeta,
-          usedKb.isAcceptableOrUnknown(data['usedKb']!, _usedKbMeta));
+      context.handle(
+        _usedKbMeta,
+        usedKb.isAcceptableOrUnknown(data['usedKb']!, _usedKbMeta),
+      );
     } else if (isInserting) {
       context.missing(_usedKbMeta);
     }
     if (data.containsKey('limitKb')) {
-      context.handle(_limitKbMeta,
-          limitKb.isAcceptableOrUnknown(data['limitKb']!, _limitKbMeta));
+      context.handle(
+        _limitKbMeta,
+        limitKb.isAcceptableOrUnknown(data['limitKb']!, _limitKbMeta),
+      );
     } else if (isInserting) {
       context.missing(_limitKbMeta);
     }
     if (data.containsKey('checkedAtEpochMillis')) {
       context.handle(
+        _checkedAtEpochMillisMeta,
+        checkedAtEpochMillis.isAcceptableOrUnknown(
+          data['checkedAtEpochMillis']!,
           _checkedAtEpochMillisMeta,
-          checkedAtEpochMillis.isAcceptableOrUnknown(
-              data['checkedAtEpochMillis']!, _checkedAtEpochMillisMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_checkedAtEpochMillisMeta);
     }
@@ -2940,14 +3450,22 @@ class StorageQuota extends Table
   StorageQuotaData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return StorageQuotaData(
-      accountId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}accountId'])!,
-      usedKb: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}usedKb'])!,
-      limitKb: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}limitKb'])!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accountId'],
+      )!,
+      usedKb: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}usedKb'],
+      )!,
+      limitKb: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}limitKb'],
+      )!,
       checkedAtEpochMillis: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}checkedAtEpochMillis'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}checkedAtEpochMillis'],
+      )!,
     );
   }
 
@@ -2966,11 +3484,12 @@ class StorageQuotaData extends DataClass
   final int usedKb;
   final int limitKb;
   final int checkedAtEpochMillis;
-  const StorageQuotaData(
-      {required this.accountId,
-      required this.usedKb,
-      required this.limitKb,
-      required this.checkedAtEpochMillis});
+  const StorageQuotaData({
+    required this.accountId,
+    required this.usedKb,
+    required this.limitKb,
+    required this.checkedAtEpochMillis,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2990,15 +3509,18 @@ class StorageQuotaData extends DataClass
     );
   }
 
-  factory StorageQuotaData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory StorageQuotaData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return StorageQuotaData(
       accountId: serializer.fromJson<String>(json['accountId']),
       usedKb: serializer.fromJson<int>(json['usedKb']),
       limitKb: serializer.fromJson<int>(json['limitKb']),
-      checkedAtEpochMillis:
-          serializer.fromJson<int>(json['checkedAtEpochMillis']),
+      checkedAtEpochMillis: serializer.fromJson<int>(
+        json['checkedAtEpochMillis'],
+      ),
     );
   }
   @override
@@ -3012,17 +3534,17 @@ class StorageQuotaData extends DataClass
     };
   }
 
-  StorageQuotaData copyWith(
-          {String? accountId,
-          int? usedKb,
-          int? limitKb,
-          int? checkedAtEpochMillis}) =>
-      StorageQuotaData(
-        accountId: accountId ?? this.accountId,
-        usedKb: usedKb ?? this.usedKb,
-        limitKb: limitKb ?? this.limitKb,
-        checkedAtEpochMillis: checkedAtEpochMillis ?? this.checkedAtEpochMillis,
-      );
+  StorageQuotaData copyWith({
+    String? accountId,
+    int? usedKb,
+    int? limitKb,
+    int? checkedAtEpochMillis,
+  }) => StorageQuotaData(
+    accountId: accountId ?? this.accountId,
+    usedKb: usedKb ?? this.usedKb,
+    limitKb: limitKb ?? this.limitKb,
+    checkedAtEpochMillis: checkedAtEpochMillis ?? this.checkedAtEpochMillis,
+  );
   StorageQuotaData copyWithCompanion(StorageQuotaCompanion data) {
     return StorageQuotaData(
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
@@ -3077,10 +3599,10 @@ class StorageQuotaCompanion extends UpdateCompanion<StorageQuotaData> {
     required int limitKb,
     required int checkedAtEpochMillis,
     this.rowid = const Value.absent(),
-  })  : accountId = Value(accountId),
-        usedKb = Value(usedKb),
-        limitKb = Value(limitKb),
-        checkedAtEpochMillis = Value(checkedAtEpochMillis);
+  }) : accountId = Value(accountId),
+       usedKb = Value(usedKb),
+       limitKb = Value(limitKb),
+       checkedAtEpochMillis = Value(checkedAtEpochMillis);
   static Insertable<StorageQuotaData> custom({
     Expression<String>? accountId,
     Expression<int>? usedKb,
@@ -3098,12 +3620,13 @@ class StorageQuotaCompanion extends UpdateCompanion<StorageQuotaData> {
     });
   }
 
-  StorageQuotaCompanion copyWith(
-      {Value<String>? accountId,
-      Value<int>? usedKb,
-      Value<int>? limitKb,
-      Value<int>? checkedAtEpochMillis,
-      Value<int>? rowid}) {
+  StorageQuotaCompanion copyWith({
+    Value<String>? accountId,
+    Value<int>? usedKb,
+    Value<int>? limitKb,
+    Value<int>? checkedAtEpochMillis,
+    Value<int>? rowid,
+  }) {
     return StorageQuotaCompanion(
       accountId: accountId ?? this.accountId,
       usedKb: usedKb ?? this.usedKb,
@@ -3153,202 +3676,279 @@ class PendingMutations extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   PendingMutations(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _mutationIdMeta =
-      const VerificationMeta('mutationId');
+  static const VerificationMeta _mutationIdMeta = const VerificationMeta(
+    'mutationId',
+  );
   late final GeneratedColumn<String> mutationId = GeneratedColumn<String>(
-      'mutationId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL PRIMARY KEY');
-  static const VerificationMeta _accountIdMeta =
-      const VerificationMeta('accountId');
+    'mutationId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
   late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
-      'accountId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL REFERENCES accounts(accountId)ON DELETE CASCADE');
-  static const VerificationMeta _mailboxIdMeta =
-      const VerificationMeta('mailboxId');
+    'accountId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES accounts(accountId)ON DELETE CASCADE',
+  );
+  static const VerificationMeta _mailboxIdMeta = const VerificationMeta(
+    'mailboxId',
+  );
   late final GeneratedColumn<String> mailboxId = GeneratedColumn<String>(
-      'mailboxId', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _messageIdMeta =
-      const VerificationMeta('messageId');
+    'mailboxId',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _messageIdMeta = const VerificationMeta(
+    'messageId',
+  );
   late final GeneratedColumn<String> messageId = GeneratedColumn<String>(
-      'messageId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL REFERENCES messages(messageId)ON DELETE CASCADE');
-  static const VerificationMeta _targetUidMeta =
-      const VerificationMeta('targetUid');
+    'messageId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES messages(messageId)ON DELETE CASCADE',
+  );
+  static const VerificationMeta _targetUidMeta = const VerificationMeta(
+    'targetUid',
+  );
   late final GeneratedColumn<int> targetUid = GeneratedColumn<int>(
-      'targetUid', aliasedName, true,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      $customConstraints: '');
+    'targetUid',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _typeMeta = const VerificationMeta('type');
   late final GeneratedColumn<String> type = GeneratedColumn<String>(
-      'type', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _payloadMeta =
-      const VerificationMeta('payload');
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
   late final GeneratedColumn<String> payload = GeneratedColumn<String>(
-      'payload', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
+    'payload',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
   static const VerificationMeta _stateMeta = const VerificationMeta('state');
   late final GeneratedColumn<String> state = GeneratedColumn<String>(
-      'state', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _retryCountMeta =
-      const VerificationMeta('retryCount');
+    'state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _retryCountMeta = const VerificationMeta(
+    'retryCount',
+  );
   late final GeneratedColumn<int> retryCount = GeneratedColumn<int>(
-      'retryCount', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'retryCount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _createdAtEpochMillisMeta =
       const VerificationMeta('createdAtEpochMillis');
   late final GeneratedColumn<int> createdAtEpochMillis = GeneratedColumn<int>(
-      'createdAtEpochMillis', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _lastErrorCodeMeta =
-      const VerificationMeta('lastErrorCode');
+    'createdAtEpochMillis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _lastErrorCodeMeta = const VerificationMeta(
+    'lastErrorCode',
+  );
   late final GeneratedColumn<String> lastErrorCode = GeneratedColumn<String>(
-      'lastErrorCode', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _previousFlagsMeta =
-      const VerificationMeta('previousFlags');
+    'lastErrorCode',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _previousFlagsMeta = const VerificationMeta(
+    'previousFlags',
+  );
   late final GeneratedColumn<String> previousFlags = GeneratedColumn<String>(
-      'previousFlags', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: 'NOT NULL DEFAULT \'\'',
-      defaultValue: const CustomExpression('\'\''));
-  static const VerificationMeta _previousLabelsMeta =
-      const VerificationMeta('previousLabels');
+    'previousFlags',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT \'\'',
+    defaultValue: const CustomExpression('\'\''),
+  );
+  static const VerificationMeta _previousLabelsMeta = const VerificationMeta(
+    'previousLabels',
+  );
   late final GeneratedColumn<String> previousLabels = GeneratedColumn<String>(
-      'previousLabels', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: 'NOT NULL DEFAULT \'\'',
-      defaultValue: const CustomExpression('\'\''));
+    'previousLabels',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: 'NOT NULL DEFAULT \'\'',
+    defaultValue: const CustomExpression('\'\''),
+  );
   @override
   List<GeneratedColumn> get $columns => [
-        mutationId,
-        accountId,
-        mailboxId,
-        messageId,
-        targetUid,
-        type,
-        payload,
-        state,
-        retryCount,
-        createdAtEpochMillis,
-        lastErrorCode,
-        previousFlags,
-        previousLabels
-      ];
+    mutationId,
+    accountId,
+    mailboxId,
+    messageId,
+    targetUid,
+    type,
+    payload,
+    state,
+    retryCount,
+    createdAtEpochMillis,
+    lastErrorCode,
+    previousFlags,
+    previousLabels,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'pending_mutations';
   @override
-  VerificationContext validateIntegrity(Insertable<PendingMutation> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<PendingMutation> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('mutationId')) {
       context.handle(
-          _mutationIdMeta,
-          mutationId.isAcceptableOrUnknown(
-              data['mutationId']!, _mutationIdMeta));
+        _mutationIdMeta,
+        mutationId.isAcceptableOrUnknown(data['mutationId']!, _mutationIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_mutationIdMeta);
     }
     if (data.containsKey('accountId')) {
-      context.handle(_accountIdMeta,
-          accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta));
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_accountIdMeta);
     }
     if (data.containsKey('mailboxId')) {
-      context.handle(_mailboxIdMeta,
-          mailboxId.isAcceptableOrUnknown(data['mailboxId']!, _mailboxIdMeta));
+      context.handle(
+        _mailboxIdMeta,
+        mailboxId.isAcceptableOrUnknown(data['mailboxId']!, _mailboxIdMeta),
+      );
     }
     if (data.containsKey('messageId')) {
-      context.handle(_messageIdMeta,
-          messageId.isAcceptableOrUnknown(data['messageId']!, _messageIdMeta));
+      context.handle(
+        _messageIdMeta,
+        messageId.isAcceptableOrUnknown(data['messageId']!, _messageIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_messageIdMeta);
     }
     if (data.containsKey('targetUid')) {
-      context.handle(_targetUidMeta,
-          targetUid.isAcceptableOrUnknown(data['targetUid']!, _targetUidMeta));
+      context.handle(
+        _targetUidMeta,
+        targetUid.isAcceptableOrUnknown(data['targetUid']!, _targetUidMeta),
+      );
     }
     if (data.containsKey('type')) {
       context.handle(
-          _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
     } else if (isInserting) {
       context.missing(_typeMeta);
     }
     if (data.containsKey('payload')) {
-      context.handle(_payloadMeta,
-          payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta));
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
     }
     if (data.containsKey('state')) {
       context.handle(
-          _stateMeta, state.isAcceptableOrUnknown(data['state']!, _stateMeta));
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
     } else if (isInserting) {
       context.missing(_stateMeta);
     }
     if (data.containsKey('retryCount')) {
       context.handle(
-          _retryCountMeta,
-          retryCount.isAcceptableOrUnknown(
-              data['retryCount']!, _retryCountMeta));
+        _retryCountMeta,
+        retryCount.isAcceptableOrUnknown(data['retryCount']!, _retryCountMeta),
+      );
     } else if (isInserting) {
       context.missing(_retryCountMeta);
     }
     if (data.containsKey('createdAtEpochMillis')) {
       context.handle(
+        _createdAtEpochMillisMeta,
+        createdAtEpochMillis.isAcceptableOrUnknown(
+          data['createdAtEpochMillis']!,
           _createdAtEpochMillisMeta,
-          createdAtEpochMillis.isAcceptableOrUnknown(
-              data['createdAtEpochMillis']!, _createdAtEpochMillisMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_createdAtEpochMillisMeta);
     }
     if (data.containsKey('lastErrorCode')) {
       context.handle(
+        _lastErrorCodeMeta,
+        lastErrorCode.isAcceptableOrUnknown(
+          data['lastErrorCode']!,
           _lastErrorCodeMeta,
-          lastErrorCode.isAcceptableOrUnknown(
-              data['lastErrorCode']!, _lastErrorCodeMeta));
+        ),
+      );
     }
     if (data.containsKey('previousFlags')) {
       context.handle(
+        _previousFlagsMeta,
+        previousFlags.isAcceptableOrUnknown(
+          data['previousFlags']!,
           _previousFlagsMeta,
-          previousFlags.isAcceptableOrUnknown(
-              data['previousFlags']!, _previousFlagsMeta));
+        ),
+      );
     }
     if (data.containsKey('previousLabels')) {
       context.handle(
+        _previousLabelsMeta,
+        previousLabels.isAcceptableOrUnknown(
+          data['previousLabels']!,
           _previousLabelsMeta,
-          previousLabels.isAcceptableOrUnknown(
-              data['previousLabels']!, _previousLabelsMeta));
+        ),
+      );
     }
     return context;
   }
@@ -3359,32 +3959,58 @@ class PendingMutations extends Table
   PendingMutation map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return PendingMutation(
-      mutationId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}mutationId'])!,
-      accountId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}accountId'])!,
-      mailboxId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}mailboxId']),
-      messageId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}messageId'])!,
-      targetUid: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}targetUid']),
-      type: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
-      payload: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}payload']),
-      state: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}state'])!,
-      retryCount: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}retryCount'])!,
+      mutationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mutationId'],
+      )!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accountId'],
+      )!,
+      mailboxId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mailboxId'],
+      ),
+      messageId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}messageId'],
+      )!,
+      targetUid: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}targetUid'],
+      ),
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      ),
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      )!,
+      retryCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retryCount'],
+      )!,
       createdAtEpochMillis: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}createdAtEpochMillis'])!,
-      lastErrorCode: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}lastErrorCode']),
-      previousFlags: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}previousFlags'])!,
-      previousLabels: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}previousLabels'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}createdAtEpochMillis'],
+      )!,
+      lastErrorCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}lastErrorCode'],
+      ),
+      previousFlags: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previousFlags'],
+      )!,
+      previousLabels: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previousLabels'],
+      )!,
     );
   }
 
@@ -3411,20 +4037,21 @@ class PendingMutation extends DataClass implements Insertable<PendingMutation> {
   final String? lastErrorCode;
   final String previousFlags;
   final String previousLabels;
-  const PendingMutation(
-      {required this.mutationId,
-      required this.accountId,
-      this.mailboxId,
-      required this.messageId,
-      this.targetUid,
-      required this.type,
-      this.payload,
-      required this.state,
-      required this.retryCount,
-      required this.createdAtEpochMillis,
-      this.lastErrorCode,
-      required this.previousFlags,
-      required this.previousLabels});
+  const PendingMutation({
+    required this.mutationId,
+    required this.accountId,
+    this.mailboxId,
+    required this.messageId,
+    this.targetUid,
+    required this.type,
+    this.payload,
+    required this.state,
+    required this.retryCount,
+    required this.createdAtEpochMillis,
+    this.lastErrorCode,
+    required this.previousFlags,
+    required this.previousLabels,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3478,8 +4105,10 @@ class PendingMutation extends DataClass implements Insertable<PendingMutation> {
     );
   }
 
-  factory PendingMutation.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory PendingMutation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return PendingMutation(
       mutationId: serializer.fromJson<String>(json['mutationId']),
@@ -3491,8 +4120,9 @@ class PendingMutation extends DataClass implements Insertable<PendingMutation> {
       payload: serializer.fromJson<String?>(json['payload']),
       state: serializer.fromJson<String>(json['state']),
       retryCount: serializer.fromJson<int>(json['retryCount']),
-      createdAtEpochMillis:
-          serializer.fromJson<int>(json['createdAtEpochMillis']),
+      createdAtEpochMillis: serializer.fromJson<int>(
+        json['createdAtEpochMillis'],
+      ),
       lastErrorCode: serializer.fromJson<String?>(json['lastErrorCode']),
       previousFlags: serializer.fromJson<String>(json['previousFlags']),
       previousLabels: serializer.fromJson<String>(json['previousLabels']),
@@ -3518,40 +4148,42 @@ class PendingMutation extends DataClass implements Insertable<PendingMutation> {
     };
   }
 
-  PendingMutation copyWith(
-          {String? mutationId,
-          String? accountId,
-          Value<String?> mailboxId = const Value.absent(),
-          String? messageId,
-          Value<int?> targetUid = const Value.absent(),
-          String? type,
-          Value<String?> payload = const Value.absent(),
-          String? state,
-          int? retryCount,
-          int? createdAtEpochMillis,
-          Value<String?> lastErrorCode = const Value.absent(),
-          String? previousFlags,
-          String? previousLabels}) =>
-      PendingMutation(
-        mutationId: mutationId ?? this.mutationId,
-        accountId: accountId ?? this.accountId,
-        mailboxId: mailboxId.present ? mailboxId.value : this.mailboxId,
-        messageId: messageId ?? this.messageId,
-        targetUid: targetUid.present ? targetUid.value : this.targetUid,
-        type: type ?? this.type,
-        payload: payload.present ? payload.value : this.payload,
-        state: state ?? this.state,
-        retryCount: retryCount ?? this.retryCount,
-        createdAtEpochMillis: createdAtEpochMillis ?? this.createdAtEpochMillis,
-        lastErrorCode:
-            lastErrorCode.present ? lastErrorCode.value : this.lastErrorCode,
-        previousFlags: previousFlags ?? this.previousFlags,
-        previousLabels: previousLabels ?? this.previousLabels,
-      );
+  PendingMutation copyWith({
+    String? mutationId,
+    String? accountId,
+    Value<String?> mailboxId = const Value.absent(),
+    String? messageId,
+    Value<int?> targetUid = const Value.absent(),
+    String? type,
+    Value<String?> payload = const Value.absent(),
+    String? state,
+    int? retryCount,
+    int? createdAtEpochMillis,
+    Value<String?> lastErrorCode = const Value.absent(),
+    String? previousFlags,
+    String? previousLabels,
+  }) => PendingMutation(
+    mutationId: mutationId ?? this.mutationId,
+    accountId: accountId ?? this.accountId,
+    mailboxId: mailboxId.present ? mailboxId.value : this.mailboxId,
+    messageId: messageId ?? this.messageId,
+    targetUid: targetUid.present ? targetUid.value : this.targetUid,
+    type: type ?? this.type,
+    payload: payload.present ? payload.value : this.payload,
+    state: state ?? this.state,
+    retryCount: retryCount ?? this.retryCount,
+    createdAtEpochMillis: createdAtEpochMillis ?? this.createdAtEpochMillis,
+    lastErrorCode: lastErrorCode.present
+        ? lastErrorCode.value
+        : this.lastErrorCode,
+    previousFlags: previousFlags ?? this.previousFlags,
+    previousLabels: previousLabels ?? this.previousLabels,
+  );
   PendingMutation copyWithCompanion(PendingMutationsCompanion data) {
     return PendingMutation(
-      mutationId:
-          data.mutationId.present ? data.mutationId.value : this.mutationId,
+      mutationId: data.mutationId.present
+          ? data.mutationId.value
+          : this.mutationId,
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
       mailboxId: data.mailboxId.present ? data.mailboxId.value : this.mailboxId,
       messageId: data.messageId.present ? data.messageId.value : this.messageId,
@@ -3559,8 +4191,9 @@ class PendingMutation extends DataClass implements Insertable<PendingMutation> {
       type: data.type.present ? data.type.value : this.type,
       payload: data.payload.present ? data.payload.value : this.payload,
       state: data.state.present ? data.state.value : this.state,
-      retryCount:
-          data.retryCount.present ? data.retryCount.value : this.retryCount,
+      retryCount: data.retryCount.present
+          ? data.retryCount.value
+          : this.retryCount,
       createdAtEpochMillis: data.createdAtEpochMillis.present
           ? data.createdAtEpochMillis.value
           : this.createdAtEpochMillis,
@@ -3598,19 +4231,20 @@ class PendingMutation extends DataClass implements Insertable<PendingMutation> {
 
   @override
   int get hashCode => Object.hash(
-      mutationId,
-      accountId,
-      mailboxId,
-      messageId,
-      targetUid,
-      type,
-      payload,
-      state,
-      retryCount,
-      createdAtEpochMillis,
-      lastErrorCode,
-      previousFlags,
-      previousLabels);
+    mutationId,
+    accountId,
+    mailboxId,
+    messageId,
+    targetUid,
+    type,
+    payload,
+    state,
+    retryCount,
+    createdAtEpochMillis,
+    lastErrorCode,
+    previousFlags,
+    previousLabels,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3676,13 +4310,13 @@ class PendingMutationsCompanion extends UpdateCompanion<PendingMutation> {
     this.previousFlags = const Value.absent(),
     this.previousLabels = const Value.absent(),
     this.rowid = const Value.absent(),
-  })  : mutationId = Value(mutationId),
-        accountId = Value(accountId),
-        messageId = Value(messageId),
-        type = Value(type),
-        state = Value(state),
-        retryCount = Value(retryCount),
-        createdAtEpochMillis = Value(createdAtEpochMillis);
+  }) : mutationId = Value(mutationId),
+       accountId = Value(accountId),
+       messageId = Value(messageId),
+       type = Value(type),
+       state = Value(state),
+       retryCount = Value(retryCount),
+       createdAtEpochMillis = Value(createdAtEpochMillis);
   static Insertable<PendingMutation> custom({
     Expression<String>? mutationId,
     Expression<String>? accountId,
@@ -3718,21 +4352,22 @@ class PendingMutationsCompanion extends UpdateCompanion<PendingMutation> {
     });
   }
 
-  PendingMutationsCompanion copyWith(
-      {Value<String>? mutationId,
-      Value<String>? accountId,
-      Value<String?>? mailboxId,
-      Value<String>? messageId,
-      Value<int?>? targetUid,
-      Value<String>? type,
-      Value<String?>? payload,
-      Value<String>? state,
-      Value<int>? retryCount,
-      Value<int>? createdAtEpochMillis,
-      Value<String?>? lastErrorCode,
-      Value<String>? previousFlags,
-      Value<String>? previousLabels,
-      Value<int>? rowid}) {
+  PendingMutationsCompanion copyWith({
+    Value<String>? mutationId,
+    Value<String>? accountId,
+    Value<String?>? mailboxId,
+    Value<String>? messageId,
+    Value<int?>? targetUid,
+    Value<String>? type,
+    Value<String?>? payload,
+    Value<String>? state,
+    Value<int>? retryCount,
+    Value<int>? createdAtEpochMillis,
+    Value<String?>? lastErrorCode,
+    Value<String>? previousFlags,
+    Value<String>? previousLabels,
+    Value<int>? rowid,
+  }) {
     return PendingMutationsCompanion(
       mutationId: mutationId ?? this.mutationId,
       accountId: accountId ?? this.accountId,
@@ -3827,111 +4462,152 @@ class SyncCheckpoints extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   SyncCheckpoints(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _mailboxIdMeta =
-      const VerificationMeta('mailboxId');
+  static const VerificationMeta _mailboxIdMeta = const VerificationMeta(
+    'mailboxId',
+  );
   late final GeneratedColumn<String> mailboxId = GeneratedColumn<String>(
-      'mailboxId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL PRIMARY KEY REFERENCES mailboxes(mailboxId)ON DELETE CASCADE');
-  static const VerificationMeta _accountIdMeta =
-      const VerificationMeta('accountId');
+    'mailboxId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL PRIMARY KEY REFERENCES mailboxes(mailboxId)ON DELETE CASCADE',
+  );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
   late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
-      'accountId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL REFERENCES accounts(accountId)ON DELETE CASCADE');
-  static const VerificationMeta _uidValidityMeta =
-      const VerificationMeta('uidValidity');
+    'accountId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES accounts(accountId)ON DELETE CASCADE',
+  );
+  static const VerificationMeta _uidValidityMeta = const VerificationMeta(
+    'uidValidity',
+  );
   late final GeneratedColumn<int> uidValidity = GeneratedColumn<int>(
-      'uidValidity', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _highestKnownUidMeta =
-      const VerificationMeta('highestKnownUid');
+    'uidValidity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _highestKnownUidMeta = const VerificationMeta(
+    'highestKnownUid',
+  );
   late final GeneratedColumn<int> highestKnownUid = GeneratedColumn<int>(
-      'highestKnownUid', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _syncGenerationMeta =
-      const VerificationMeta('syncGeneration');
+    'highestKnownUid',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _syncGenerationMeta = const VerificationMeta(
+    'syncGeneration',
+  );
   late final GeneratedColumn<int> syncGeneration = GeneratedColumn<int>(
-      'syncGeneration', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'syncGeneration',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _lastSuccessfulSyncEpochMillisMeta =
       const VerificationMeta('lastSuccessfulSyncEpochMillis');
   late final GeneratedColumn<int> lastSuccessfulSyncEpochMillis =
-      GeneratedColumn<int>('lastSuccessfulSyncEpochMillis', aliasedName, true,
-          type: DriftSqlType.int,
-          requiredDuringInsert: false,
-          $customConstraints: '');
+      GeneratedColumn<int>(
+        'lastSuccessfulSyncEpochMillis',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        $customConstraints: '',
+      );
   @override
   List<GeneratedColumn> get $columns => [
-        mailboxId,
-        accountId,
-        uidValidity,
-        highestKnownUid,
-        syncGeneration,
-        lastSuccessfulSyncEpochMillis
-      ];
+    mailboxId,
+    accountId,
+    uidValidity,
+    highestKnownUid,
+    syncGeneration,
+    lastSuccessfulSyncEpochMillis,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'sync_checkpoints';
   @override
-  VerificationContext validateIntegrity(Insertable<SyncCheckpoint> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<SyncCheckpoint> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('mailboxId')) {
-      context.handle(_mailboxIdMeta,
-          mailboxId.isAcceptableOrUnknown(data['mailboxId']!, _mailboxIdMeta));
+      context.handle(
+        _mailboxIdMeta,
+        mailboxId.isAcceptableOrUnknown(data['mailboxId']!, _mailboxIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_mailboxIdMeta);
     }
     if (data.containsKey('accountId')) {
-      context.handle(_accountIdMeta,
-          accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta));
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_accountIdMeta);
     }
     if (data.containsKey('uidValidity')) {
       context.handle(
+        _uidValidityMeta,
+        uidValidity.isAcceptableOrUnknown(
+          data['uidValidity']!,
           _uidValidityMeta,
-          uidValidity.isAcceptableOrUnknown(
-              data['uidValidity']!, _uidValidityMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_uidValidityMeta);
     }
     if (data.containsKey('highestKnownUid')) {
       context.handle(
+        _highestKnownUidMeta,
+        highestKnownUid.isAcceptableOrUnknown(
+          data['highestKnownUid']!,
           _highestKnownUidMeta,
-          highestKnownUid.isAcceptableOrUnknown(
-              data['highestKnownUid']!, _highestKnownUidMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_highestKnownUidMeta);
     }
     if (data.containsKey('syncGeneration')) {
       context.handle(
+        _syncGenerationMeta,
+        syncGeneration.isAcceptableOrUnknown(
+          data['syncGeneration']!,
           _syncGenerationMeta,
-          syncGeneration.isAcceptableOrUnknown(
-              data['syncGeneration']!, _syncGenerationMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_syncGenerationMeta);
     }
     if (data.containsKey('lastSuccessfulSyncEpochMillis')) {
       context.handle(
+        _lastSuccessfulSyncEpochMillisMeta,
+        lastSuccessfulSyncEpochMillis.isAcceptableOrUnknown(
+          data['lastSuccessfulSyncEpochMillis']!,
           _lastSuccessfulSyncEpochMillisMeta,
-          lastSuccessfulSyncEpochMillis.isAcceptableOrUnknown(
-              data['lastSuccessfulSyncEpochMillis']!,
-              _lastSuccessfulSyncEpochMillisMeta));
+        ),
+      );
     }
     return context;
   }
@@ -3942,19 +4618,30 @@ class SyncCheckpoints extends Table
   SyncCheckpoint map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return SyncCheckpoint(
-      mailboxId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}mailboxId'])!,
-      accountId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}accountId'])!,
-      uidValidity: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}uidValidity'])!,
-      highestKnownUid: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}highestKnownUid'])!,
-      syncGeneration: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}syncGeneration'])!,
+      mailboxId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mailboxId'],
+      )!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accountId'],
+      )!,
+      uidValidity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}uidValidity'],
+      )!,
+      highestKnownUid: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}highestKnownUid'],
+      )!,
+      syncGeneration: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}syncGeneration'],
+      )!,
       lastSuccessfulSyncEpochMillis: attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}lastSuccessfulSyncEpochMillis']),
+        DriftSqlType.int,
+        data['${effectivePrefix}lastSuccessfulSyncEpochMillis'],
+      ),
     );
   }
 
@@ -3974,13 +4661,14 @@ class SyncCheckpoint extends DataClass implements Insertable<SyncCheckpoint> {
   final int highestKnownUid;
   final int syncGeneration;
   final int? lastSuccessfulSyncEpochMillis;
-  const SyncCheckpoint(
-      {required this.mailboxId,
-      required this.accountId,
-      required this.uidValidity,
-      required this.highestKnownUid,
-      required this.syncGeneration,
-      this.lastSuccessfulSyncEpochMillis});
+  const SyncCheckpoint({
+    required this.mailboxId,
+    required this.accountId,
+    required this.uidValidity,
+    required this.highestKnownUid,
+    required this.syncGeneration,
+    this.lastSuccessfulSyncEpochMillis,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3990,8 +4678,9 @@ class SyncCheckpoint extends DataClass implements Insertable<SyncCheckpoint> {
     map['highestKnownUid'] = Variable<int>(highestKnownUid);
     map['syncGeneration'] = Variable<int>(syncGeneration);
     if (!nullToAbsent || lastSuccessfulSyncEpochMillis != null) {
-      map['lastSuccessfulSyncEpochMillis'] =
-          Variable<int>(lastSuccessfulSyncEpochMillis);
+      map['lastSuccessfulSyncEpochMillis'] = Variable<int>(
+        lastSuccessfulSyncEpochMillis,
+      );
     }
     return map;
   }
@@ -4005,13 +4694,15 @@ class SyncCheckpoint extends DataClass implements Insertable<SyncCheckpoint> {
       syncGeneration: Value(syncGeneration),
       lastSuccessfulSyncEpochMillis:
           lastSuccessfulSyncEpochMillis == null && nullToAbsent
-              ? const Value.absent()
-              : Value(lastSuccessfulSyncEpochMillis),
+          ? const Value.absent()
+          : Value(lastSuccessfulSyncEpochMillis),
     );
   }
 
-  factory SyncCheckpoint.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory SyncCheckpoint.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return SyncCheckpoint(
       mailboxId: serializer.fromJson<String>(json['mailboxId']),
@@ -4019,8 +4710,9 @@ class SyncCheckpoint extends DataClass implements Insertable<SyncCheckpoint> {
       uidValidity: serializer.fromJson<int>(json['uidValidity']),
       highestKnownUid: serializer.fromJson<int>(json['highestKnownUid']),
       syncGeneration: serializer.fromJson<int>(json['syncGeneration']),
-      lastSuccessfulSyncEpochMillis:
-          serializer.fromJson<int?>(json['lastSuccessfulSyncEpochMillis']),
+      lastSuccessfulSyncEpochMillis: serializer.fromJson<int?>(
+        json['lastSuccessfulSyncEpochMillis'],
+      ),
     );
   }
   @override
@@ -4032,34 +4724,36 @@ class SyncCheckpoint extends DataClass implements Insertable<SyncCheckpoint> {
       'uidValidity': serializer.toJson<int>(uidValidity),
       'highestKnownUid': serializer.toJson<int>(highestKnownUid),
       'syncGeneration': serializer.toJson<int>(syncGeneration),
-      'lastSuccessfulSyncEpochMillis':
-          serializer.toJson<int?>(lastSuccessfulSyncEpochMillis),
+      'lastSuccessfulSyncEpochMillis': serializer.toJson<int?>(
+        lastSuccessfulSyncEpochMillis,
+      ),
     };
   }
 
-  SyncCheckpoint copyWith(
-          {String? mailboxId,
-          String? accountId,
-          int? uidValidity,
-          int? highestKnownUid,
-          int? syncGeneration,
-          Value<int?> lastSuccessfulSyncEpochMillis = const Value.absent()}) =>
-      SyncCheckpoint(
-        mailboxId: mailboxId ?? this.mailboxId,
-        accountId: accountId ?? this.accountId,
-        uidValidity: uidValidity ?? this.uidValidity,
-        highestKnownUid: highestKnownUid ?? this.highestKnownUid,
-        syncGeneration: syncGeneration ?? this.syncGeneration,
-        lastSuccessfulSyncEpochMillis: lastSuccessfulSyncEpochMillis.present
-            ? lastSuccessfulSyncEpochMillis.value
-            : this.lastSuccessfulSyncEpochMillis,
-      );
+  SyncCheckpoint copyWith({
+    String? mailboxId,
+    String? accountId,
+    int? uidValidity,
+    int? highestKnownUid,
+    int? syncGeneration,
+    Value<int?> lastSuccessfulSyncEpochMillis = const Value.absent(),
+  }) => SyncCheckpoint(
+    mailboxId: mailboxId ?? this.mailboxId,
+    accountId: accountId ?? this.accountId,
+    uidValidity: uidValidity ?? this.uidValidity,
+    highestKnownUid: highestKnownUid ?? this.highestKnownUid,
+    syncGeneration: syncGeneration ?? this.syncGeneration,
+    lastSuccessfulSyncEpochMillis: lastSuccessfulSyncEpochMillis.present
+        ? lastSuccessfulSyncEpochMillis.value
+        : this.lastSuccessfulSyncEpochMillis,
+  );
   SyncCheckpoint copyWithCompanion(SyncCheckpointsCompanion data) {
     return SyncCheckpoint(
       mailboxId: data.mailboxId.present ? data.mailboxId.value : this.mailboxId,
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
-      uidValidity:
-          data.uidValidity.present ? data.uidValidity.value : this.uidValidity,
+      uidValidity: data.uidValidity.present
+          ? data.uidValidity.value
+          : this.uidValidity,
       highestKnownUid: data.highestKnownUid.present
           ? data.highestKnownUid.value
           : this.highestKnownUid,
@@ -4081,14 +4775,21 @@ class SyncCheckpoint extends DataClass implements Insertable<SyncCheckpoint> {
           ..write('highestKnownUid: $highestKnownUid, ')
           ..write('syncGeneration: $syncGeneration, ')
           ..write(
-              'lastSuccessfulSyncEpochMillis: $lastSuccessfulSyncEpochMillis')
+            'lastSuccessfulSyncEpochMillis: $lastSuccessfulSyncEpochMillis',
+          )
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(mailboxId, accountId, uidValidity,
-      highestKnownUid, syncGeneration, lastSuccessfulSyncEpochMillis);
+  int get hashCode => Object.hash(
+    mailboxId,
+    accountId,
+    uidValidity,
+    highestKnownUid,
+    syncGeneration,
+    lastSuccessfulSyncEpochMillis,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4127,11 +4828,11 @@ class SyncCheckpointsCompanion extends UpdateCompanion<SyncCheckpoint> {
     required int syncGeneration,
     this.lastSuccessfulSyncEpochMillis = const Value.absent(),
     this.rowid = const Value.absent(),
-  })  : mailboxId = Value(mailboxId),
-        accountId = Value(accountId),
-        uidValidity = Value(uidValidity),
-        highestKnownUid = Value(highestKnownUid),
-        syncGeneration = Value(syncGeneration);
+  }) : mailboxId = Value(mailboxId),
+       accountId = Value(accountId),
+       uidValidity = Value(uidValidity),
+       highestKnownUid = Value(highestKnownUid),
+       syncGeneration = Value(syncGeneration);
   static Insertable<SyncCheckpoint> custom({
     Expression<String>? mailboxId,
     Expression<String>? accountId,
@@ -4153,14 +4854,15 @@ class SyncCheckpointsCompanion extends UpdateCompanion<SyncCheckpoint> {
     });
   }
 
-  SyncCheckpointsCompanion copyWith(
-      {Value<String>? mailboxId,
-      Value<String>? accountId,
-      Value<int>? uidValidity,
-      Value<int>? highestKnownUid,
-      Value<int>? syncGeneration,
-      Value<int?>? lastSuccessfulSyncEpochMillis,
-      Value<int>? rowid}) {
+  SyncCheckpointsCompanion copyWith({
+    Value<String>? mailboxId,
+    Value<String>? accountId,
+    Value<int>? uidValidity,
+    Value<int>? highestKnownUid,
+    Value<int>? syncGeneration,
+    Value<int?>? lastSuccessfulSyncEpochMillis,
+    Value<int>? rowid,
+  }) {
     return SyncCheckpointsCompanion(
       mailboxId: mailboxId ?? this.mailboxId,
       accountId: accountId ?? this.accountId,
@@ -4192,8 +4894,9 @@ class SyncCheckpointsCompanion extends UpdateCompanion<SyncCheckpoint> {
       map['syncGeneration'] = Variable<int>(syncGeneration.value);
     }
     if (lastSuccessfulSyncEpochMillis.present) {
-      map['lastSuccessfulSyncEpochMillis'] =
-          Variable<int>(lastSuccessfulSyncEpochMillis.value);
+      map['lastSuccessfulSyncEpochMillis'] = Variable<int>(
+        lastSuccessfulSyncEpochMillis.value,
+      );
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -4210,7 +4913,8 @@ class SyncCheckpointsCompanion extends UpdateCompanion<SyncCheckpoint> {
           ..write('highestKnownUid: $highestKnownUid, ')
           ..write('syncGeneration: $syncGeneration, ')
           ..write(
-              'lastSuccessfulSyncEpochMillis: $lastSuccessfulSyncEpochMillis, ')
+            'lastSuccessfulSyncEpochMillis: $lastSuccessfulSyncEpochMillis, ',
+          )
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4222,193 +4926,267 @@ class Drafts extends Table with TableInfo<Drafts, Draft> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   Drafts(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _draftIdMeta =
-      const VerificationMeta('draftId');
+  static const VerificationMeta _draftIdMeta = const VerificationMeta(
+    'draftId',
+  );
   late final GeneratedColumn<String> draftId = GeneratedColumn<String>(
-      'draftId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL PRIMARY KEY');
-  static const VerificationMeta _accountIdMeta =
-      const VerificationMeta('accountId');
+    'draftId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
   late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
-      'accountId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints:
-          'NOT NULL REFERENCES accounts(accountId)ON DELETE CASCADE');
-  static const VerificationMeta _toAddressesMeta =
-      const VerificationMeta('toAddresses');
+    'accountId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL REFERENCES accounts(accountId)ON DELETE CASCADE',
+  );
+  static const VerificationMeta _toAddressesMeta = const VerificationMeta(
+    'toAddresses',
+  );
   late final GeneratedColumn<String> toAddresses = GeneratedColumn<String>(
-      'toAddresses', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _ccAddressesMeta =
-      const VerificationMeta('ccAddresses');
+    'toAddresses',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _ccAddressesMeta = const VerificationMeta(
+    'ccAddresses',
+  );
   late final GeneratedColumn<String> ccAddresses = GeneratedColumn<String>(
-      'ccAddresses', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _bccAddressesMeta =
-      const VerificationMeta('bccAddresses');
+    'ccAddresses',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _bccAddressesMeta = const VerificationMeta(
+    'bccAddresses',
+  );
   late final GeneratedColumn<String> bccAddresses = GeneratedColumn<String>(
-      'bccAddresses', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _subjectMeta =
-      const VerificationMeta('subject');
+    'bccAddresses',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _subjectMeta = const VerificationMeta(
+    'subject',
+  );
   late final GeneratedColumn<String> subject = GeneratedColumn<String>(
-      'subject', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'subject',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _bodyMeta = const VerificationMeta('body');
   late final GeneratedColumn<String> body = GeneratedColumn<String>(
-      'body', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _inReplyToMeta =
-      const VerificationMeta('inReplyTo');
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _inReplyToMeta = const VerificationMeta(
+    'inReplyTo',
+  );
   late final GeneratedColumn<String> inReplyTo = GeneratedColumn<String>(
-      'inReplyTo', aliasedName, true,
-      type: DriftSqlType.string,
-      requiredDuringInsert: false,
-      $customConstraints: '');
-  static const VerificationMeta _referencesMeta =
-      const VerificationMeta('references');
+    'inReplyTo',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _referencesMeta = const VerificationMeta(
+    'references',
+  );
   late final GeneratedColumn<String> references = GeneratedColumn<String>(
-      'references', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'references',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
-      'status', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   static const VerificationMeta _updatedAtEpochMillisMeta =
       const VerificationMeta('updatedAtEpochMillis');
   late final GeneratedColumn<int> updatedAtEpochMillis = GeneratedColumn<int>(
-      'updatedAtEpochMillis', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
-  static const VerificationMeta _attachmentsMeta =
-      const VerificationMeta('attachments');
+    'updatedAtEpochMillis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
+  static const VerificationMeta _attachmentsMeta = const VerificationMeta(
+    'attachments',
+  );
   late final GeneratedColumn<String> attachments = GeneratedColumn<String>(
-      'attachments', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'attachments',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   @override
   List<GeneratedColumn> get $columns => [
-        draftId,
-        accountId,
-        toAddresses,
-        ccAddresses,
-        bccAddresses,
-        subject,
-        body,
-        inReplyTo,
-        references,
-        status,
-        updatedAtEpochMillis,
-        attachments
-      ];
+    draftId,
+    accountId,
+    toAddresses,
+    ccAddresses,
+    bccAddresses,
+    subject,
+    body,
+    inReplyTo,
+    references,
+    status,
+    updatedAtEpochMillis,
+    attachments,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
   static const String $name = 'drafts';
   @override
-  VerificationContext validateIntegrity(Insertable<Draft> instance,
-      {bool isInserting = false}) {
+  VerificationContext validateIntegrity(
+    Insertable<Draft> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('draftId')) {
-      context.handle(_draftIdMeta,
-          draftId.isAcceptableOrUnknown(data['draftId']!, _draftIdMeta));
+      context.handle(
+        _draftIdMeta,
+        draftId.isAcceptableOrUnknown(data['draftId']!, _draftIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_draftIdMeta);
     }
     if (data.containsKey('accountId')) {
-      context.handle(_accountIdMeta,
-          accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta));
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_accountIdMeta);
     }
     if (data.containsKey('toAddresses')) {
       context.handle(
+        _toAddressesMeta,
+        toAddresses.isAcceptableOrUnknown(
+          data['toAddresses']!,
           _toAddressesMeta,
-          toAddresses.isAcceptableOrUnknown(
-              data['toAddresses']!, _toAddressesMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_toAddressesMeta);
     }
     if (data.containsKey('ccAddresses')) {
       context.handle(
+        _ccAddressesMeta,
+        ccAddresses.isAcceptableOrUnknown(
+          data['ccAddresses']!,
           _ccAddressesMeta,
-          ccAddresses.isAcceptableOrUnknown(
-              data['ccAddresses']!, _ccAddressesMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_ccAddressesMeta);
     }
     if (data.containsKey('bccAddresses')) {
       context.handle(
+        _bccAddressesMeta,
+        bccAddresses.isAcceptableOrUnknown(
+          data['bccAddresses']!,
           _bccAddressesMeta,
-          bccAddresses.isAcceptableOrUnknown(
-              data['bccAddresses']!, _bccAddressesMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_bccAddressesMeta);
     }
     if (data.containsKey('subject')) {
-      context.handle(_subjectMeta,
-          subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta));
+      context.handle(
+        _subjectMeta,
+        subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta),
+      );
     } else if (isInserting) {
       context.missing(_subjectMeta);
     }
     if (data.containsKey('body')) {
       context.handle(
-          _bodyMeta, body.isAcceptableOrUnknown(data['body']!, _bodyMeta));
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
     } else if (isInserting) {
       context.missing(_bodyMeta);
     }
     if (data.containsKey('inReplyTo')) {
-      context.handle(_inReplyToMeta,
-          inReplyTo.isAcceptableOrUnknown(data['inReplyTo']!, _inReplyToMeta));
+      context.handle(
+        _inReplyToMeta,
+        inReplyTo.isAcceptableOrUnknown(data['inReplyTo']!, _inReplyToMeta),
+      );
     }
     if (data.containsKey('references')) {
       context.handle(
-          _referencesMeta,
-          references.isAcceptableOrUnknown(
-              data['references']!, _referencesMeta));
+        _referencesMeta,
+        references.isAcceptableOrUnknown(data['references']!, _referencesMeta),
+      );
     } else if (isInserting) {
       context.missing(_referencesMeta);
     }
     if (data.containsKey('status')) {
-      context.handle(_statusMeta,
-          status.isAcceptableOrUnknown(data['status']!, _statusMeta));
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
     } else if (isInserting) {
       context.missing(_statusMeta);
     }
     if (data.containsKey('updatedAtEpochMillis')) {
       context.handle(
+        _updatedAtEpochMillisMeta,
+        updatedAtEpochMillis.isAcceptableOrUnknown(
+          data['updatedAtEpochMillis']!,
           _updatedAtEpochMillisMeta,
-          updatedAtEpochMillis.isAcceptableOrUnknown(
-              data['updatedAtEpochMillis']!, _updatedAtEpochMillisMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_updatedAtEpochMillisMeta);
     }
     if (data.containsKey('attachments')) {
       context.handle(
+        _attachmentsMeta,
+        attachments.isAcceptableOrUnknown(
+          data['attachments']!,
           _attachmentsMeta,
-          attachments.isAcceptableOrUnknown(
-              data['attachments']!, _attachmentsMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_attachmentsMeta);
     }
@@ -4421,30 +5199,54 @@ class Drafts extends Table with TableInfo<Drafts, Draft> {
   Draft map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Draft(
-      draftId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}draftId'])!,
-      accountId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}accountId'])!,
-      toAddresses: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}toAddresses'])!,
-      ccAddresses: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}ccAddresses'])!,
-      bccAddresses: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}bccAddresses'])!,
-      subject: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}subject'])!,
-      body: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}body'])!,
-      inReplyTo: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}inReplyTo']),
-      references: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}references'])!,
-      status: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      draftId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}draftId'],
+      )!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accountId'],
+      )!,
+      toAddresses: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}toAddresses'],
+      )!,
+      ccAddresses: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ccAddresses'],
+      )!,
+      bccAddresses: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}bccAddresses'],
+      )!,
+      subject: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      inReplyTo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}inReplyTo'],
+      ),
+      references: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}references'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
       updatedAtEpochMillis: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}updatedAtEpochMillis'])!,
-      attachments: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}attachments'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}updatedAtEpochMillis'],
+      )!,
+      attachments: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}attachments'],
+      )!,
     );
   }
 
@@ -4470,19 +5272,20 @@ class Draft extends DataClass implements Insertable<Draft> {
   final String status;
   final int updatedAtEpochMillis;
   final String attachments;
-  const Draft(
-      {required this.draftId,
-      required this.accountId,
-      required this.toAddresses,
-      required this.ccAddresses,
-      required this.bccAddresses,
-      required this.subject,
-      required this.body,
-      this.inReplyTo,
-      required this.references,
-      required this.status,
-      required this.updatedAtEpochMillis,
-      required this.attachments});
+  const Draft({
+    required this.draftId,
+    required this.accountId,
+    required this.toAddresses,
+    required this.ccAddresses,
+    required this.bccAddresses,
+    required this.subject,
+    required this.body,
+    this.inReplyTo,
+    required this.references,
+    required this.status,
+    required this.updatedAtEpochMillis,
+    required this.attachments,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -4522,8 +5325,10 @@ class Draft extends DataClass implements Insertable<Draft> {
     );
   }
 
-  factory Draft.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory Draft.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Draft(
       draftId: serializer.fromJson<String>(json['draftId']),
@@ -4536,8 +5341,9 @@ class Draft extends DataClass implements Insertable<Draft> {
       inReplyTo: serializer.fromJson<String?>(json['inReplyTo']),
       references: serializer.fromJson<String>(json['references']),
       status: serializer.fromJson<String>(json['status']),
-      updatedAtEpochMillis:
-          serializer.fromJson<int>(json['updatedAtEpochMillis']),
+      updatedAtEpochMillis: serializer.fromJson<int>(
+        json['updatedAtEpochMillis'],
+      ),
       attachments: serializer.fromJson<String>(json['attachments']),
     );
   }
@@ -4560,55 +5366,59 @@ class Draft extends DataClass implements Insertable<Draft> {
     };
   }
 
-  Draft copyWith(
-          {String? draftId,
-          String? accountId,
-          String? toAddresses,
-          String? ccAddresses,
-          String? bccAddresses,
-          String? subject,
-          String? body,
-          Value<String?> inReplyTo = const Value.absent(),
-          String? references,
-          String? status,
-          int? updatedAtEpochMillis,
-          String? attachments}) =>
-      Draft(
-        draftId: draftId ?? this.draftId,
-        accountId: accountId ?? this.accountId,
-        toAddresses: toAddresses ?? this.toAddresses,
-        ccAddresses: ccAddresses ?? this.ccAddresses,
-        bccAddresses: bccAddresses ?? this.bccAddresses,
-        subject: subject ?? this.subject,
-        body: body ?? this.body,
-        inReplyTo: inReplyTo.present ? inReplyTo.value : this.inReplyTo,
-        references: references ?? this.references,
-        status: status ?? this.status,
-        updatedAtEpochMillis: updatedAtEpochMillis ?? this.updatedAtEpochMillis,
-        attachments: attachments ?? this.attachments,
-      );
+  Draft copyWith({
+    String? draftId,
+    String? accountId,
+    String? toAddresses,
+    String? ccAddresses,
+    String? bccAddresses,
+    String? subject,
+    String? body,
+    Value<String?> inReplyTo = const Value.absent(),
+    String? references,
+    String? status,
+    int? updatedAtEpochMillis,
+    String? attachments,
+  }) => Draft(
+    draftId: draftId ?? this.draftId,
+    accountId: accountId ?? this.accountId,
+    toAddresses: toAddresses ?? this.toAddresses,
+    ccAddresses: ccAddresses ?? this.ccAddresses,
+    bccAddresses: bccAddresses ?? this.bccAddresses,
+    subject: subject ?? this.subject,
+    body: body ?? this.body,
+    inReplyTo: inReplyTo.present ? inReplyTo.value : this.inReplyTo,
+    references: references ?? this.references,
+    status: status ?? this.status,
+    updatedAtEpochMillis: updatedAtEpochMillis ?? this.updatedAtEpochMillis,
+    attachments: attachments ?? this.attachments,
+  );
   Draft copyWithCompanion(DraftsCompanion data) {
     return Draft(
       draftId: data.draftId.present ? data.draftId.value : this.draftId,
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
-      toAddresses:
-          data.toAddresses.present ? data.toAddresses.value : this.toAddresses,
-      ccAddresses:
-          data.ccAddresses.present ? data.ccAddresses.value : this.ccAddresses,
+      toAddresses: data.toAddresses.present
+          ? data.toAddresses.value
+          : this.toAddresses,
+      ccAddresses: data.ccAddresses.present
+          ? data.ccAddresses.value
+          : this.ccAddresses,
       bccAddresses: data.bccAddresses.present
           ? data.bccAddresses.value
           : this.bccAddresses,
       subject: data.subject.present ? data.subject.value : this.subject,
       body: data.body.present ? data.body.value : this.body,
       inReplyTo: data.inReplyTo.present ? data.inReplyTo.value : this.inReplyTo,
-      references:
-          data.references.present ? data.references.value : this.references,
+      references: data.references.present
+          ? data.references.value
+          : this.references,
       status: data.status.present ? data.status.value : this.status,
       updatedAtEpochMillis: data.updatedAtEpochMillis.present
           ? data.updatedAtEpochMillis.value
           : this.updatedAtEpochMillis,
-      attachments:
-          data.attachments.present ? data.attachments.value : this.attachments,
+      attachments: data.attachments.present
+          ? data.attachments.value
+          : this.attachments,
     );
   }
 
@@ -4633,18 +5443,19 @@ class Draft extends DataClass implements Insertable<Draft> {
 
   @override
   int get hashCode => Object.hash(
-      draftId,
-      accountId,
-      toAddresses,
-      ccAddresses,
-      bccAddresses,
-      subject,
-      body,
-      inReplyTo,
-      references,
-      status,
-      updatedAtEpochMillis,
-      attachments);
+    draftId,
+    accountId,
+    toAddresses,
+    ccAddresses,
+    bccAddresses,
+    subject,
+    body,
+    inReplyTo,
+    references,
+    status,
+    updatedAtEpochMillis,
+    attachments,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4706,17 +5517,17 @@ class DraftsCompanion extends UpdateCompanion<Draft> {
     required int updatedAtEpochMillis,
     required String attachments,
     this.rowid = const Value.absent(),
-  })  : draftId = Value(draftId),
-        accountId = Value(accountId),
-        toAddresses = Value(toAddresses),
-        ccAddresses = Value(ccAddresses),
-        bccAddresses = Value(bccAddresses),
-        subject = Value(subject),
-        body = Value(body),
-        references = Value(references),
-        status = Value(status),
-        updatedAtEpochMillis = Value(updatedAtEpochMillis),
-        attachments = Value(attachments);
+  }) : draftId = Value(draftId),
+       accountId = Value(accountId),
+       toAddresses = Value(toAddresses),
+       ccAddresses = Value(ccAddresses),
+       bccAddresses = Value(bccAddresses),
+       subject = Value(subject),
+       body = Value(body),
+       references = Value(references),
+       status = Value(status),
+       updatedAtEpochMillis = Value(updatedAtEpochMillis),
+       attachments = Value(attachments);
   static Insertable<Draft> custom({
     Expression<String>? draftId,
     Expression<String>? accountId,
@@ -4750,20 +5561,21 @@ class DraftsCompanion extends UpdateCompanion<Draft> {
     });
   }
 
-  DraftsCompanion copyWith(
-      {Value<String>? draftId,
-      Value<String>? accountId,
-      Value<String>? toAddresses,
-      Value<String>? ccAddresses,
-      Value<String>? bccAddresses,
-      Value<String>? subject,
-      Value<String>? body,
-      Value<String?>? inReplyTo,
-      Value<String>? references,
-      Value<String>? status,
-      Value<int>? updatedAtEpochMillis,
-      Value<String>? attachments,
-      Value<int>? rowid}) {
+  DraftsCompanion copyWith({
+    Value<String>? draftId,
+    Value<String>? accountId,
+    Value<String>? toAddresses,
+    Value<String>? ccAddresses,
+    Value<String>? bccAddresses,
+    Value<String>? subject,
+    Value<String>? body,
+    Value<String?>? inReplyTo,
+    Value<String>? references,
+    Value<String>? status,
+    Value<int>? updatedAtEpochMillis,
+    Value<String>? attachments,
+    Value<int>? rowid,
+  }) {
     return DraftsCompanion(
       draftId: draftId ?? this.draftId,
       accountId: accountId ?? this.accountId,
@@ -4853,20 +5665,27 @@ class NotificationState extends Table
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   NotificationState(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _accountIdMeta =
-      const VerificationMeta('accountId');
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
   late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
-      'accountId', aliasedName, false,
-      type: DriftSqlType.string,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL PRIMARY KEY');
+    'accountId',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL PRIMARY KEY',
+  );
   static const VerificationMeta _baselineEstablishedMeta =
       const VerificationMeta('baselineEstablished');
   late final GeneratedColumn<int> baselineEstablished = GeneratedColumn<int>(
-      'baselineEstablished', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      $customConstraints: 'NOT NULL');
+    'baselineEstablished',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL',
+  );
   @override
   List<GeneratedColumn> get $columns => [accountId, baselineEstablished];
   @override
@@ -4876,21 +5695,27 @@ class NotificationState extends Table
   static const String $name = 'notification_state';
   @override
   VerificationContext validateIntegrity(
-      Insertable<NotificationStateData> instance,
-      {bool isInserting = false}) {
+    Insertable<NotificationStateData> instance, {
+    bool isInserting = false,
+  }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('accountId')) {
-      context.handle(_accountIdMeta,
-          accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta));
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['accountId']!, _accountIdMeta),
+      );
     } else if (isInserting) {
       context.missing(_accountIdMeta);
     }
     if (data.containsKey('baselineEstablished')) {
       context.handle(
+        _baselineEstablishedMeta,
+        baselineEstablished.isAcceptableOrUnknown(
+          data['baselineEstablished']!,
           _baselineEstablishedMeta,
-          baselineEstablished.isAcceptableOrUnknown(
-              data['baselineEstablished']!, _baselineEstablishedMeta));
+        ),
+      );
     } else if (isInserting) {
       context.missing(_baselineEstablishedMeta);
     }
@@ -4903,10 +5728,14 @@ class NotificationState extends Table
   NotificationStateData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return NotificationStateData(
-      accountId: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}accountId'])!,
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}accountId'],
+      )!,
       baselineEstablished: attachedDatabase.typeMapping.read(
-          DriftSqlType.int, data['${effectivePrefix}baselineEstablished'])!,
+        DriftSqlType.int,
+        data['${effectivePrefix}baselineEstablished'],
+      )!,
     );
   }
 
@@ -4923,8 +5752,10 @@ class NotificationStateData extends DataClass
     implements Insertable<NotificationStateData> {
   final String accountId;
   final int baselineEstablished;
-  const NotificationStateData(
-      {required this.accountId, required this.baselineEstablished});
+  const NotificationStateData({
+    required this.accountId,
+    required this.baselineEstablished,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -4940,13 +5771,16 @@ class NotificationStateData extends DataClass
     );
   }
 
-  factory NotificationStateData.fromJson(Map<String, dynamic> json,
-      {ValueSerializer? serializer}) {
+  factory NotificationStateData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return NotificationStateData(
       accountId: serializer.fromJson<String>(json['accountId']),
-      baselineEstablished:
-          serializer.fromJson<int>(json['baselineEstablished']),
+      baselineEstablished: serializer.fromJson<int>(
+        json['baselineEstablished'],
+      ),
     );
   }
   @override
@@ -4958,12 +5792,13 @@ class NotificationStateData extends DataClass
     };
   }
 
-  NotificationStateData copyWith(
-          {String? accountId, int? baselineEstablished}) =>
-      NotificationStateData(
-        accountId: accountId ?? this.accountId,
-        baselineEstablished: baselineEstablished ?? this.baselineEstablished,
-      );
+  NotificationStateData copyWith({
+    String? accountId,
+    int? baselineEstablished,
+  }) => NotificationStateData(
+    accountId: accountId ?? this.accountId,
+    baselineEstablished: baselineEstablished ?? this.baselineEstablished,
+  );
   NotificationStateData copyWithCompanion(NotificationStateCompanion data) {
     return NotificationStateData(
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
@@ -5006,8 +5841,8 @@ class NotificationStateCompanion
     required String accountId,
     required int baselineEstablished,
     this.rowid = const Value.absent(),
-  })  : accountId = Value(accountId),
-        baselineEstablished = Value(baselineEstablished);
+  }) : accountId = Value(accountId),
+       baselineEstablished = Value(baselineEstablished);
   static Insertable<NotificationStateData> custom({
     Expression<String>? accountId,
     Expression<int>? baselineEstablished,
@@ -5021,10 +5856,11 @@ class NotificationStateCompanion
     });
   }
 
-  NotificationStateCompanion copyWith(
-      {Value<String>? accountId,
-      Value<int>? baselineEstablished,
-      Value<int>? rowid}) {
+  NotificationStateCompanion copyWith({
+    Value<String>? accountId,
+    Value<int>? baselineEstablished,
+    Value<int>? rowid,
+  }) {
     return NotificationStateCompanion(
       accountId: accountId ?? this.accountId,
       baselineEstablished: baselineEstablished ?? this.baselineEstablished,
@@ -5062,276 +5898,323 @@ abstract class _$GlassMailDatabase extends GeneratedDatabase {
   _$GlassMailDatabase(QueryExecutor e) : super(e);
   $GlassMailDatabaseManager get managers => $GlassMailDatabaseManager(this);
   late final Accounts accounts = Accounts(this);
-  late final Index indexAccountsEmail = Index('index_accounts_email',
-      'CREATE UNIQUE INDEX index_accounts_email ON accounts (email)');
+  late final Index indexAccountsEmail = Index(
+    'index_accounts_email',
+    'CREATE UNIQUE INDEX index_accounts_email ON accounts (email)',
+  );
   late final Mailboxes mailboxes = Mailboxes(this);
   late final Index indexMailboxesAccountIdRemoteName = Index(
-      'index_mailboxes_accountId_remoteName',
-      'CREATE UNIQUE INDEX index_mailboxes_accountId_remoteName ON mailboxes (accountId, remoteName)');
+    'index_mailboxes_accountId_remoteName',
+    'CREATE UNIQUE INDEX index_mailboxes_accountId_remoteName ON mailboxes (accountId, remoteName)',
+  );
   late final Messages messages = Messages(this);
   late final Index indexMessagesAccountIdGmailMessageId = Index(
-      'index_messages_accountId_gmailMessageId',
-      'CREATE UNIQUE INDEX index_messages_accountId_gmailMessageId ON messages (accountId, gmailMessageId)');
+    'index_messages_accountId_gmailMessageId',
+    'CREATE UNIQUE INDEX index_messages_accountId_gmailMessageId ON messages (accountId, gmailMessageId)',
+  );
   late final Index indexMessagesAccountIdGmailThreadId = Index(
-      'index_messages_accountId_gmailThreadId',
-      'CREATE INDEX index_messages_accountId_gmailThreadId ON messages (accountId, gmailThreadId)');
+    'index_messages_accountId_gmailThreadId',
+    'CREATE INDEX index_messages_accountId_gmailThreadId ON messages (accountId, gmailThreadId)',
+  );
   late final Index indexMessagesAccountIdCategory = Index(
-      'index_messages_accountId_category',
-      'CREATE INDEX index_messages_accountId_category ON messages (accountId, category)');
+    'index_messages_accountId_category',
+    'CREATE INDEX index_messages_accountId_category ON messages (accountId, category)',
+  );
   late final MailboxMessages mailboxMessages = MailboxMessages(this);
   late final Index indexMailboxMessagesMessageId = Index(
-      'index_mailbox_messages_messageId',
-      'CREATE INDEX index_mailbox_messages_messageId ON mailbox_messages (messageId)');
+    'index_mailbox_messages_messageId',
+    'CREATE INDEX index_mailbox_messages_messageId ON mailbox_messages (messageId)',
+  );
   late final Index indexMailboxMessagesMailboxIdUid = Index(
-      'index_mailbox_messages_mailboxId_uid',
-      'CREATE UNIQUE INDEX index_mailbox_messages_mailboxId_uid ON mailbox_messages (mailboxId, uid)');
+    'index_mailbox_messages_mailboxId_uid',
+    'CREATE UNIQUE INDEX index_mailbox_messages_mailboxId_uid ON mailbox_messages (mailboxId, uid)',
+  );
   late final MessageLabels messageLabels = MessageLabels(this);
-  late final Index indexMessageLabelsLabel = Index('index_message_labels_label',
-      'CREATE INDEX index_message_labels_label ON message_labels (label)');
+  late final Index indexMessageLabelsLabel = Index(
+    'index_message_labels_label',
+    'CREATE INDEX index_message_labels_label ON message_labels (label)',
+  );
   late final Attachments attachments = Attachments(this);
   late final Index indexAttachmentsMessageId = Index(
-      'index_attachments_messageId',
-      'CREATE INDEX index_attachments_messageId ON attachments (messageId)');
+    'index_attachments_messageId',
+    'CREATE INDEX index_attachments_messageId ON attachments (messageId)',
+  );
   late final Index indexAttachmentsDownloadState = Index(
-      'index_attachments_downloadState',
-      'CREATE INDEX index_attachments_downloadState ON attachments (downloadState)');
+    'index_attachments_downloadState',
+    'CREATE INDEX index_attachments_downloadState ON attachments (downloadState)',
+  );
   late final CacheConfig cacheConfig = CacheConfig(this);
   late final StorageQuota storageQuota = StorageQuota(this);
   late final PendingMutations pendingMutations = PendingMutations(this);
   late final Index indexPendingMutationsAccountIdState = Index(
-      'index_pending_mutations_accountId_state',
-      'CREATE INDEX index_pending_mutations_accountId_state ON pending_mutations (accountId, state)');
+    'index_pending_mutations_accountId_state',
+    'CREATE INDEX index_pending_mutations_accountId_state ON pending_mutations (accountId, state)',
+  );
   late final Index indexPendingMutationsMessageIdState = Index(
-      'index_pending_mutations_messageId_state',
-      'CREATE INDEX index_pending_mutations_messageId_state ON pending_mutations (messageId, state)');
+    'index_pending_mutations_messageId_state',
+    'CREATE INDEX index_pending_mutations_messageId_state ON pending_mutations (messageId, state)',
+  );
   late final Index indexPendingMutationsMailboxId = Index(
-      'index_pending_mutations_mailboxId',
-      'CREATE INDEX index_pending_mutations_mailboxId ON pending_mutations (mailboxId)');
+    'index_pending_mutations_mailboxId',
+    'CREATE INDEX index_pending_mutations_mailboxId ON pending_mutations (mailboxId)',
+  );
   late final SyncCheckpoints syncCheckpoints = SyncCheckpoints(this);
   late final Index indexSyncCheckpointsAccountId = Index(
-      'index_sync_checkpoints_accountId',
-      'CREATE INDEX index_sync_checkpoints_accountId ON sync_checkpoints (accountId)');
+    'index_sync_checkpoints_accountId',
+    'CREATE INDEX index_sync_checkpoints_accountId ON sync_checkpoints (accountId)',
+  );
   late final Index indexSyncCheckpointsMailboxId = Index(
-      'index_sync_checkpoints_mailboxId',
-      'CREATE UNIQUE INDEX index_sync_checkpoints_mailboxId ON sync_checkpoints (mailboxId)');
+    'index_sync_checkpoints_mailboxId',
+    'CREATE UNIQUE INDEX index_sync_checkpoints_mailboxId ON sync_checkpoints (mailboxId)',
+  );
   late final Drafts drafts = Drafts(this);
   late final Index indexDraftsAccountIdUpdatedAtEpochMillis = Index(
-      'index_drafts_accountId_updatedAtEpochMillis',
-      'CREATE INDEX index_drafts_accountId_updatedAtEpochMillis ON drafts (accountId, updatedAtEpochMillis)');
+    'index_drafts_accountId_updatedAtEpochMillis',
+    'CREATE INDEX index_drafts_accountId_updatedAtEpochMillis ON drafts (accountId, updatedAtEpochMillis)',
+  );
   late final NotificationState notificationState = NotificationState(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
-        accounts,
-        indexAccountsEmail,
-        mailboxes,
-        indexMailboxesAccountIdRemoteName,
-        messages,
-        indexMessagesAccountIdGmailMessageId,
-        indexMessagesAccountIdGmailThreadId,
-        indexMessagesAccountIdCategory,
-        mailboxMessages,
-        indexMailboxMessagesMessageId,
-        indexMailboxMessagesMailboxIdUid,
-        messageLabels,
-        indexMessageLabelsLabel,
-        attachments,
-        indexAttachmentsMessageId,
-        indexAttachmentsDownloadState,
-        cacheConfig,
-        storageQuota,
-        pendingMutations,
-        indexPendingMutationsAccountIdState,
-        indexPendingMutationsMessageIdState,
-        indexPendingMutationsMailboxId,
-        syncCheckpoints,
-        indexSyncCheckpointsAccountId,
-        indexSyncCheckpointsMailboxId,
-        drafts,
-        indexDraftsAccountIdUpdatedAtEpochMillis,
-        notificationState
-      ];
+    accounts,
+    indexAccountsEmail,
+    mailboxes,
+    indexMailboxesAccountIdRemoteName,
+    messages,
+    indexMessagesAccountIdGmailMessageId,
+    indexMessagesAccountIdGmailThreadId,
+    indexMessagesAccountIdCategory,
+    mailboxMessages,
+    indexMailboxMessagesMessageId,
+    indexMailboxMessagesMailboxIdUid,
+    messageLabels,
+    indexMessageLabelsLabel,
+    attachments,
+    indexAttachmentsMessageId,
+    indexAttachmentsDownloadState,
+    cacheConfig,
+    storageQuota,
+    pendingMutations,
+    indexPendingMutationsAccountIdState,
+    indexPendingMutationsMessageIdState,
+    indexPendingMutationsMailboxId,
+    syncCheckpoints,
+    indexSyncCheckpointsAccountId,
+    indexSyncCheckpointsMailboxId,
+    drafts,
+    indexDraftsAccountIdUpdatedAtEpochMillis,
+    notificationState,
+  ];
   @override
-  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
-        [
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('accounts',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('mailboxes', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('accounts',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('messages', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('mailboxes',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('mailbox_messages', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('messages',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('mailbox_messages', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('messages',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('message_labels', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('messages',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('attachments', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('accounts',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('pending_mutations', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('messages',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('pending_mutations', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('mailboxes',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('sync_checkpoints', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('accounts',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('sync_checkpoints', kind: UpdateKind.delete),
-            ],
-          ),
-          WritePropagation(
-            on: TableUpdateQuery.onTableName('accounts',
-                limitUpdateKind: UpdateKind.delete),
-            result: [
-              TableUpdate('drafts', kind: UpdateKind.delete),
-            ],
-          ),
-        ],
-      );
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'accounts',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('mailboxes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'accounts',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('messages', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'mailboxes',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('mailbox_messages', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'messages',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('mailbox_messages', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'messages',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('message_labels', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'messages',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('attachments', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'accounts',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('pending_mutations', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'messages',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('pending_mutations', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'mailboxes',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('sync_checkpoints', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'accounts',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('sync_checkpoints', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'accounts',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('drafts', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
-typedef $AccountsCreateCompanionBuilder = AccountsCompanion Function({
-  required String accountId,
-  required String email,
-  required int createdAtEpochMillis,
-  required String syncState,
-  required int gmailExtensionsEnabled,
-  Value<int?> lastSyncedAtEpochMillis,
-  Value<int> rowid,
-});
-typedef $AccountsUpdateCompanionBuilder = AccountsCompanion Function({
-  Value<String> accountId,
-  Value<String> email,
-  Value<int> createdAtEpochMillis,
-  Value<String> syncState,
-  Value<int> gmailExtensionsEnabled,
-  Value<int?> lastSyncedAtEpochMillis,
-  Value<int> rowid,
-});
+typedef $AccountsCreateCompanionBuilder =
+    AccountsCompanion Function({
+      required String accountId,
+      required String email,
+      required int createdAtEpochMillis,
+      required String syncState,
+      required int gmailExtensionsEnabled,
+      Value<int?> lastSyncedAtEpochMillis,
+      Value<int> rowid,
+    });
+typedef $AccountsUpdateCompanionBuilder =
+    AccountsCompanion Function({
+      Value<String> accountId,
+      Value<String> email,
+      Value<int> createdAtEpochMillis,
+      Value<String> syncState,
+      Value<int> gmailExtensionsEnabled,
+      Value<int?> lastSyncedAtEpochMillis,
+      Value<int> rowid,
+    });
 
 final class $AccountsReferences
     extends BaseReferences<_$GlassMailDatabase, Accounts, Account> {
   $AccountsReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static MultiTypedResultKey<Mailboxes, List<Mailboxe>> _mailboxesRefsTable(
-          _$GlassMailDatabase db) =>
-      MultiTypedResultKey.fromTable(db.mailboxes,
-          aliasName: 'accounts__accountId__mailboxes__accountId');
+    _$GlassMailDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.mailboxes,
+    aliasName: 'accounts__accountId__mailboxes__accountId',
+  );
 
   $MailboxesProcessedTableManager get mailboxesRefs {
-    final manager = $MailboxesTableManager($_db, $_db.mailboxes).filter((f) =>
-        f.accountId.accountId.sqlEquals($_itemColumn<String>('accountId')!));
+    final manager = $MailboxesTableManager($_db, $_db.mailboxes).filter(
+      (f) =>
+          f.accountId.accountId.sqlEquals($_itemColumn<String>('accountId')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_mailboxesRefsTable($_db));
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 
   static MultiTypedResultKey<Messages, List<Message>> _messagesRefsTable(
-          _$GlassMailDatabase db) =>
-      MultiTypedResultKey.fromTable(db.messages,
-          aliasName: 'accounts__accountId__messages__accountId');
+    _$GlassMailDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.messages,
+    aliasName: 'accounts__accountId__messages__accountId',
+  );
 
   $MessagesProcessedTableManager get messagesRefs {
-    final manager = $MessagesTableManager($_db, $_db.messages).filter((f) =>
-        f.accountId.accountId.sqlEquals($_itemColumn<String>('accountId')!));
+    final manager = $MessagesTableManager($_db, $_db.messages).filter(
+      (f) =>
+          f.accountId.accountId.sqlEquals($_itemColumn<String>('accountId')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_messagesRefsTable($_db));
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 
   static MultiTypedResultKey<PendingMutations, List<PendingMutation>>
-      _pendingMutationsRefsTable(_$GlassMailDatabase db) =>
-          MultiTypedResultKey.fromTable(db.pendingMutations,
-              aliasName: 'accounts__accountId__pending_mutations__accountId');
+  _pendingMutationsRefsTable(_$GlassMailDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.pendingMutations,
+        aliasName: 'accounts__accountId__pending_mutations__accountId',
+      );
 
   $PendingMutationsProcessedTableManager get pendingMutationsRefs {
     final manager = $PendingMutationsTableManager($_db, $_db.pendingMutations)
-        .filter((f) => f.accountId.accountId
-            .sqlEquals($_itemColumn<String>('accountId')!));
+        .filter(
+          (f) => f.accountId.accountId.sqlEquals(
+            $_itemColumn<String>('accountId')!,
+          ),
+        );
 
-    final cache =
-        $_typedResult.readTableOrNull(_pendingMutationsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(
+      _pendingMutationsRefsTable($_db),
+    );
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 
   static MultiTypedResultKey<SyncCheckpoints, List<SyncCheckpoint>>
-      _syncCheckpointsRefsTable(_$GlassMailDatabase db) =>
-          MultiTypedResultKey.fromTable(db.syncCheckpoints,
-              aliasName: 'accounts__accountId__sync_checkpoints__accountId');
+  _syncCheckpointsRefsTable(_$GlassMailDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.syncCheckpoints,
+        aliasName: 'accounts__accountId__sync_checkpoints__accountId',
+      );
 
   $SyncCheckpointsProcessedTableManager get syncCheckpointsRefs {
     final manager = $SyncCheckpointsTableManager($_db, $_db.syncCheckpoints)
-        .filter((f) => f.accountId.accountId
-            .sqlEquals($_itemColumn<String>('accountId')!));
+        .filter(
+          (f) => f.accountId.accountId.sqlEquals(
+            $_itemColumn<String>('accountId')!,
+          ),
+        );
 
-    final cache =
-        $_typedResult.readTableOrNull(_syncCheckpointsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(
+      _syncCheckpointsRefsTable($_db),
+    );
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 
   static MultiTypedResultKey<Drafts, List<Draft>> _draftsRefsTable(
-          _$GlassMailDatabase db) =>
-      MultiTypedResultKey.fromTable(db.drafts,
-          aliasName: 'accounts__accountId__drafts__accountId');
+    _$GlassMailDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.drafts,
+    aliasName: 'accounts__accountId__drafts__accountId',
+  );
 
   $DraftsProcessedTableManager get draftsRefs {
-    final manager = $DraftsTableManager($_db, $_db.drafts).filter((f) =>
-        f.accountId.accountId.sqlEquals($_itemColumn<String>('accountId')!));
+    final manager = $DraftsTableManager($_db, $_db.drafts).filter(
+      (f) =>
+          f.accountId.accountId.sqlEquals($_itemColumn<String>('accountId')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_draftsRefsTable($_db));
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 }
 
@@ -5344,128 +6227,157 @@ class $AccountsFilterComposer extends Composer<_$GlassMailDatabase, Accounts> {
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get accountId => $composableBuilder(
-      column: $table.accountId, builder: (column) => ColumnFilters(column));
+    column: $table.accountId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get email => $composableBuilder(
-      column: $table.email, builder: (column) => ColumnFilters(column));
+    column: $table.email,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get createdAtEpochMillis => $composableBuilder(
-      column: $table.createdAtEpochMillis,
-      builder: (column) => ColumnFilters(column));
+    column: $table.createdAtEpochMillis,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get syncState => $composableBuilder(
-      column: $table.syncState, builder: (column) => ColumnFilters(column));
+    column: $table.syncState,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get gmailExtensionsEnabled => $composableBuilder(
-      column: $table.gmailExtensionsEnabled,
-      builder: (column) => ColumnFilters(column));
+    column: $table.gmailExtensionsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get lastSyncedAtEpochMillis => $composableBuilder(
-      column: $table.lastSyncedAtEpochMillis,
-      builder: (column) => ColumnFilters(column));
+    column: $table.lastSyncedAtEpochMillis,
+    builder: (column) => ColumnFilters(column),
+  );
 
   Expression<bool> mailboxesRefs(
-      Expression<bool> Function($MailboxesFilterComposer f) f) {
+    Expression<bool> Function($MailboxesFilterComposer f) f,
+  ) {
     final $MailboxesFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.mailboxes,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxesFilterComposer(
-              $db: $db,
-              $table: $db.mailboxes,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.mailboxes,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxesFilterComposer(
+            $db: $db,
+            $table: $db.mailboxes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<bool> messagesRefs(
-      Expression<bool> Function($MessagesFilterComposer f) f) {
+    Expression<bool> Function($MessagesFilterComposer f) f,
+  ) {
     final $MessagesFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesFilterComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesFilterComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<bool> pendingMutationsRefs(
-      Expression<bool> Function($PendingMutationsFilterComposer f) f) {
+    Expression<bool> Function($PendingMutationsFilterComposer f) f,
+  ) {
     final $PendingMutationsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.pendingMutations,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $PendingMutationsFilterComposer(
-              $db: $db,
-              $table: $db.pendingMutations,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.pendingMutations,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $PendingMutationsFilterComposer(
+            $db: $db,
+            $table: $db.pendingMutations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<bool> syncCheckpointsRefs(
-      Expression<bool> Function($SyncCheckpointsFilterComposer f) f) {
+    Expression<bool> Function($SyncCheckpointsFilterComposer f) f,
+  ) {
     final $SyncCheckpointsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.syncCheckpoints,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $SyncCheckpointsFilterComposer(
-              $db: $db,
-              $table: $db.syncCheckpoints,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.syncCheckpoints,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $SyncCheckpointsFilterComposer(
+            $db: $db,
+            $table: $db.syncCheckpoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<bool> draftsRefs(
-      Expression<bool> Function($DraftsFilterComposer f) f) {
+    Expression<bool> Function($DraftsFilterComposer f) f,
+  ) {
     final $DraftsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.drafts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $DraftsFilterComposer(
-              $db: $db,
-              $table: $db.drafts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.drafts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DraftsFilterComposer(
+            $db: $db,
+            $table: $db.drafts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -5480,25 +6392,34 @@ class $AccountsOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get accountId => $composableBuilder(
-      column: $table.accountId, builder: (column) => ColumnOrderings(column));
+    column: $table.accountId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get email => $composableBuilder(
-      column: $table.email, builder: (column) => ColumnOrderings(column));
+    column: $table.email,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get createdAtEpochMillis => $composableBuilder(
-      column: $table.createdAtEpochMillis,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.createdAtEpochMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get syncState => $composableBuilder(
-      column: $table.syncState, builder: (column) => ColumnOrderings(column));
+    column: $table.syncState,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get gmailExtensionsEnabled => $composableBuilder(
-      column: $table.gmailExtensionsEnabled,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.gmailExtensionsEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get lastSyncedAtEpochMillis => $composableBuilder(
-      column: $table.lastSyncedAtEpochMillis,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.lastSyncedAtEpochMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $AccountsAnnotationComposer
@@ -5517,142 +6438,173 @@ class $AccountsAnnotationComposer
       $composableBuilder(column: $table.email, builder: (column) => column);
 
   GeneratedColumn<int> get createdAtEpochMillis => $composableBuilder(
-      column: $table.createdAtEpochMillis, builder: (column) => column);
+    column: $table.createdAtEpochMillis,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get syncState =>
       $composableBuilder(column: $table.syncState, builder: (column) => column);
 
   GeneratedColumn<int> get gmailExtensionsEnabled => $composableBuilder(
-      column: $table.gmailExtensionsEnabled, builder: (column) => column);
+    column: $table.gmailExtensionsEnabled,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get lastSyncedAtEpochMillis => $composableBuilder(
-      column: $table.lastSyncedAtEpochMillis, builder: (column) => column);
+    column: $table.lastSyncedAtEpochMillis,
+    builder: (column) => column,
+  );
 
   Expression<T> mailboxesRefs<T extends Object>(
-      Expression<T> Function($MailboxesAnnotationComposer a) f) {
+    Expression<T> Function($MailboxesAnnotationComposer a) f,
+  ) {
     final $MailboxesAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.mailboxes,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxesAnnotationComposer(
-              $db: $db,
-              $table: $db.mailboxes,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.mailboxes,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxesAnnotationComposer(
+            $db: $db,
+            $table: $db.mailboxes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<T> messagesRefs<T extends Object>(
-      Expression<T> Function($MessagesAnnotationComposer a) f) {
+    Expression<T> Function($MessagesAnnotationComposer a) f,
+  ) {
     final $MessagesAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesAnnotationComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesAnnotationComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<T> pendingMutationsRefs<T extends Object>(
-      Expression<T> Function($PendingMutationsAnnotationComposer a) f) {
+    Expression<T> Function($PendingMutationsAnnotationComposer a) f,
+  ) {
     final $PendingMutationsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.pendingMutations,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $PendingMutationsAnnotationComposer(
-              $db: $db,
-              $table: $db.pendingMutations,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.pendingMutations,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $PendingMutationsAnnotationComposer(
+            $db: $db,
+            $table: $db.pendingMutations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<T> syncCheckpointsRefs<T extends Object>(
-      Expression<T> Function($SyncCheckpointsAnnotationComposer a) f) {
+    Expression<T> Function($SyncCheckpointsAnnotationComposer a) f,
+  ) {
     final $SyncCheckpointsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.syncCheckpoints,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $SyncCheckpointsAnnotationComposer(
-              $db: $db,
-              $table: $db.syncCheckpoints,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.syncCheckpoints,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $SyncCheckpointsAnnotationComposer(
+            $db: $db,
+            $table: $db.syncCheckpoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<T> draftsRefs<T extends Object>(
-      Expression<T> Function($DraftsAnnotationComposer a) f) {
+    Expression<T> Function($DraftsAnnotationComposer a) f,
+  ) {
     final $DraftsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.drafts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $DraftsAnnotationComposer(
-              $db: $db,
-              $table: $db.drafts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.drafts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $DraftsAnnotationComposer(
+            $db: $db,
+            $table: $db.drafts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
 
-class $AccountsTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    Accounts,
-    Account,
-    $AccountsFilterComposer,
-    $AccountsOrderingComposer,
-    $AccountsAnnotationComposer,
-    $AccountsCreateCompanionBuilder,
-    $AccountsUpdateCompanionBuilder,
-    (Account, $AccountsReferences),
-    Account,
-    PrefetchHooks Function(
-        {bool mailboxesRefs,
-        bool messagesRefs,
-        bool pendingMutationsRefs,
-        bool syncCheckpointsRefs,
-        bool draftsRefs})> {
+class $AccountsTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          Accounts,
+          Account,
+          $AccountsFilterComposer,
+          $AccountsOrderingComposer,
+          $AccountsAnnotationComposer,
+          $AccountsCreateCompanionBuilder,
+          $AccountsUpdateCompanionBuilder,
+          (Account, $AccountsReferences),
+          Account,
+          PrefetchHooks Function({
+            bool mailboxesRefs,
+            bool messagesRefs,
+            bool pendingMutationsRefs,
+            bool syncCheckpointsRefs,
+            bool draftsRefs,
+          })
+        > {
   $AccountsTableManager(_$GlassMailDatabase db, Accounts table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -5661,167 +6613,198 @@ class $AccountsTableManager extends RootTableManager<
               $AccountsOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $AccountsAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> accountId = const Value.absent(),
-            Value<String> email = const Value.absent(),
-            Value<int> createdAtEpochMillis = const Value.absent(),
-            Value<String> syncState = const Value.absent(),
-            Value<int> gmailExtensionsEnabled = const Value.absent(),
-            Value<int?> lastSyncedAtEpochMillis = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              AccountsCompanion(
-            accountId: accountId,
-            email: email,
-            createdAtEpochMillis: createdAtEpochMillis,
-            syncState: syncState,
-            gmailExtensionsEnabled: gmailExtensionsEnabled,
-            lastSyncedAtEpochMillis: lastSyncedAtEpochMillis,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String accountId,
-            required String email,
-            required int createdAtEpochMillis,
-            required String syncState,
-            required int gmailExtensionsEnabled,
-            Value<int?> lastSyncedAtEpochMillis = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              AccountsCompanion.insert(
-            accountId: accountId,
-            email: email,
-            createdAtEpochMillis: createdAtEpochMillis,
-            syncState: syncState,
-            gmailExtensionsEnabled: gmailExtensionsEnabled,
-            lastSyncedAtEpochMillis: lastSyncedAtEpochMillis,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> accountId = const Value.absent(),
+                Value<String> email = const Value.absent(),
+                Value<int> createdAtEpochMillis = const Value.absent(),
+                Value<String> syncState = const Value.absent(),
+                Value<int> gmailExtensionsEnabled = const Value.absent(),
+                Value<int?> lastSyncedAtEpochMillis = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AccountsCompanion(
+                accountId: accountId,
+                email: email,
+                createdAtEpochMillis: createdAtEpochMillis,
+                syncState: syncState,
+                gmailExtensionsEnabled: gmailExtensionsEnabled,
+                lastSyncedAtEpochMillis: lastSyncedAtEpochMillis,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String accountId,
+                required String email,
+                required int createdAtEpochMillis,
+                required String syncState,
+                required int gmailExtensionsEnabled,
+                Value<int?> lastSyncedAtEpochMillis = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AccountsCompanion.insert(
+                accountId: accountId,
+                email: email,
+                createdAtEpochMillis: createdAtEpochMillis,
+                syncState: syncState,
+                gmailExtensionsEnabled: gmailExtensionsEnabled,
+                lastSyncedAtEpochMillis: lastSyncedAtEpochMillis,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<Accounts, Account>(table),
-                    $AccountsReferences(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<Accounts, Account>(table),
+                  $AccountsReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: (
-              {mailboxesRefs = false,
-              messagesRefs = false,
-              pendingMutationsRefs = false,
-              syncCheckpointsRefs = false,
-              draftsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (mailboxesRefs) db.mailboxes,
-                if (messagesRefs) db.messages,
-                if (pendingMutationsRefs) db.pendingMutations,
-                if (syncCheckpointsRefs) db.syncCheckpoints,
-                if (draftsRefs) db.drafts
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (mailboxesRefs)
-                    await $_getPrefetchedData<Account, Accounts, Mailboxe>(
-                        currentTable: table,
-                        referencedTable:
-                            $AccountsReferences._mailboxesRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $AccountsReferences(db, table, p0).mailboxesRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.accountId == item.accountId),
-                        typedResults: items),
-                  if (messagesRefs)
-                    await $_getPrefetchedData<Account, Accounts, Message>(
-                        currentTable: table,
-                        referencedTable:
-                            $AccountsReferences._messagesRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $AccountsReferences(db, table, p0).messagesRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.accountId == item.accountId),
-                        typedResults: items),
-                  if (pendingMutationsRefs)
-                    await $_getPrefetchedData<Account, Accounts,
-                            PendingMutation>(
-                        currentTable: table,
-                        referencedTable:
-                            $AccountsReferences._pendingMutationsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $AccountsReferences(db, table, p0)
-                                .pendingMutationsRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.accountId == item.accountId),
-                        typedResults: items),
-                  if (syncCheckpointsRefs)
-                    await $_getPrefetchedData<Account, Accounts,
-                            SyncCheckpoint>(
-                        currentTable: table,
-                        referencedTable:
-                            $AccountsReferences._syncCheckpointsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $AccountsReferences(db, table, p0)
-                                .syncCheckpointsRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.accountId == item.accountId),
-                        typedResults: items),
-                  if (draftsRefs)
-                    await $_getPrefetchedData<Account, Accounts, Draft>(
-                        currentTable: table,
-                        referencedTable:
-                            $AccountsReferences._draftsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $AccountsReferences(db, table, p0).draftsRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.accountId == item.accountId),
-                        typedResults: items)
-                ];
+          prefetchHooksCallback:
+              ({
+                mailboxesRefs = false,
+                messagesRefs = false,
+                pendingMutationsRefs = false,
+                syncCheckpointsRefs = false,
+                draftsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (mailboxesRefs) db.mailboxes,
+                    if (messagesRefs) db.messages,
+                    if (pendingMutationsRefs) db.pendingMutations,
+                    if (syncCheckpointsRefs) db.syncCheckpoints,
+                    if (draftsRefs) db.drafts,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (mailboxesRefs)
+                        await $_getPrefetchedData<Account, Accounts, Mailboxe>(
+                          currentTable: table,
+                          referencedTable: $AccountsReferences
+                              ._mailboxesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $AccountsReferences(db, table, p0).mailboxesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.accountId == item.accountId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (messagesRefs)
+                        await $_getPrefetchedData<Account, Accounts, Message>(
+                          currentTable: table,
+                          referencedTable: $AccountsReferences
+                              ._messagesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $AccountsReferences(db, table, p0).messagesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.accountId == item.accountId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (pendingMutationsRefs)
+                        await $_getPrefetchedData<
+                          Account,
+                          Accounts,
+                          PendingMutation
+                        >(
+                          currentTable: table,
+                          referencedTable: $AccountsReferences
+                              ._pendingMutationsRefsTable(db),
+                          managerFromTypedResult: (p0) => $AccountsReferences(
+                            db,
+                            table,
+                            p0,
+                          ).pendingMutationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.accountId == item.accountId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (syncCheckpointsRefs)
+                        await $_getPrefetchedData<
+                          Account,
+                          Accounts,
+                          SyncCheckpoint
+                        >(
+                          currentTable: table,
+                          referencedTable: $AccountsReferences
+                              ._syncCheckpointsRefsTable(db),
+                          managerFromTypedResult: (p0) => $AccountsReferences(
+                            db,
+                            table,
+                            p0,
+                          ).syncCheckpointsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.accountId == item.accountId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (draftsRefs)
+                        await $_getPrefetchedData<Account, Accounts, Draft>(
+                          currentTable: table,
+                          referencedTable: $AccountsReferences._draftsRefsTable(
+                            db,
+                          ),
+                          managerFromTypedResult: (p0) =>
+                              $AccountsReferences(db, table, p0).draftsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.accountId == item.accountId,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
-        ));
+        ),
+      );
 }
 
-typedef $AccountsProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    Accounts,
-    Account,
-    $AccountsFilterComposer,
-    $AccountsOrderingComposer,
-    $AccountsAnnotationComposer,
-    $AccountsCreateCompanionBuilder,
-    $AccountsUpdateCompanionBuilder,
-    (Account, $AccountsReferences),
-    Account,
-    PrefetchHooks Function(
-        {bool mailboxesRefs,
+typedef $AccountsProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      Accounts,
+      Account,
+      $AccountsFilterComposer,
+      $AccountsOrderingComposer,
+      $AccountsAnnotationComposer,
+      $AccountsCreateCompanionBuilder,
+      $AccountsUpdateCompanionBuilder,
+      (Account, $AccountsReferences),
+      Account,
+      PrefetchHooks Function({
+        bool mailboxesRefs,
         bool messagesRefs,
         bool pendingMutationsRefs,
         bool syncCheckpointsRefs,
-        bool draftsRefs})>;
-typedef $MailboxesCreateCompanionBuilder = MailboxesCompanion Function({
-  required String mailboxId,
-  required String accountId,
-  required String remoteName,
-  required int uidValidity,
-  required int uidNext,
-  required int messageCount,
-  Value<int> rowid,
-});
-typedef $MailboxesUpdateCompanionBuilder = MailboxesCompanion Function({
-  Value<String> mailboxId,
-  Value<String> accountId,
-  Value<String> remoteName,
-  Value<int> uidValidity,
-  Value<int> uidNext,
-  Value<int> messageCount,
-  Value<int> rowid,
-});
+        bool draftsRefs,
+      })
+    >;
+typedef $MailboxesCreateCompanionBuilder =
+    MailboxesCompanion Function({
+      required String mailboxId,
+      required String accountId,
+      required String remoteName,
+      required int uidValidity,
+      required int uidNext,
+      required int messageCount,
+      Value<int> rowid,
+    });
+typedef $MailboxesUpdateCompanionBuilder =
+    MailboxesCompanion Function({
+      Value<String> mailboxId,
+      Value<String> accountId,
+      Value<String> remoteName,
+      Value<int> uidValidity,
+      Value<int> uidNext,
+      Value<int> messageCount,
+      Value<int> rowid,
+    });
 
 final class $MailboxesReferences
     extends BaseReferences<_$GlassMailDatabase, Mailboxes, Mailboxe> {
@@ -5833,44 +6816,61 @@ final class $MailboxesReferences
   $AccountsProcessedTableManager get accountId {
     final $_column = $_itemColumn<String>('accountId')!;
 
-    final manager = $AccountsTableManager($_db, $_db.accounts)
-        .filter((f) => f.accountId.sqlEquals($_column));
+    final manager = $AccountsTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.accountId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 
   static MultiTypedResultKey<MailboxMessages, List<MailboxMessage>>
-      _mailboxMessagesRefsTable(_$GlassMailDatabase db) =>
-          MultiTypedResultKey.fromTable(db.mailboxMessages,
-              aliasName: 'mailboxes__mailboxId__mailbox_messages__mailboxId');
+  _mailboxMessagesRefsTable(_$GlassMailDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.mailboxMessages,
+        aliasName: 'mailboxes__mailboxId__mailbox_messages__mailboxId',
+      );
 
   $MailboxMessagesProcessedTableManager get mailboxMessagesRefs {
     final manager = $MailboxMessagesTableManager($_db, $_db.mailboxMessages)
-        .filter((f) => f.mailboxId.mailboxId
-            .sqlEquals($_itemColumn<String>('mailboxId')!));
+        .filter(
+          (f) => f.mailboxId.mailboxId.sqlEquals(
+            $_itemColumn<String>('mailboxId')!,
+          ),
+        );
 
-    final cache =
-        $_typedResult.readTableOrNull(_mailboxMessagesRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(
+      _mailboxMessagesRefsTable($_db),
+    );
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 
   static MultiTypedResultKey<SyncCheckpoints, List<SyncCheckpoint>>
-      _syncCheckpointsRefsTable(_$GlassMailDatabase db) =>
-          MultiTypedResultKey.fromTable(db.syncCheckpoints,
-              aliasName: 'mailboxes__mailboxId__sync_checkpoints__mailboxId');
+  _syncCheckpointsRefsTable(_$GlassMailDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.syncCheckpoints,
+        aliasName: 'mailboxes__mailboxId__sync_checkpoints__mailboxId',
+      );
 
   $SyncCheckpointsProcessedTableManager get syncCheckpointsRefs {
     final manager = $SyncCheckpointsTableManager($_db, $_db.syncCheckpoints)
-        .filter((f) => f.mailboxId.mailboxId
-            .sqlEquals($_itemColumn<String>('mailboxId')!));
+        .filter(
+          (f) => f.mailboxId.mailboxId.sqlEquals(
+            $_itemColumn<String>('mailboxId')!,
+          ),
+        );
 
-    final cache =
-        $_typedResult.readTableOrNull(_syncCheckpointsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(
+      _syncCheckpointsRefsTable($_db),
+    );
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 }
 
@@ -5884,79 +6884,100 @@ class $MailboxesFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get mailboxId => $composableBuilder(
-      column: $table.mailboxId, builder: (column) => ColumnFilters(column));
+    column: $table.mailboxId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get remoteName => $composableBuilder(
-      column: $table.remoteName, builder: (column) => ColumnFilters(column));
+    column: $table.remoteName,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get uidValidity => $composableBuilder(
-      column: $table.uidValidity, builder: (column) => ColumnFilters(column));
+    column: $table.uidValidity,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get uidNext => $composableBuilder(
-      column: $table.uidNext, builder: (column) => ColumnFilters(column));
+    column: $table.uidNext,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get messageCount => $composableBuilder(
-      column: $table.messageCount, builder: (column) => ColumnFilters(column));
+    column: $table.messageCount,
+    builder: (column) => ColumnFilters(column),
+  );
 
   $AccountsFilterComposer get accountId {
     final $AccountsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsFilterComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   Expression<bool> mailboxMessagesRefs(
-      Expression<bool> Function($MailboxMessagesFilterComposer f) f) {
+    Expression<bool> Function($MailboxMessagesFilterComposer f) f,
+  ) {
     final $MailboxMessagesFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.mailboxId,
-        referencedTable: $db.mailboxMessages,
-        getReferencedColumn: (t) => t.mailboxId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxMessagesFilterComposer(
-              $db: $db,
-              $table: $db.mailboxMessages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.mailboxId,
+      referencedTable: $db.mailboxMessages,
+      getReferencedColumn: (t) => t.mailboxId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxMessagesFilterComposer(
+            $db: $db,
+            $table: $db.mailboxMessages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<bool> syncCheckpointsRefs(
-      Expression<bool> Function($SyncCheckpointsFilterComposer f) f) {
+    Expression<bool> Function($SyncCheckpointsFilterComposer f) f,
+  ) {
     final $SyncCheckpointsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.mailboxId,
-        referencedTable: $db.syncCheckpoints,
-        getReferencedColumn: (t) => t.mailboxId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $SyncCheckpointsFilterComposer(
-              $db: $db,
-              $table: $db.syncCheckpoints,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.mailboxId,
+      referencedTable: $db.syncCheckpoints,
+      getReferencedColumn: (t) => t.mailboxId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $SyncCheckpointsFilterComposer(
+            $db: $db,
+            $table: $db.syncCheckpoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -5971,38 +6992,50 @@ class $MailboxesOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get mailboxId => $composableBuilder(
-      column: $table.mailboxId, builder: (column) => ColumnOrderings(column));
+    column: $table.mailboxId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get remoteName => $composableBuilder(
-      column: $table.remoteName, builder: (column) => ColumnOrderings(column));
+    column: $table.remoteName,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get uidValidity => $composableBuilder(
-      column: $table.uidValidity, builder: (column) => ColumnOrderings(column));
+    column: $table.uidValidity,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get uidNext => $composableBuilder(
-      column: $table.uidNext, builder: (column) => ColumnOrderings(column));
+    column: $table.uidNext,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get messageCount => $composableBuilder(
-      column: $table.messageCount,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.messageCount,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   $AccountsOrderingComposer get accountId {
     final $AccountsOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsOrderingComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -6020,95 +7053,119 @@ class $MailboxesAnnotationComposer
       $composableBuilder(column: $table.mailboxId, builder: (column) => column);
 
   GeneratedColumn<String> get remoteName => $composableBuilder(
-      column: $table.remoteName, builder: (column) => column);
+    column: $table.remoteName,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get uidValidity => $composableBuilder(
-      column: $table.uidValidity, builder: (column) => column);
+    column: $table.uidValidity,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get uidNext =>
       $composableBuilder(column: $table.uidNext, builder: (column) => column);
 
   GeneratedColumn<int> get messageCount => $composableBuilder(
-      column: $table.messageCount, builder: (column) => column);
+    column: $table.messageCount,
+    builder: (column) => column,
+  );
 
   $AccountsAnnotationComposer get accountId {
     final $AccountsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsAnnotationComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   Expression<T> mailboxMessagesRefs<T extends Object>(
-      Expression<T> Function($MailboxMessagesAnnotationComposer a) f) {
+    Expression<T> Function($MailboxMessagesAnnotationComposer a) f,
+  ) {
     final $MailboxMessagesAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.mailboxId,
-        referencedTable: $db.mailboxMessages,
-        getReferencedColumn: (t) => t.mailboxId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxMessagesAnnotationComposer(
-              $db: $db,
-              $table: $db.mailboxMessages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.mailboxId,
+      referencedTable: $db.mailboxMessages,
+      getReferencedColumn: (t) => t.mailboxId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxMessagesAnnotationComposer(
+            $db: $db,
+            $table: $db.mailboxMessages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<T> syncCheckpointsRefs<T extends Object>(
-      Expression<T> Function($SyncCheckpointsAnnotationComposer a) f) {
+    Expression<T> Function($SyncCheckpointsAnnotationComposer a) f,
+  ) {
     final $SyncCheckpointsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.mailboxId,
-        referencedTable: $db.syncCheckpoints,
-        getReferencedColumn: (t) => t.mailboxId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $SyncCheckpointsAnnotationComposer(
-              $db: $db,
-              $table: $db.syncCheckpoints,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.mailboxId,
+      referencedTable: $db.syncCheckpoints,
+      getReferencedColumn: (t) => t.mailboxId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $SyncCheckpointsAnnotationComposer(
+            $db: $db,
+            $table: $db.syncCheckpoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
 
-class $MailboxesTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    Mailboxes,
-    Mailboxe,
-    $MailboxesFilterComposer,
-    $MailboxesOrderingComposer,
-    $MailboxesAnnotationComposer,
-    $MailboxesCreateCompanionBuilder,
-    $MailboxesUpdateCompanionBuilder,
-    (Mailboxe, $MailboxesReferences),
-    Mailboxe,
-    PrefetchHooks Function(
-        {bool accountId, bool mailboxMessagesRefs, bool syncCheckpointsRefs})> {
+class $MailboxesTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          Mailboxes,
+          Mailboxe,
+          $MailboxesFilterComposer,
+          $MailboxesOrderingComposer,
+          $MailboxesAnnotationComposer,
+          $MailboxesCreateCompanionBuilder,
+          $MailboxesUpdateCompanionBuilder,
+          (Mailboxe, $MailboxesReferences),
+          Mailboxe,
+          PrefetchHooks Function({
+            bool accountId,
+            bool mailboxMessagesRefs,
+            bool syncCheckpointsRefs,
+          })
+        > {
   $MailboxesTableManager(_$GlassMailDatabase db, Mailboxes table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -6117,167 +7174,200 @@ class $MailboxesTableManager extends RootTableManager<
               $MailboxesOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $MailboxesAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> mailboxId = const Value.absent(),
-            Value<String> accountId = const Value.absent(),
-            Value<String> remoteName = const Value.absent(),
-            Value<int> uidValidity = const Value.absent(),
-            Value<int> uidNext = const Value.absent(),
-            Value<int> messageCount = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              MailboxesCompanion(
-            mailboxId: mailboxId,
-            accountId: accountId,
-            remoteName: remoteName,
-            uidValidity: uidValidity,
-            uidNext: uidNext,
-            messageCount: messageCount,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String mailboxId,
-            required String accountId,
-            required String remoteName,
-            required int uidValidity,
-            required int uidNext,
-            required int messageCount,
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              MailboxesCompanion.insert(
-            mailboxId: mailboxId,
-            accountId: accountId,
-            remoteName: remoteName,
-            uidValidity: uidValidity,
-            uidNext: uidNext,
-            messageCount: messageCount,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> mailboxId = const Value.absent(),
+                Value<String> accountId = const Value.absent(),
+                Value<String> remoteName = const Value.absent(),
+                Value<int> uidValidity = const Value.absent(),
+                Value<int> uidNext = const Value.absent(),
+                Value<int> messageCount = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MailboxesCompanion(
+                mailboxId: mailboxId,
+                accountId: accountId,
+                remoteName: remoteName,
+                uidValidity: uidValidity,
+                uidNext: uidNext,
+                messageCount: messageCount,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String mailboxId,
+                required String accountId,
+                required String remoteName,
+                required int uidValidity,
+                required int uidNext,
+                required int messageCount,
+                Value<int> rowid = const Value.absent(),
+              }) => MailboxesCompanion.insert(
+                mailboxId: mailboxId,
+                accountId: accountId,
+                remoteName: remoteName,
+                uidValidity: uidValidity,
+                uidNext: uidNext,
+                messageCount: messageCount,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<Mailboxes, Mailboxe>(table),
-                    $MailboxesReferences(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<Mailboxes, Mailboxe>(table),
+                  $MailboxesReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: (
-              {accountId = false,
-              mailboxMessagesRefs = false,
-              syncCheckpointsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (mailboxMessagesRefs) db.mailboxMessages,
-                if (syncCheckpointsRefs) db.syncCheckpoints
-              ],
-              addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
-                if (accountId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.accountId,
-                    referencedTable: $MailboxesReferences._accountIdTable(db),
-                    referencedColumn:
-                        $MailboxesReferences._accountIdTable(db).accountId,
-                  ) as T;
-                }
+          prefetchHooksCallback:
+              ({
+                accountId = false,
+                mailboxMessagesRefs = false,
+                syncCheckpointsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (mailboxMessagesRefs) db.mailboxMessages,
+                    if (syncCheckpointsRefs) db.syncCheckpoints,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (accountId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.accountId,
+                                    referencedTable: $MailboxesReferences
+                                        ._accountIdTable(db),
+                                    referencedColumn: $MailboxesReferences
+                                        ._accountIdTable(db)
+                                        .accountId,
+                                  )
+                                  as T;
+                        }
 
-                return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (mailboxMessagesRefs)
+                        await $_getPrefetchedData<
+                          Mailboxe,
+                          Mailboxes,
+                          MailboxMessage
+                        >(
+                          currentTable: table,
+                          referencedTable: $MailboxesReferences
+                              ._mailboxMessagesRefsTable(db),
+                          managerFromTypedResult: (p0) => $MailboxesReferences(
+                            db,
+                            table,
+                            p0,
+                          ).mailboxMessagesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.mailboxId == item.mailboxId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (syncCheckpointsRefs)
+                        await $_getPrefetchedData<
+                          Mailboxe,
+                          Mailboxes,
+                          SyncCheckpoint
+                        >(
+                          currentTable: table,
+                          referencedTable: $MailboxesReferences
+                              ._syncCheckpointsRefsTable(db),
+                          managerFromTypedResult: (p0) => $MailboxesReferences(
+                            db,
+                            table,
+                            p0,
+                          ).syncCheckpointsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.mailboxId == item.mailboxId,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (mailboxMessagesRefs)
-                    await $_getPrefetchedData<Mailboxe, Mailboxes,
-                            MailboxMessage>(
-                        currentTable: table,
-                        referencedTable:
-                            $MailboxesReferences._mailboxMessagesRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $MailboxesReferences(db, table, p0)
-                                .mailboxMessagesRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.mailboxId == item.mailboxId),
-                        typedResults: items),
-                  if (syncCheckpointsRefs)
-                    await $_getPrefetchedData<Mailboxe, Mailboxes,
-                            SyncCheckpoint>(
-                        currentTable: table,
-                        referencedTable:
-                            $MailboxesReferences._syncCheckpointsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $MailboxesReferences(db, table, p0)
-                                .syncCheckpointsRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.mailboxId == item.mailboxId),
-                        typedResults: items)
-                ];
-              },
-            );
-          },
-        ));
+        ),
+      );
 }
 
-typedef $MailboxesProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    Mailboxes,
-    Mailboxe,
-    $MailboxesFilterComposer,
-    $MailboxesOrderingComposer,
-    $MailboxesAnnotationComposer,
-    $MailboxesCreateCompanionBuilder,
-    $MailboxesUpdateCompanionBuilder,
-    (Mailboxe, $MailboxesReferences),
-    Mailboxe,
-    PrefetchHooks Function(
-        {bool accountId, bool mailboxMessagesRefs, bool syncCheckpointsRefs})>;
-typedef $MessagesCreateCompanionBuilder = MessagesCompanion Function({
-  required String messageId,
-  required String accountId,
-  Value<String?> gmailMessageId,
-  Value<String?> gmailThreadId,
-  Value<String?> subject,
-  Value<String?> sender,
-  Value<int?> sentAtEpochMillis,
-  Value<int?> sizeBytes,
-  Value<String> category,
-  Value<String?> preview,
-  Value<String?> body,
-  required String contentKind,
-  required String bodyDownloadState,
-  Value<String?> listUnsubscribe,
-  Value<String?> listUnsubscribePost,
-  Value<int> rowid,
-});
-typedef $MessagesUpdateCompanionBuilder = MessagesCompanion Function({
-  Value<String> messageId,
-  Value<String> accountId,
-  Value<String?> gmailMessageId,
-  Value<String?> gmailThreadId,
-  Value<String?> subject,
-  Value<String?> sender,
-  Value<int?> sentAtEpochMillis,
-  Value<int?> sizeBytes,
-  Value<String> category,
-  Value<String?> preview,
-  Value<String?> body,
-  Value<String> contentKind,
-  Value<String> bodyDownloadState,
-  Value<String?> listUnsubscribe,
-  Value<String?> listUnsubscribePost,
-  Value<int> rowid,
-});
+typedef $MailboxesProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      Mailboxes,
+      Mailboxe,
+      $MailboxesFilterComposer,
+      $MailboxesOrderingComposer,
+      $MailboxesAnnotationComposer,
+      $MailboxesCreateCompanionBuilder,
+      $MailboxesUpdateCompanionBuilder,
+      (Mailboxe, $MailboxesReferences),
+      Mailboxe,
+      PrefetchHooks Function({
+        bool accountId,
+        bool mailboxMessagesRefs,
+        bool syncCheckpointsRefs,
+      })
+    >;
+typedef $MessagesCreateCompanionBuilder =
+    MessagesCompanion Function({
+      required String messageId,
+      required String accountId,
+      Value<String?> gmailMessageId,
+      Value<String?> gmailThreadId,
+      Value<String?> subject,
+      Value<String?> sender,
+      Value<int?> sentAtEpochMillis,
+      Value<int?> sizeBytes,
+      Value<String> category,
+      Value<String?> preview,
+      Value<String?> body,
+      required String contentKind,
+      required String bodyDownloadState,
+      Value<String?> listUnsubscribe,
+      Value<String?> listUnsubscribePost,
+      Value<int> rowid,
+    });
+typedef $MessagesUpdateCompanionBuilder =
+    MessagesCompanion Function({
+      Value<String> messageId,
+      Value<String> accountId,
+      Value<String?> gmailMessageId,
+      Value<String?> gmailThreadId,
+      Value<String?> subject,
+      Value<String?> sender,
+      Value<int?> sentAtEpochMillis,
+      Value<int?> sizeBytes,
+      Value<String> category,
+      Value<String?> preview,
+      Value<String?> body,
+      Value<String> contentKind,
+      Value<String> bodyDownloadState,
+      Value<String?> listUnsubscribe,
+      Value<String?> listUnsubscribePost,
+      Value<int> rowid,
+    });
 
 final class $MessagesReferences
     extends BaseReferences<_$GlassMailDatabase, Messages, Message> {
@@ -6289,74 +7379,99 @@ final class $MessagesReferences
   $AccountsProcessedTableManager get accountId {
     final $_column = $_itemColumn<String>('accountId')!;
 
-    final manager = $AccountsTableManager($_db, $_db.accounts)
-        .filter((f) => f.accountId.sqlEquals($_column));
+    final manager = $AccountsTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.accountId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 
   static MultiTypedResultKey<MailboxMessages, List<MailboxMessage>>
-      _mailboxMessagesRefsTable(_$GlassMailDatabase db) =>
-          MultiTypedResultKey.fromTable(db.mailboxMessages,
-              aliasName: 'messages__messageId__mailbox_messages__messageId');
+  _mailboxMessagesRefsTable(_$GlassMailDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.mailboxMessages,
+        aliasName: 'messages__messageId__mailbox_messages__messageId',
+      );
 
   $MailboxMessagesProcessedTableManager get mailboxMessagesRefs {
     final manager = $MailboxMessagesTableManager($_db, $_db.mailboxMessages)
-        .filter((f) => f.messageId.messageId
-            .sqlEquals($_itemColumn<String>('messageId')!));
+        .filter(
+          (f) => f.messageId.messageId.sqlEquals(
+            $_itemColumn<String>('messageId')!,
+          ),
+        );
 
-    final cache =
-        $_typedResult.readTableOrNull(_mailboxMessagesRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(
+      _mailboxMessagesRefsTable($_db),
+    );
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 
   static MultiTypedResultKey<MessageLabels, List<MessageLabel>>
-      _messageLabelsRefsTable(_$GlassMailDatabase db) =>
-          MultiTypedResultKey.fromTable(db.messageLabels,
-              aliasName: 'messages__messageId__message_labels__messageId');
+  _messageLabelsRefsTable(_$GlassMailDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.messageLabels,
+        aliasName: 'messages__messageId__message_labels__messageId',
+      );
 
   $MessageLabelsProcessedTableManager get messageLabelsRefs {
     final manager = $MessageLabelsTableManager($_db, $_db.messageLabels).filter(
-        (f) => f.messageId.messageId
-            .sqlEquals($_itemColumn<String>('messageId')!));
+      (f) =>
+          f.messageId.messageId.sqlEquals($_itemColumn<String>('messageId')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_messageLabelsRefsTable($_db));
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 
   static MultiTypedResultKey<Attachments, List<Attachment>>
-      _attachmentsRefsTable(_$GlassMailDatabase db) =>
-          MultiTypedResultKey.fromTable(db.attachments,
-              aliasName: 'messages__messageId__attachments__messageId');
+  _attachmentsRefsTable(_$GlassMailDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.attachments,
+        aliasName: 'messages__messageId__attachments__messageId',
+      );
 
   $AttachmentsProcessedTableManager get attachmentsRefs {
     final manager = $AttachmentsTableManager($_db, $_db.attachments).filter(
-        (f) => f.messageId.messageId
-            .sqlEquals($_itemColumn<String>('messageId')!));
+      (f) =>
+          f.messageId.messageId.sqlEquals($_itemColumn<String>('messageId')!),
+    );
 
     final cache = $_typedResult.readTableOrNull(_attachmentsRefsTable($_db));
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 
   static MultiTypedResultKey<PendingMutations, List<PendingMutation>>
-      _pendingMutationsRefsTable(_$GlassMailDatabase db) =>
-          MultiTypedResultKey.fromTable(db.pendingMutations,
-              aliasName: 'messages__messageId__pending_mutations__messageId');
+  _pendingMutationsRefsTable(_$GlassMailDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.pendingMutations,
+        aliasName: 'messages__messageId__pending_mutations__messageId',
+      );
 
   $PendingMutationsProcessedTableManager get pendingMutationsRefs {
     final manager = $PendingMutationsTableManager($_db, $_db.pendingMutations)
-        .filter((f) => f.messageId.messageId
-            .sqlEquals($_itemColumn<String>('messageId')!));
+        .filter(
+          (f) => f.messageId.messageId.sqlEquals(
+            $_itemColumn<String>('messageId')!,
+          ),
+        );
 
-    final cache =
-        $_typedResult.readTableOrNull(_pendingMutationsRefsTable($_db));
+    final cache = $_typedResult.readTableOrNull(
+      _pendingMutationsRefsTable($_db),
+    );
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
+      manager.$state.copyWith(prefetchedData: cache),
+    );
   }
 }
 
@@ -6369,153 +7484,195 @@ class $MessagesFilterComposer extends Composer<_$GlassMailDatabase, Messages> {
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get messageId => $composableBuilder(
-      column: $table.messageId, builder: (column) => ColumnFilters(column));
+    column: $table.messageId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get gmailMessageId => $composableBuilder(
-      column: $table.gmailMessageId,
-      builder: (column) => ColumnFilters(column));
+    column: $table.gmailMessageId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get gmailThreadId => $composableBuilder(
-      column: $table.gmailThreadId, builder: (column) => ColumnFilters(column));
+    column: $table.gmailThreadId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get subject => $composableBuilder(
-      column: $table.subject, builder: (column) => ColumnFilters(column));
+    column: $table.subject,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get sender => $composableBuilder(
-      column: $table.sender, builder: (column) => ColumnFilters(column));
+    column: $table.sender,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get sentAtEpochMillis => $composableBuilder(
-      column: $table.sentAtEpochMillis,
-      builder: (column) => ColumnFilters(column));
+    column: $table.sentAtEpochMillis,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get sizeBytes => $composableBuilder(
-      column: $table.sizeBytes, builder: (column) => ColumnFilters(column));
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get category => $composableBuilder(
-      column: $table.category, builder: (column) => ColumnFilters(column));
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get preview => $composableBuilder(
-      column: $table.preview, builder: (column) => ColumnFilters(column));
+    column: $table.preview,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get body => $composableBuilder(
-      column: $table.body, builder: (column) => ColumnFilters(column));
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get contentKind => $composableBuilder(
-      column: $table.contentKind, builder: (column) => ColumnFilters(column));
+    column: $table.contentKind,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get bodyDownloadState => $composableBuilder(
-      column: $table.bodyDownloadState,
-      builder: (column) => ColumnFilters(column));
+    column: $table.bodyDownloadState,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get listUnsubscribe => $composableBuilder(
-      column: $table.listUnsubscribe,
-      builder: (column) => ColumnFilters(column));
+    column: $table.listUnsubscribe,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get listUnsubscribePost => $composableBuilder(
-      column: $table.listUnsubscribePost,
-      builder: (column) => ColumnFilters(column));
+    column: $table.listUnsubscribePost,
+    builder: (column) => ColumnFilters(column),
+  );
 
   $AccountsFilterComposer get accountId {
     final $AccountsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsFilterComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   Expression<bool> mailboxMessagesRefs(
-      Expression<bool> Function($MailboxMessagesFilterComposer f) f) {
+    Expression<bool> Function($MailboxMessagesFilterComposer f) f,
+  ) {
     final $MailboxMessagesFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.mailboxMessages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxMessagesFilterComposer(
-              $db: $db,
-              $table: $db.mailboxMessages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.mailboxMessages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxMessagesFilterComposer(
+            $db: $db,
+            $table: $db.mailboxMessages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<bool> messageLabelsRefs(
-      Expression<bool> Function($MessageLabelsFilterComposer f) f) {
+    Expression<bool> Function($MessageLabelsFilterComposer f) f,
+  ) {
     final $MessageLabelsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messageLabels,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessageLabelsFilterComposer(
-              $db: $db,
-              $table: $db.messageLabels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messageLabels,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessageLabelsFilterComposer(
+            $db: $db,
+            $table: $db.messageLabels,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<bool> attachmentsRefs(
-      Expression<bool> Function($AttachmentsFilterComposer f) f) {
+    Expression<bool> Function($AttachmentsFilterComposer f) f,
+  ) {
     final $AttachmentsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.attachments,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AttachmentsFilterComposer(
-              $db: $db,
-              $table: $db.attachments,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.attachments,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AttachmentsFilterComposer(
+            $db: $db,
+            $table: $db.attachments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<bool> pendingMutationsRefs(
-      Expression<bool> Function($PendingMutationsFilterComposer f) f) {
+    Expression<bool> Function($PendingMutationsFilterComposer f) f,
+  ) {
     final $PendingMutationsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.pendingMutations,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $PendingMutationsFilterComposer(
-              $db: $db,
-              $table: $db.pendingMutations,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.pendingMutations,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $PendingMutationsFilterComposer(
+            $db: $db,
+            $table: $db.pendingMutations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -6530,70 +7687,95 @@ class $MessagesOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get messageId => $composableBuilder(
-      column: $table.messageId, builder: (column) => ColumnOrderings(column));
+    column: $table.messageId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get gmailMessageId => $composableBuilder(
-      column: $table.gmailMessageId,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.gmailMessageId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get gmailThreadId => $composableBuilder(
-      column: $table.gmailThreadId,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.gmailThreadId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get subject => $composableBuilder(
-      column: $table.subject, builder: (column) => ColumnOrderings(column));
+    column: $table.subject,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get sender => $composableBuilder(
-      column: $table.sender, builder: (column) => ColumnOrderings(column));
+    column: $table.sender,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get sentAtEpochMillis => $composableBuilder(
-      column: $table.sentAtEpochMillis,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.sentAtEpochMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get sizeBytes => $composableBuilder(
-      column: $table.sizeBytes, builder: (column) => ColumnOrderings(column));
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get category => $composableBuilder(
-      column: $table.category, builder: (column) => ColumnOrderings(column));
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get preview => $composableBuilder(
-      column: $table.preview, builder: (column) => ColumnOrderings(column));
+    column: $table.preview,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get body => $composableBuilder(
-      column: $table.body, builder: (column) => ColumnOrderings(column));
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get contentKind => $composableBuilder(
-      column: $table.contentKind, builder: (column) => ColumnOrderings(column));
+    column: $table.contentKind,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get bodyDownloadState => $composableBuilder(
-      column: $table.bodyDownloadState,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.bodyDownloadState,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get listUnsubscribe => $composableBuilder(
-      column: $table.listUnsubscribe,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.listUnsubscribe,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get listUnsubscribePost => $composableBuilder(
-      column: $table.listUnsubscribePost,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.listUnsubscribePost,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   $AccountsOrderingComposer get accountId {
     final $AccountsOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsOrderingComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -6611,10 +7793,14 @@ class $MessagesAnnotationComposer
       $composableBuilder(column: $table.messageId, builder: (column) => column);
 
   GeneratedColumn<String> get gmailMessageId => $composableBuilder(
-      column: $table.gmailMessageId, builder: (column) => column);
+    column: $table.gmailMessageId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get gmailThreadId => $composableBuilder(
-      column: $table.gmailThreadId, builder: (column) => column);
+    column: $table.gmailThreadId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get subject =>
       $composableBuilder(column: $table.subject, builder: (column) => column);
@@ -6623,7 +7809,9 @@ class $MessagesAnnotationComposer
       $composableBuilder(column: $table.sender, builder: (column) => column);
 
   GeneratedColumn<int> get sentAtEpochMillis => $composableBuilder(
-      column: $table.sentAtEpochMillis, builder: (column) => column);
+    column: $table.sentAtEpochMillis,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get sizeBytes =>
       $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
@@ -6638,141 +7826,173 @@ class $MessagesAnnotationComposer
       $composableBuilder(column: $table.body, builder: (column) => column);
 
   GeneratedColumn<String> get contentKind => $composableBuilder(
-      column: $table.contentKind, builder: (column) => column);
+    column: $table.contentKind,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get bodyDownloadState => $composableBuilder(
-      column: $table.bodyDownloadState, builder: (column) => column);
+    column: $table.bodyDownloadState,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get listUnsubscribe => $composableBuilder(
-      column: $table.listUnsubscribe, builder: (column) => column);
+    column: $table.listUnsubscribe,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get listUnsubscribePost => $composableBuilder(
-      column: $table.listUnsubscribePost, builder: (column) => column);
+    column: $table.listUnsubscribePost,
+    builder: (column) => column,
+  );
 
   $AccountsAnnotationComposer get accountId {
     final $AccountsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsAnnotationComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   Expression<T> mailboxMessagesRefs<T extends Object>(
-      Expression<T> Function($MailboxMessagesAnnotationComposer a) f) {
+    Expression<T> Function($MailboxMessagesAnnotationComposer a) f,
+  ) {
     final $MailboxMessagesAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.mailboxMessages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxMessagesAnnotationComposer(
-              $db: $db,
-              $table: $db.mailboxMessages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.mailboxMessages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxMessagesAnnotationComposer(
+            $db: $db,
+            $table: $db.mailboxMessages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<T> messageLabelsRefs<T extends Object>(
-      Expression<T> Function($MessageLabelsAnnotationComposer a) f) {
+    Expression<T> Function($MessageLabelsAnnotationComposer a) f,
+  ) {
     final $MessageLabelsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messageLabels,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessageLabelsAnnotationComposer(
-              $db: $db,
-              $table: $db.messageLabels,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messageLabels,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessageLabelsAnnotationComposer(
+            $db: $db,
+            $table: $db.messageLabels,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<T> attachmentsRefs<T extends Object>(
-      Expression<T> Function($AttachmentsAnnotationComposer a) f) {
+    Expression<T> Function($AttachmentsAnnotationComposer a) f,
+  ) {
     final $AttachmentsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.attachments,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AttachmentsAnnotationComposer(
-              $db: $db,
-              $table: $db.attachments,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.attachments,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AttachmentsAnnotationComposer(
+            $db: $db,
+            $table: $db.attachments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 
   Expression<T> pendingMutationsRefs<T extends Object>(
-      Expression<T> Function($PendingMutationsAnnotationComposer a) f) {
+    Expression<T> Function($PendingMutationsAnnotationComposer a) f,
+  ) {
     final $PendingMutationsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.pendingMutations,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $PendingMutationsAnnotationComposer(
-              $db: $db,
-              $table: $db.pendingMutations,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.pendingMutations,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $PendingMutationsAnnotationComposer(
+            $db: $db,
+            $table: $db.pendingMutations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
 
-class $MessagesTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    Messages,
-    Message,
-    $MessagesFilterComposer,
-    $MessagesOrderingComposer,
-    $MessagesAnnotationComposer,
-    $MessagesCreateCompanionBuilder,
-    $MessagesUpdateCompanionBuilder,
-    (Message, $MessagesReferences),
-    Message,
-    PrefetchHooks Function(
-        {bool accountId,
-        bool mailboxMessagesRefs,
-        bool messageLabelsRefs,
-        bool attachmentsRefs,
-        bool pendingMutationsRefs})> {
+class $MessagesTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          Messages,
+          Message,
+          $MessagesFilterComposer,
+          $MessagesOrderingComposer,
+          $MessagesAnnotationComposer,
+          $MessagesCreateCompanionBuilder,
+          $MessagesUpdateCompanionBuilder,
+          (Message, $MessagesReferences),
+          Message,
+          PrefetchHooks Function({
+            bool accountId,
+            bool mailboxMessagesRefs,
+            bool messageLabelsRefs,
+            bool attachmentsRefs,
+            bool pendingMutationsRefs,
+          })
+        > {
   $MessagesTableManager(_$GlassMailDatabase db, Messages table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -6781,219 +8001,266 @@ class $MessagesTableManager extends RootTableManager<
               $MessagesOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $MessagesAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> messageId = const Value.absent(),
-            Value<String> accountId = const Value.absent(),
-            Value<String?> gmailMessageId = const Value.absent(),
-            Value<String?> gmailThreadId = const Value.absent(),
-            Value<String?> subject = const Value.absent(),
-            Value<String?> sender = const Value.absent(),
-            Value<int?> sentAtEpochMillis = const Value.absent(),
-            Value<int?> sizeBytes = const Value.absent(),
-            Value<String> category = const Value.absent(),
-            Value<String?> preview = const Value.absent(),
-            Value<String?> body = const Value.absent(),
-            Value<String> contentKind = const Value.absent(),
-            Value<String> bodyDownloadState = const Value.absent(),
-            Value<String?> listUnsubscribe = const Value.absent(),
-            Value<String?> listUnsubscribePost = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              MessagesCompanion(
-            messageId: messageId,
-            accountId: accountId,
-            gmailMessageId: gmailMessageId,
-            gmailThreadId: gmailThreadId,
-            subject: subject,
-            sender: sender,
-            sentAtEpochMillis: sentAtEpochMillis,
-            sizeBytes: sizeBytes,
-            category: category,
-            preview: preview,
-            body: body,
-            contentKind: contentKind,
-            bodyDownloadState: bodyDownloadState,
-            listUnsubscribe: listUnsubscribe,
-            listUnsubscribePost: listUnsubscribePost,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String messageId,
-            required String accountId,
-            Value<String?> gmailMessageId = const Value.absent(),
-            Value<String?> gmailThreadId = const Value.absent(),
-            Value<String?> subject = const Value.absent(),
-            Value<String?> sender = const Value.absent(),
-            Value<int?> sentAtEpochMillis = const Value.absent(),
-            Value<int?> sizeBytes = const Value.absent(),
-            Value<String> category = const Value.absent(),
-            Value<String?> preview = const Value.absent(),
-            Value<String?> body = const Value.absent(),
-            required String contentKind,
-            required String bodyDownloadState,
-            Value<String?> listUnsubscribe = const Value.absent(),
-            Value<String?> listUnsubscribePost = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              MessagesCompanion.insert(
-            messageId: messageId,
-            accountId: accountId,
-            gmailMessageId: gmailMessageId,
-            gmailThreadId: gmailThreadId,
-            subject: subject,
-            sender: sender,
-            sentAtEpochMillis: sentAtEpochMillis,
-            sizeBytes: sizeBytes,
-            category: category,
-            preview: preview,
-            body: body,
-            contentKind: contentKind,
-            bodyDownloadState: bodyDownloadState,
-            listUnsubscribe: listUnsubscribe,
-            listUnsubscribePost: listUnsubscribePost,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> messageId = const Value.absent(),
+                Value<String> accountId = const Value.absent(),
+                Value<String?> gmailMessageId = const Value.absent(),
+                Value<String?> gmailThreadId = const Value.absent(),
+                Value<String?> subject = const Value.absent(),
+                Value<String?> sender = const Value.absent(),
+                Value<int?> sentAtEpochMillis = const Value.absent(),
+                Value<int?> sizeBytes = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<String?> preview = const Value.absent(),
+                Value<String?> body = const Value.absent(),
+                Value<String> contentKind = const Value.absent(),
+                Value<String> bodyDownloadState = const Value.absent(),
+                Value<String?> listUnsubscribe = const Value.absent(),
+                Value<String?> listUnsubscribePost = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MessagesCompanion(
+                messageId: messageId,
+                accountId: accountId,
+                gmailMessageId: gmailMessageId,
+                gmailThreadId: gmailThreadId,
+                subject: subject,
+                sender: sender,
+                sentAtEpochMillis: sentAtEpochMillis,
+                sizeBytes: sizeBytes,
+                category: category,
+                preview: preview,
+                body: body,
+                contentKind: contentKind,
+                bodyDownloadState: bodyDownloadState,
+                listUnsubscribe: listUnsubscribe,
+                listUnsubscribePost: listUnsubscribePost,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String messageId,
+                required String accountId,
+                Value<String?> gmailMessageId = const Value.absent(),
+                Value<String?> gmailThreadId = const Value.absent(),
+                Value<String?> subject = const Value.absent(),
+                Value<String?> sender = const Value.absent(),
+                Value<int?> sentAtEpochMillis = const Value.absent(),
+                Value<int?> sizeBytes = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<String?> preview = const Value.absent(),
+                Value<String?> body = const Value.absent(),
+                required String contentKind,
+                required String bodyDownloadState,
+                Value<String?> listUnsubscribe = const Value.absent(),
+                Value<String?> listUnsubscribePost = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MessagesCompanion.insert(
+                messageId: messageId,
+                accountId: accountId,
+                gmailMessageId: gmailMessageId,
+                gmailThreadId: gmailThreadId,
+                subject: subject,
+                sender: sender,
+                sentAtEpochMillis: sentAtEpochMillis,
+                sizeBytes: sizeBytes,
+                category: category,
+                preview: preview,
+                body: body,
+                contentKind: contentKind,
+                bodyDownloadState: bodyDownloadState,
+                listUnsubscribe: listUnsubscribe,
+                listUnsubscribePost: listUnsubscribePost,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<Messages, Message>(table),
-                    $MessagesReferences(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<Messages, Message>(table),
+                  $MessagesReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: (
-              {accountId = false,
-              mailboxMessagesRefs = false,
-              messageLabelsRefs = false,
-              attachmentsRefs = false,
-              pendingMutationsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (mailboxMessagesRefs) db.mailboxMessages,
-                if (messageLabelsRefs) db.messageLabels,
-                if (attachmentsRefs) db.attachments,
-                if (pendingMutationsRefs) db.pendingMutations
-              ],
-              addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
-                if (accountId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.accountId,
-                    referencedTable: $MessagesReferences._accountIdTable(db),
-                    referencedColumn:
-                        $MessagesReferences._accountIdTable(db).accountId,
-                  ) as T;
-                }
+          prefetchHooksCallback:
+              ({
+                accountId = false,
+                mailboxMessagesRefs = false,
+                messageLabelsRefs = false,
+                attachmentsRefs = false,
+                pendingMutationsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (mailboxMessagesRefs) db.mailboxMessages,
+                    if (messageLabelsRefs) db.messageLabels,
+                    if (attachmentsRefs) db.attachments,
+                    if (pendingMutationsRefs) db.pendingMutations,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (accountId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.accountId,
+                                    referencedTable: $MessagesReferences
+                                        ._accountIdTable(db),
+                                    referencedColumn: $MessagesReferences
+                                        ._accountIdTable(db)
+                                        .accountId,
+                                  )
+                                  as T;
+                        }
 
-                return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (mailboxMessagesRefs)
+                        await $_getPrefetchedData<
+                          Message,
+                          Messages,
+                          MailboxMessage
+                        >(
+                          currentTable: table,
+                          referencedTable: $MessagesReferences
+                              ._mailboxMessagesRefsTable(db),
+                          managerFromTypedResult: (p0) => $MessagesReferences(
+                            db,
+                            table,
+                            p0,
+                          ).mailboxMessagesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.messageId == item.messageId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (messageLabelsRefs)
+                        await $_getPrefetchedData<
+                          Message,
+                          Messages,
+                          MessageLabel
+                        >(
+                          currentTable: table,
+                          referencedTable: $MessagesReferences
+                              ._messageLabelsRefsTable(db),
+                          managerFromTypedResult: (p0) => $MessagesReferences(
+                            db,
+                            table,
+                            p0,
+                          ).messageLabelsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.messageId == item.messageId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (attachmentsRefs)
+                        await $_getPrefetchedData<
+                          Message,
+                          Messages,
+                          Attachment
+                        >(
+                          currentTable: table,
+                          referencedTable: $MessagesReferences
+                              ._attachmentsRefsTable(db),
+                          managerFromTypedResult: (p0) => $MessagesReferences(
+                            db,
+                            table,
+                            p0,
+                          ).attachmentsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.messageId == item.messageId,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (pendingMutationsRefs)
+                        await $_getPrefetchedData<
+                          Message,
+                          Messages,
+                          PendingMutation
+                        >(
+                          currentTable: table,
+                          referencedTable: $MessagesReferences
+                              ._pendingMutationsRefsTable(db),
+                          managerFromTypedResult: (p0) => $MessagesReferences(
+                            db,
+                            table,
+                            p0,
+                          ).pendingMutationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.messageId == item.messageId,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (mailboxMessagesRefs)
-                    await $_getPrefetchedData<Message, Messages,
-                            MailboxMessage>(
-                        currentTable: table,
-                        referencedTable:
-                            $MessagesReferences._mailboxMessagesRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $MessagesReferences(db, table, p0)
-                                .mailboxMessagesRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.messageId == item.messageId),
-                        typedResults: items),
-                  if (messageLabelsRefs)
-                    await $_getPrefetchedData<Message, Messages, MessageLabel>(
-                        currentTable: table,
-                        referencedTable:
-                            $MessagesReferences._messageLabelsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $MessagesReferences(db, table, p0)
-                                .messageLabelsRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.messageId == item.messageId),
-                        typedResults: items),
-                  if (attachmentsRefs)
-                    await $_getPrefetchedData<Message, Messages, Attachment>(
-                        currentTable: table,
-                        referencedTable:
-                            $MessagesReferences._attachmentsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $MessagesReferences(db, table, p0).attachmentsRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.messageId == item.messageId),
-                        typedResults: items),
-                  if (pendingMutationsRefs)
-                    await $_getPrefetchedData<Message, Messages,
-                            PendingMutation>(
-                        currentTable: table,
-                        referencedTable:
-                            $MessagesReferences._pendingMutationsRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $MessagesReferences(db, table, p0)
-                                .pendingMutationsRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.messageId == item.messageId),
-                        typedResults: items)
-                ];
-              },
-            );
-          },
-        ));
+        ),
+      );
 }
 
-typedef $MessagesProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    Messages,
-    Message,
-    $MessagesFilterComposer,
-    $MessagesOrderingComposer,
-    $MessagesAnnotationComposer,
-    $MessagesCreateCompanionBuilder,
-    $MessagesUpdateCompanionBuilder,
-    (Message, $MessagesReferences),
-    Message,
-    PrefetchHooks Function(
-        {bool accountId,
+typedef $MessagesProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      Messages,
+      Message,
+      $MessagesFilterComposer,
+      $MessagesOrderingComposer,
+      $MessagesAnnotationComposer,
+      $MessagesCreateCompanionBuilder,
+      $MessagesUpdateCompanionBuilder,
+      (Message, $MessagesReferences),
+      Message,
+      PrefetchHooks Function({
+        bool accountId,
         bool mailboxMessagesRefs,
         bool messageLabelsRefs,
         bool attachmentsRefs,
-        bool pendingMutationsRefs})>;
-typedef $MailboxMessagesCreateCompanionBuilder = MailboxMessagesCompanion
-    Function({
-  required String mailboxId,
-  required int uid,
-  required String messageId,
-  required String flags,
-  required String labels,
-  Value<int> rowid,
-});
-typedef $MailboxMessagesUpdateCompanionBuilder = MailboxMessagesCompanion
-    Function({
-  Value<String> mailboxId,
-  Value<int> uid,
-  Value<String> messageId,
-  Value<String> flags,
-  Value<String> labels,
-  Value<int> rowid,
-});
+        bool pendingMutationsRefs,
+      })
+    >;
+typedef $MailboxMessagesCreateCompanionBuilder =
+    MailboxMessagesCompanion Function({
+      required String mailboxId,
+      required int uid,
+      required String messageId,
+      required String flags,
+      required String labels,
+      Value<int> rowid,
+    });
+typedef $MailboxMessagesUpdateCompanionBuilder =
+    MailboxMessagesCompanion Function({
+      Value<String> mailboxId,
+      Value<int> uid,
+      Value<String> messageId,
+      Value<String> flags,
+      Value<String> labels,
+      Value<int> rowid,
+    });
 
-final class $MailboxMessagesReferences extends BaseReferences<
-    _$GlassMailDatabase, MailboxMessages, MailboxMessage> {
+final class $MailboxMessagesReferences
+    extends
+        BaseReferences<_$GlassMailDatabase, MailboxMessages, MailboxMessage> {
   $MailboxMessagesReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static Mailboxes _mailboxIdTable(_$GlassMailDatabase db) => db.mailboxes
@@ -7002,12 +8269,15 @@ final class $MailboxMessagesReferences extends BaseReferences<
   $MailboxesProcessedTableManager get mailboxId {
     final $_column = $_itemColumn<String>('mailboxId')!;
 
-    final manager = $MailboxesTableManager($_db, $_db.mailboxes)
-        .filter((f) => f.mailboxId.sqlEquals($_column));
+    final manager = $MailboxesTableManager(
+      $_db,
+      $_db.mailboxes,
+    ).filter((f) => f.mailboxId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_mailboxIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 
   static Messages _messageIdTable(_$GlassMailDatabase db) => db.messages
@@ -7016,12 +8286,15 @@ final class $MailboxMessagesReferences extends BaseReferences<
   $MessagesProcessedTableManager get messageId {
     final $_column = $_itemColumn<String>('messageId')!;
 
-    final manager = $MessagesTableManager($_db, $_db.messages)
-        .filter((f) => f.messageId.sqlEquals($_column));
+    final manager = $MessagesTableManager(
+      $_db,
+      $_db.messages,
+    ).filter((f) => f.messageId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_messageIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 }
 
@@ -7035,51 +8308,63 @@ class $MailboxMessagesFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<int> get uid => $composableBuilder(
-      column: $table.uid, builder: (column) => ColumnFilters(column));
+    column: $table.uid,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get flags => $composableBuilder(
-      column: $table.flags, builder: (column) => ColumnFilters(column));
+    column: $table.flags,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get labels => $composableBuilder(
-      column: $table.labels, builder: (column) => ColumnFilters(column));
+    column: $table.labels,
+    builder: (column) => ColumnFilters(column),
+  );
 
   $MailboxesFilterComposer get mailboxId {
     final $MailboxesFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.mailboxId,
-        referencedTable: $db.mailboxes,
-        getReferencedColumn: (t) => t.mailboxId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxesFilterComposer(
-              $db: $db,
-              $table: $db.mailboxes,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.mailboxId,
+      referencedTable: $db.mailboxes,
+      getReferencedColumn: (t) => t.mailboxId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxesFilterComposer(
+            $db: $db,
+            $table: $db.mailboxes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $MessagesFilterComposer get messageId {
     final $MessagesFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesFilterComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesFilterComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -7094,51 +8379,63 @@ class $MailboxMessagesOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<int> get uid => $composableBuilder(
-      column: $table.uid, builder: (column) => ColumnOrderings(column));
+    column: $table.uid,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get flags => $composableBuilder(
-      column: $table.flags, builder: (column) => ColumnOrderings(column));
+    column: $table.flags,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get labels => $composableBuilder(
-      column: $table.labels, builder: (column) => ColumnOrderings(column));
+    column: $table.labels,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   $MailboxesOrderingComposer get mailboxId {
     final $MailboxesOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.mailboxId,
-        referencedTable: $db.mailboxes,
-        getReferencedColumn: (t) => t.mailboxId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxesOrderingComposer(
-              $db: $db,
-              $table: $db.mailboxes,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.mailboxId,
+      referencedTable: $db.mailboxes,
+      getReferencedColumn: (t) => t.mailboxId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxesOrderingComposer(
+            $db: $db,
+            $table: $db.mailboxes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $MessagesOrderingComposer get messageId {
     final $MessagesOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesOrderingComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesOrderingComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -7163,59 +8460,69 @@ class $MailboxMessagesAnnotationComposer
 
   $MailboxesAnnotationComposer get mailboxId {
     final $MailboxesAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.mailboxId,
-        referencedTable: $db.mailboxes,
-        getReferencedColumn: (t) => t.mailboxId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxesAnnotationComposer(
-              $db: $db,
-              $table: $db.mailboxes,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.mailboxId,
+      referencedTable: $db.mailboxes,
+      getReferencedColumn: (t) => t.mailboxId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxesAnnotationComposer(
+            $db: $db,
+            $table: $db.mailboxes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $MessagesAnnotationComposer get messageId {
     final $MessagesAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesAnnotationComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesAnnotationComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
 
-class $MailboxMessagesTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    MailboxMessages,
-    MailboxMessage,
-    $MailboxMessagesFilterComposer,
-    $MailboxMessagesOrderingComposer,
-    $MailboxMessagesAnnotationComposer,
-    $MailboxMessagesCreateCompanionBuilder,
-    $MailboxMessagesUpdateCompanionBuilder,
-    (MailboxMessage, $MailboxMessagesReferences),
-    MailboxMessage,
-    PrefetchHooks Function({bool mailboxId, bool messageId})> {
+class $MailboxMessagesTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          MailboxMessages,
+          MailboxMessage,
+          $MailboxMessagesFilterComposer,
+          $MailboxMessagesOrderingComposer,
+          $MailboxMessagesAnnotationComposer,
+          $MailboxMessagesCreateCompanionBuilder,
+          $MailboxMessagesUpdateCompanionBuilder,
+          (MailboxMessage, $MailboxMessagesReferences),
+          MailboxMessage,
+          PrefetchHooks Function({bool mailboxId, bool messageId})
+        > {
   $MailboxMessagesTableManager(_$GlassMailDatabase db, MailboxMessages table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -7224,50 +8531,53 @@ class $MailboxMessagesTableManager extends RootTableManager<
               $MailboxMessagesOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $MailboxMessagesAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> mailboxId = const Value.absent(),
-            Value<int> uid = const Value.absent(),
-            Value<String> messageId = const Value.absent(),
-            Value<String> flags = const Value.absent(),
-            Value<String> labels = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              MailboxMessagesCompanion(
-            mailboxId: mailboxId,
-            uid: uid,
-            messageId: messageId,
-            flags: flags,
-            labels: labels,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String mailboxId,
-            required int uid,
-            required String messageId,
-            required String flags,
-            required String labels,
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              MailboxMessagesCompanion.insert(
-            mailboxId: mailboxId,
-            uid: uid,
-            messageId: messageId,
-            flags: flags,
-            labels: labels,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> mailboxId = const Value.absent(),
+                Value<int> uid = const Value.absent(),
+                Value<String> messageId = const Value.absent(),
+                Value<String> flags = const Value.absent(),
+                Value<String> labels = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MailboxMessagesCompanion(
+                mailboxId: mailboxId,
+                uid: uid,
+                messageId: messageId,
+                flags: flags,
+                labels: labels,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String mailboxId,
+                required int uid,
+                required String messageId,
+                required String flags,
+                required String labels,
+                Value<int> rowid = const Value.absent(),
+              }) => MailboxMessagesCompanion.insert(
+                mailboxId: mailboxId,
+                uid: uid,
+                messageId: messageId,
+                flags: flags,
+                labels: labels,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<MailboxMessages, MailboxMessage>(table),
-                    $MailboxMessagesReferences(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<MailboxMessages, MailboxMessage>(table),
+                  $MailboxMessagesReferences(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: ({mailboxId = false, messageId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
+              addJoins:
+                  <
+                    T extends TableManagerState<
                       dynamic,
                       dynamic,
                       dynamic,
@@ -7278,62 +8588,73 @@ class $MailboxMessagesTableManager extends RootTableManager<
                       dynamic,
                       dynamic,
                       dynamic,
-                      dynamic>>(state) {
-                if (mailboxId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.mailboxId,
-                    referencedTable:
-                        $MailboxMessagesReferences._mailboxIdTable(db),
-                    referencedColumn: $MailboxMessagesReferences
-                        ._mailboxIdTable(db)
-                        .mailboxId,
-                  ) as T;
-                }
-                if (messageId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.messageId,
-                    referencedTable:
-                        $MailboxMessagesReferences._messageIdTable(db),
-                    referencedColumn: $MailboxMessagesReferences
-                        ._messageIdTable(db)
-                        .messageId,
-                  ) as T;
-                }
+                      dynamic
+                    >
+                  >(state) {
+                    if (mailboxId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.mailboxId,
+                                referencedTable: $MailboxMessagesReferences
+                                    ._mailboxIdTable(db),
+                                referencedColumn: $MailboxMessagesReferences
+                                    ._mailboxIdTable(db)
+                                    .mailboxId,
+                              )
+                              as T;
+                    }
+                    if (messageId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.messageId,
+                                referencedTable: $MailboxMessagesReferences
+                                    ._messageIdTable(db),
+                                referencedColumn: $MailboxMessagesReferences
+                                    ._messageIdTable(db)
+                                    .messageId,
+                              )
+                              as T;
+                    }
 
-                return state;
-              },
+                    return state;
+                  },
               getPrefetchedDataCallback: (items) async {
                 return [];
               },
             );
           },
-        ));
+        ),
+      );
 }
 
-typedef $MailboxMessagesProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    MailboxMessages,
-    MailboxMessage,
-    $MailboxMessagesFilterComposer,
-    $MailboxMessagesOrderingComposer,
-    $MailboxMessagesAnnotationComposer,
-    $MailboxMessagesCreateCompanionBuilder,
-    $MailboxMessagesUpdateCompanionBuilder,
-    (MailboxMessage, $MailboxMessagesReferences),
-    MailboxMessage,
-    PrefetchHooks Function({bool mailboxId, bool messageId})>;
-typedef $MessageLabelsCreateCompanionBuilder = MessageLabelsCompanion Function({
-  required String messageId,
-  required String label,
-  Value<int> rowid,
-});
-typedef $MessageLabelsUpdateCompanionBuilder = MessageLabelsCompanion Function({
-  Value<String> messageId,
-  Value<String> label,
-  Value<int> rowid,
-});
+typedef $MailboxMessagesProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      MailboxMessages,
+      MailboxMessage,
+      $MailboxMessagesFilterComposer,
+      $MailboxMessagesOrderingComposer,
+      $MailboxMessagesAnnotationComposer,
+      $MailboxMessagesCreateCompanionBuilder,
+      $MailboxMessagesUpdateCompanionBuilder,
+      (MailboxMessage, $MailboxMessagesReferences),
+      MailboxMessage,
+      PrefetchHooks Function({bool mailboxId, bool messageId})
+    >;
+typedef $MessageLabelsCreateCompanionBuilder =
+    MessageLabelsCompanion Function({
+      required String messageId,
+      required String label,
+      Value<int> rowid,
+    });
+typedef $MessageLabelsUpdateCompanionBuilder =
+    MessageLabelsCompanion Function({
+      Value<String> messageId,
+      Value<String> label,
+      Value<int> rowid,
+    });
 
 final class $MessageLabelsReferences
     extends BaseReferences<_$GlassMailDatabase, MessageLabels, MessageLabel> {
@@ -7345,12 +8666,15 @@ final class $MessageLabelsReferences
   $MessagesProcessedTableManager get messageId {
     final $_column = $_itemColumn<String>('messageId')!;
 
-    final manager = $MessagesTableManager($_db, $_db.messages)
-        .filter((f) => f.messageId.sqlEquals($_column));
+    final manager = $MessagesTableManager(
+      $_db,
+      $_db.messages,
+    ).filter((f) => f.messageId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_messageIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 }
 
@@ -7364,25 +8688,30 @@ class $MessageLabelsFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get label => $composableBuilder(
-      column: $table.label, builder: (column) => ColumnFilters(column));
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
 
   $MessagesFilterComposer get messageId {
     final $MessagesFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesFilterComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesFilterComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -7397,25 +8726,30 @@ class $MessageLabelsOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get label => $composableBuilder(
-      column: $table.label, builder: (column) => ColumnOrderings(column));
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   $MessagesOrderingComposer get messageId {
     final $MessagesOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesOrderingComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesOrderingComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -7434,39 +8768,46 @@ class $MessageLabelsAnnotationComposer
 
   $MessagesAnnotationComposer get messageId {
     final $MessagesAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesAnnotationComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesAnnotationComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
 
-class $MessageLabelsTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    MessageLabels,
-    MessageLabel,
-    $MessageLabelsFilterComposer,
-    $MessageLabelsOrderingComposer,
-    $MessageLabelsAnnotationComposer,
-    $MessageLabelsCreateCompanionBuilder,
-    $MessageLabelsUpdateCompanionBuilder,
-    (MessageLabel, $MessageLabelsReferences),
-    MessageLabel,
-    PrefetchHooks Function({bool messageId})> {
+class $MessageLabelsTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          MessageLabels,
+          MessageLabel,
+          $MessageLabelsFilterComposer,
+          $MessageLabelsOrderingComposer,
+          $MessageLabelsAnnotationComposer,
+          $MessageLabelsCreateCompanionBuilder,
+          $MessageLabelsUpdateCompanionBuilder,
+          (MessageLabel, $MessageLabelsReferences),
+          MessageLabel,
+          PrefetchHooks Function({bool messageId})
+        > {
   $MessageLabelsTableManager(_$GlassMailDatabase db, MessageLabels table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -7475,38 +8816,41 @@ class $MessageLabelsTableManager extends RootTableManager<
               $MessageLabelsOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $MessageLabelsAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> messageId = const Value.absent(),
-            Value<String> label = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              MessageLabelsCompanion(
-            messageId: messageId,
-            label: label,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String messageId,
-            required String label,
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              MessageLabelsCompanion.insert(
-            messageId: messageId,
-            label: label,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> messageId = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MessageLabelsCompanion(
+                messageId: messageId,
+                label: label,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String messageId,
+                required String label,
+                Value<int> rowid = const Value.absent(),
+              }) => MessageLabelsCompanion.insert(
+                messageId: messageId,
+                label: label,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<MessageLabels, MessageLabel>(table),
-                    $MessageLabelsReferences(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<MessageLabels, MessageLabel>(table),
+                  $MessageLabelsReferences(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: ({messageId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
+              addJoins:
+                  <
+                    T extends TableManagerState<
                       dynamic,
                       dynamic,
                       dynamic,
@@ -7517,62 +8861,72 @@ class $MessageLabelsTableManager extends RootTableManager<
                       dynamic,
                       dynamic,
                       dynamic,
-                      dynamic>>(state) {
-                if (messageId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.messageId,
-                    referencedTable:
-                        $MessageLabelsReferences._messageIdTable(db),
-                    referencedColumn:
-                        $MessageLabelsReferences._messageIdTable(db).messageId,
-                  ) as T;
-                }
+                      dynamic
+                    >
+                  >(state) {
+                    if (messageId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.messageId,
+                                referencedTable: $MessageLabelsReferences
+                                    ._messageIdTable(db),
+                                referencedColumn: $MessageLabelsReferences
+                                    ._messageIdTable(db)
+                                    .messageId,
+                              )
+                              as T;
+                    }
 
-                return state;
-              },
+                    return state;
+                  },
               getPrefetchedDataCallback: (items) async {
                 return [];
               },
             );
           },
-        ));
+        ),
+      );
 }
 
-typedef $MessageLabelsProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    MessageLabels,
-    MessageLabel,
-    $MessageLabelsFilterComposer,
-    $MessageLabelsOrderingComposer,
-    $MessageLabelsAnnotationComposer,
-    $MessageLabelsCreateCompanionBuilder,
-    $MessageLabelsUpdateCompanionBuilder,
-    (MessageLabel, $MessageLabelsReferences),
-    MessageLabel,
-    PrefetchHooks Function({bool messageId})>;
-typedef $AttachmentsCreateCompanionBuilder = AttachmentsCompanion Function({
-  required String attachmentId,
-  required String messageId,
-  required String partId,
-  Value<String?> fileName,
-  Value<String?> mimeType,
-  Value<int?> sizeBytes,
-  required String downloadState,
-  Value<int> lastAccessedAtEpochMillis,
-  Value<int> rowid,
-});
-typedef $AttachmentsUpdateCompanionBuilder = AttachmentsCompanion Function({
-  Value<String> attachmentId,
-  Value<String> messageId,
-  Value<String> partId,
-  Value<String?> fileName,
-  Value<String?> mimeType,
-  Value<int?> sizeBytes,
-  Value<String> downloadState,
-  Value<int> lastAccessedAtEpochMillis,
-  Value<int> rowid,
-});
+typedef $MessageLabelsProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      MessageLabels,
+      MessageLabel,
+      $MessageLabelsFilterComposer,
+      $MessageLabelsOrderingComposer,
+      $MessageLabelsAnnotationComposer,
+      $MessageLabelsCreateCompanionBuilder,
+      $MessageLabelsUpdateCompanionBuilder,
+      (MessageLabel, $MessageLabelsReferences),
+      MessageLabel,
+      PrefetchHooks Function({bool messageId})
+    >;
+typedef $AttachmentsCreateCompanionBuilder =
+    AttachmentsCompanion Function({
+      required String attachmentId,
+      required String messageId,
+      required String partId,
+      Value<String?> fileName,
+      Value<String?> mimeType,
+      Value<int?> sizeBytes,
+      required String downloadState,
+      Value<int> lastAccessedAtEpochMillis,
+      Value<int> rowid,
+    });
+typedef $AttachmentsUpdateCompanionBuilder =
+    AttachmentsCompanion Function({
+      Value<String> attachmentId,
+      Value<String> messageId,
+      Value<String> partId,
+      Value<String?> fileName,
+      Value<String?> mimeType,
+      Value<int?> sizeBytes,
+      Value<String> downloadState,
+      Value<int> lastAccessedAtEpochMillis,
+      Value<int> rowid,
+    });
 
 final class $AttachmentsReferences
     extends BaseReferences<_$GlassMailDatabase, Attachments, Attachment> {
@@ -7584,12 +8938,15 @@ final class $AttachmentsReferences
   $MessagesProcessedTableManager get messageId {
     final $_column = $_itemColumn<String>('messageId')!;
 
-    final manager = $MessagesTableManager($_db, $_db.messages)
-        .filter((f) => f.messageId.sqlEquals($_column));
+    final manager = $MessagesTableManager(
+      $_db,
+      $_db.messages,
+    ).filter((f) => f.messageId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_messageIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 }
 
@@ -7603,44 +8960,60 @@ class $AttachmentsFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get attachmentId => $composableBuilder(
-      column: $table.attachmentId, builder: (column) => ColumnFilters(column));
+    column: $table.attachmentId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get partId => $composableBuilder(
-      column: $table.partId, builder: (column) => ColumnFilters(column));
+    column: $table.partId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get fileName => $composableBuilder(
-      column: $table.fileName, builder: (column) => ColumnFilters(column));
+    column: $table.fileName,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get mimeType => $composableBuilder(
-      column: $table.mimeType, builder: (column) => ColumnFilters(column));
+    column: $table.mimeType,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get sizeBytes => $composableBuilder(
-      column: $table.sizeBytes, builder: (column) => ColumnFilters(column));
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get downloadState => $composableBuilder(
-      column: $table.downloadState, builder: (column) => ColumnFilters(column));
+    column: $table.downloadState,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get lastAccessedAtEpochMillis => $composableBuilder(
-      column: $table.lastAccessedAtEpochMillis,
-      builder: (column) => ColumnFilters(column));
+    column: $table.lastAccessedAtEpochMillis,
+    builder: (column) => ColumnFilters(column),
+  );
 
   $MessagesFilterComposer get messageId {
     final $MessagesFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesFilterComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesFilterComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -7655,46 +9028,60 @@ class $AttachmentsOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get attachmentId => $composableBuilder(
-      column: $table.attachmentId,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.attachmentId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get partId => $composableBuilder(
-      column: $table.partId, builder: (column) => ColumnOrderings(column));
+    column: $table.partId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get fileName => $composableBuilder(
-      column: $table.fileName, builder: (column) => ColumnOrderings(column));
+    column: $table.fileName,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get mimeType => $composableBuilder(
-      column: $table.mimeType, builder: (column) => ColumnOrderings(column));
+    column: $table.mimeType,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get sizeBytes => $composableBuilder(
-      column: $table.sizeBytes, builder: (column) => ColumnOrderings(column));
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get downloadState => $composableBuilder(
-      column: $table.downloadState,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.downloadState,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get lastAccessedAtEpochMillis => $composableBuilder(
-      column: $table.lastAccessedAtEpochMillis,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.lastAccessedAtEpochMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   $MessagesOrderingComposer get messageId {
     final $MessagesOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesOrderingComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesOrderingComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -7709,7 +9096,9 @@ class $AttachmentsAnnotationComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   GeneratedColumn<String> get attachmentId => $composableBuilder(
-      column: $table.attachmentId, builder: (column) => column);
+    column: $table.attachmentId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get partId =>
       $composableBuilder(column: $table.partId, builder: (column) => column);
@@ -7724,46 +9113,57 @@ class $AttachmentsAnnotationComposer
       $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
 
   GeneratedColumn<String> get downloadState => $composableBuilder(
-      column: $table.downloadState, builder: (column) => column);
+    column: $table.downloadState,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get lastAccessedAtEpochMillis => $composableBuilder(
-      column: $table.lastAccessedAtEpochMillis, builder: (column) => column);
+    column: $table.lastAccessedAtEpochMillis,
+    builder: (column) => column,
+  );
 
   $MessagesAnnotationComposer get messageId {
     final $MessagesAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesAnnotationComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesAnnotationComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
 
-class $AttachmentsTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    Attachments,
-    Attachment,
-    $AttachmentsFilterComposer,
-    $AttachmentsOrderingComposer,
-    $AttachmentsAnnotationComposer,
-    $AttachmentsCreateCompanionBuilder,
-    $AttachmentsUpdateCompanionBuilder,
-    (Attachment, $AttachmentsReferences),
-    Attachment,
-    PrefetchHooks Function({bool messageId})> {
+class $AttachmentsTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          Attachments,
+          Attachment,
+          $AttachmentsFilterComposer,
+          $AttachmentsOrderingComposer,
+          $AttachmentsAnnotationComposer,
+          $AttachmentsCreateCompanionBuilder,
+          $AttachmentsUpdateCompanionBuilder,
+          (Attachment, $AttachmentsReferences),
+          Attachment,
+          PrefetchHooks Function({bool messageId})
+        > {
   $AttachmentsTableManager(_$GlassMailDatabase db, Attachments table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -7772,62 +9172,65 @@ class $AttachmentsTableManager extends RootTableManager<
               $AttachmentsOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $AttachmentsAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> attachmentId = const Value.absent(),
-            Value<String> messageId = const Value.absent(),
-            Value<String> partId = const Value.absent(),
-            Value<String?> fileName = const Value.absent(),
-            Value<String?> mimeType = const Value.absent(),
-            Value<int?> sizeBytes = const Value.absent(),
-            Value<String> downloadState = const Value.absent(),
-            Value<int> lastAccessedAtEpochMillis = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              AttachmentsCompanion(
-            attachmentId: attachmentId,
-            messageId: messageId,
-            partId: partId,
-            fileName: fileName,
-            mimeType: mimeType,
-            sizeBytes: sizeBytes,
-            downloadState: downloadState,
-            lastAccessedAtEpochMillis: lastAccessedAtEpochMillis,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String attachmentId,
-            required String messageId,
-            required String partId,
-            Value<String?> fileName = const Value.absent(),
-            Value<String?> mimeType = const Value.absent(),
-            Value<int?> sizeBytes = const Value.absent(),
-            required String downloadState,
-            Value<int> lastAccessedAtEpochMillis = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              AttachmentsCompanion.insert(
-            attachmentId: attachmentId,
-            messageId: messageId,
-            partId: partId,
-            fileName: fileName,
-            mimeType: mimeType,
-            sizeBytes: sizeBytes,
-            downloadState: downloadState,
-            lastAccessedAtEpochMillis: lastAccessedAtEpochMillis,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> attachmentId = const Value.absent(),
+                Value<String> messageId = const Value.absent(),
+                Value<String> partId = const Value.absent(),
+                Value<String?> fileName = const Value.absent(),
+                Value<String?> mimeType = const Value.absent(),
+                Value<int?> sizeBytes = const Value.absent(),
+                Value<String> downloadState = const Value.absent(),
+                Value<int> lastAccessedAtEpochMillis = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AttachmentsCompanion(
+                attachmentId: attachmentId,
+                messageId: messageId,
+                partId: partId,
+                fileName: fileName,
+                mimeType: mimeType,
+                sizeBytes: sizeBytes,
+                downloadState: downloadState,
+                lastAccessedAtEpochMillis: lastAccessedAtEpochMillis,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String attachmentId,
+                required String messageId,
+                required String partId,
+                Value<String?> fileName = const Value.absent(),
+                Value<String?> mimeType = const Value.absent(),
+                Value<int?> sizeBytes = const Value.absent(),
+                required String downloadState,
+                Value<int> lastAccessedAtEpochMillis = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AttachmentsCompanion.insert(
+                attachmentId: attachmentId,
+                messageId: messageId,
+                partId: partId,
+                fileName: fileName,
+                mimeType: mimeType,
+                sizeBytes: sizeBytes,
+                downloadState: downloadState,
+                lastAccessedAtEpochMillis: lastAccessedAtEpochMillis,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<Attachments, Attachment>(table),
-                    $AttachmentsReferences(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<Attachments, Attachment>(table),
+                  $AttachmentsReferences(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: ({messageId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
+              addJoins:
+                  <
+                    T extends TableManagerState<
                       dynamic,
                       dynamic,
                       dynamic,
@@ -7838,55 +9241,66 @@ class $AttachmentsTableManager extends RootTableManager<
                       dynamic,
                       dynamic,
                       dynamic,
-                      dynamic>>(state) {
-                if (messageId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.messageId,
-                    referencedTable: $AttachmentsReferences._messageIdTable(db),
-                    referencedColumn:
-                        $AttachmentsReferences._messageIdTable(db).messageId,
-                  ) as T;
-                }
+                      dynamic
+                    >
+                  >(state) {
+                    if (messageId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.messageId,
+                                referencedTable: $AttachmentsReferences
+                                    ._messageIdTable(db),
+                                referencedColumn: $AttachmentsReferences
+                                    ._messageIdTable(db)
+                                    .messageId,
+                              )
+                              as T;
+                    }
 
-                return state;
-              },
+                    return state;
+                  },
               getPrefetchedDataCallback: (items) async {
                 return [];
               },
             );
           },
-        ));
+        ),
+      );
 }
 
-typedef $AttachmentsProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    Attachments,
-    Attachment,
-    $AttachmentsFilterComposer,
-    $AttachmentsOrderingComposer,
-    $AttachmentsAnnotationComposer,
-    $AttachmentsCreateCompanionBuilder,
-    $AttachmentsUpdateCompanionBuilder,
-    (Attachment, $AttachmentsReferences),
-    Attachment,
-    PrefetchHooks Function({bool messageId})>;
-typedef $CacheConfigCreateCompanionBuilder = CacheConfigCompanion Function({
-  required String accountId,
-  Value<int> offlineMessageCount,
-  Value<int> attachmentCacheLimitMb,
-  Value<int> autoEvictReadOlderThanDays,
-  Value<int> prefetchUnreadBodies,
-  Value<int> rowid,
-});
-typedef $CacheConfigUpdateCompanionBuilder = CacheConfigCompanion Function({
-  Value<String> accountId,
-  Value<int> offlineMessageCount,
-  Value<int> attachmentCacheLimitMb,
-  Value<int> autoEvictReadOlderThanDays,
-  Value<int> prefetchUnreadBodies,
-  Value<int> rowid,
-});
+typedef $AttachmentsProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      Attachments,
+      Attachment,
+      $AttachmentsFilterComposer,
+      $AttachmentsOrderingComposer,
+      $AttachmentsAnnotationComposer,
+      $AttachmentsCreateCompanionBuilder,
+      $AttachmentsUpdateCompanionBuilder,
+      (Attachment, $AttachmentsReferences),
+      Attachment,
+      PrefetchHooks Function({bool messageId})
+    >;
+typedef $CacheConfigCreateCompanionBuilder =
+    CacheConfigCompanion Function({
+      required String accountId,
+      Value<int> offlineMessageCount,
+      Value<int> attachmentCacheLimitMb,
+      Value<int> autoEvictReadOlderThanDays,
+      Value<int> prefetchUnreadBodies,
+      Value<int> rowid,
+    });
+typedef $CacheConfigUpdateCompanionBuilder =
+    CacheConfigCompanion Function({
+      Value<String> accountId,
+      Value<int> offlineMessageCount,
+      Value<int> attachmentCacheLimitMb,
+      Value<int> autoEvictReadOlderThanDays,
+      Value<int> prefetchUnreadBodies,
+      Value<int> rowid,
+    });
 
 class $CacheConfigFilterComposer
     extends Composer<_$GlassMailDatabase, CacheConfig> {
@@ -7898,23 +9312,29 @@ class $CacheConfigFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get accountId => $composableBuilder(
-      column: $table.accountId, builder: (column) => ColumnFilters(column));
+    column: $table.accountId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get offlineMessageCount => $composableBuilder(
-      column: $table.offlineMessageCount,
-      builder: (column) => ColumnFilters(column));
+    column: $table.offlineMessageCount,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get attachmentCacheLimitMb => $composableBuilder(
-      column: $table.attachmentCacheLimitMb,
-      builder: (column) => ColumnFilters(column));
+    column: $table.attachmentCacheLimitMb,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get autoEvictReadOlderThanDays => $composableBuilder(
-      column: $table.autoEvictReadOlderThanDays,
-      builder: (column) => ColumnFilters(column));
+    column: $table.autoEvictReadOlderThanDays,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get prefetchUnreadBodies => $composableBuilder(
-      column: $table.prefetchUnreadBodies,
-      builder: (column) => ColumnFilters(column));
+    column: $table.prefetchUnreadBodies,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $CacheConfigOrderingComposer
@@ -7927,23 +9347,29 @@ class $CacheConfigOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get accountId => $composableBuilder(
-      column: $table.accountId, builder: (column) => ColumnOrderings(column));
+    column: $table.accountId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get offlineMessageCount => $composableBuilder(
-      column: $table.offlineMessageCount,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.offlineMessageCount,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get attachmentCacheLimitMb => $composableBuilder(
-      column: $table.attachmentCacheLimitMb,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.attachmentCacheLimitMb,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get autoEvictReadOlderThanDays => $composableBuilder(
-      column: $table.autoEvictReadOlderThanDays,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.autoEvictReadOlderThanDays,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get prefetchUnreadBodies => $composableBuilder(
-      column: $table.prefetchUnreadBodies,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.prefetchUnreadBodies,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $CacheConfigAnnotationComposer
@@ -7959,35 +9385,47 @@ class $CacheConfigAnnotationComposer
       $composableBuilder(column: $table.accountId, builder: (column) => column);
 
   GeneratedColumn<int> get offlineMessageCount => $composableBuilder(
-      column: $table.offlineMessageCount, builder: (column) => column);
+    column: $table.offlineMessageCount,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get attachmentCacheLimitMb => $composableBuilder(
-      column: $table.attachmentCacheLimitMb, builder: (column) => column);
+    column: $table.attachmentCacheLimitMb,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get autoEvictReadOlderThanDays => $composableBuilder(
-      column: $table.autoEvictReadOlderThanDays, builder: (column) => column);
+    column: $table.autoEvictReadOlderThanDays,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get prefetchUnreadBodies => $composableBuilder(
-      column: $table.prefetchUnreadBodies, builder: (column) => column);
+    column: $table.prefetchUnreadBodies,
+    builder: (column) => column,
+  );
 }
 
-class $CacheConfigTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    CacheConfig,
-    CacheConfigData,
-    $CacheConfigFilterComposer,
-    $CacheConfigOrderingComposer,
-    $CacheConfigAnnotationComposer,
-    $CacheConfigCreateCompanionBuilder,
-    $CacheConfigUpdateCompanionBuilder,
-    (
-      CacheConfigData,
-      BaseReferences<_$GlassMailDatabase, CacheConfig, CacheConfigData>
-    ),
-    CacheConfigData,
-    PrefetchHooks Function()> {
+class $CacheConfigTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          CacheConfig,
+          CacheConfigData,
+          $CacheConfigFilterComposer,
+          $CacheConfigOrderingComposer,
+          $CacheConfigAnnotationComposer,
+          $CacheConfigCreateCompanionBuilder,
+          $CacheConfigUpdateCompanionBuilder,
+          (
+            CacheConfigData,
+            BaseReferences<_$GlassMailDatabase, CacheConfig, CacheConfigData>,
+          ),
+          CacheConfigData,
+          PrefetchHooks Function()
+        > {
   $CacheConfigTableManager(_$GlassMailDatabase db, CacheConfig table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -7996,78 +9434,88 @@ class $CacheConfigTableManager extends RootTableManager<
               $CacheConfigOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $CacheConfigAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> accountId = const Value.absent(),
-            Value<int> offlineMessageCount = const Value.absent(),
-            Value<int> attachmentCacheLimitMb = const Value.absent(),
-            Value<int> autoEvictReadOlderThanDays = const Value.absent(),
-            Value<int> prefetchUnreadBodies = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              CacheConfigCompanion(
-            accountId: accountId,
-            offlineMessageCount: offlineMessageCount,
-            attachmentCacheLimitMb: attachmentCacheLimitMb,
-            autoEvictReadOlderThanDays: autoEvictReadOlderThanDays,
-            prefetchUnreadBodies: prefetchUnreadBodies,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String accountId,
-            Value<int> offlineMessageCount = const Value.absent(),
-            Value<int> attachmentCacheLimitMb = const Value.absent(),
-            Value<int> autoEvictReadOlderThanDays = const Value.absent(),
-            Value<int> prefetchUnreadBodies = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              CacheConfigCompanion.insert(
-            accountId: accountId,
-            offlineMessageCount: offlineMessageCount,
-            attachmentCacheLimitMb: attachmentCacheLimitMb,
-            autoEvictReadOlderThanDays: autoEvictReadOlderThanDays,
-            prefetchUnreadBodies: prefetchUnreadBodies,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> accountId = const Value.absent(),
+                Value<int> offlineMessageCount = const Value.absent(),
+                Value<int> attachmentCacheLimitMb = const Value.absent(),
+                Value<int> autoEvictReadOlderThanDays = const Value.absent(),
+                Value<int> prefetchUnreadBodies = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CacheConfigCompanion(
+                accountId: accountId,
+                offlineMessageCount: offlineMessageCount,
+                attachmentCacheLimitMb: attachmentCacheLimitMb,
+                autoEvictReadOlderThanDays: autoEvictReadOlderThanDays,
+                prefetchUnreadBodies: prefetchUnreadBodies,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String accountId,
+                Value<int> offlineMessageCount = const Value.absent(),
+                Value<int> attachmentCacheLimitMb = const Value.absent(),
+                Value<int> autoEvictReadOlderThanDays = const Value.absent(),
+                Value<int> prefetchUnreadBodies = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CacheConfigCompanion.insert(
+                accountId: accountId,
+                offlineMessageCount: offlineMessageCount,
+                attachmentCacheLimitMb: attachmentCacheLimitMb,
+                autoEvictReadOlderThanDays: autoEvictReadOlderThanDays,
+                prefetchUnreadBodies: prefetchUnreadBodies,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<CacheConfig, CacheConfigData>(table),
-                    BaseReferences<_$GlassMailDatabase, CacheConfig,
-                        CacheConfigData>(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<CacheConfig, CacheConfigData>(table),
+                  BaseReferences<
+                    _$GlassMailDatabase,
+                    CacheConfig,
+                    CacheConfigData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
-        ));
+        ),
+      );
 }
 
-typedef $CacheConfigProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    CacheConfig,
-    CacheConfigData,
-    $CacheConfigFilterComposer,
-    $CacheConfigOrderingComposer,
-    $CacheConfigAnnotationComposer,
-    $CacheConfigCreateCompanionBuilder,
-    $CacheConfigUpdateCompanionBuilder,
-    (
+typedef $CacheConfigProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      CacheConfig,
       CacheConfigData,
-      BaseReferences<_$GlassMailDatabase, CacheConfig, CacheConfigData>
-    ),
-    CacheConfigData,
-    PrefetchHooks Function()>;
-typedef $StorageQuotaCreateCompanionBuilder = StorageQuotaCompanion Function({
-  required String accountId,
-  required int usedKb,
-  required int limitKb,
-  required int checkedAtEpochMillis,
-  Value<int> rowid,
-});
-typedef $StorageQuotaUpdateCompanionBuilder = StorageQuotaCompanion Function({
-  Value<String> accountId,
-  Value<int> usedKb,
-  Value<int> limitKb,
-  Value<int> checkedAtEpochMillis,
-  Value<int> rowid,
-});
+      $CacheConfigFilterComposer,
+      $CacheConfigOrderingComposer,
+      $CacheConfigAnnotationComposer,
+      $CacheConfigCreateCompanionBuilder,
+      $CacheConfigUpdateCompanionBuilder,
+      (
+        CacheConfigData,
+        BaseReferences<_$GlassMailDatabase, CacheConfig, CacheConfigData>,
+      ),
+      CacheConfigData,
+      PrefetchHooks Function()
+    >;
+typedef $StorageQuotaCreateCompanionBuilder =
+    StorageQuotaCompanion Function({
+      required String accountId,
+      required int usedKb,
+      required int limitKb,
+      required int checkedAtEpochMillis,
+      Value<int> rowid,
+    });
+typedef $StorageQuotaUpdateCompanionBuilder =
+    StorageQuotaCompanion Function({
+      Value<String> accountId,
+      Value<int> usedKb,
+      Value<int> limitKb,
+      Value<int> checkedAtEpochMillis,
+      Value<int> rowid,
+    });
 
 class $StorageQuotaFilterComposer
     extends Composer<_$GlassMailDatabase, StorageQuota> {
@@ -8079,17 +9527,24 @@ class $StorageQuotaFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get accountId => $composableBuilder(
-      column: $table.accountId, builder: (column) => ColumnFilters(column));
+    column: $table.accountId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get usedKb => $composableBuilder(
-      column: $table.usedKb, builder: (column) => ColumnFilters(column));
+    column: $table.usedKb,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get limitKb => $composableBuilder(
-      column: $table.limitKb, builder: (column) => ColumnFilters(column));
+    column: $table.limitKb,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get checkedAtEpochMillis => $composableBuilder(
-      column: $table.checkedAtEpochMillis,
-      builder: (column) => ColumnFilters(column));
+    column: $table.checkedAtEpochMillis,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $StorageQuotaOrderingComposer
@@ -8102,17 +9557,24 @@ class $StorageQuotaOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get accountId => $composableBuilder(
-      column: $table.accountId, builder: (column) => ColumnOrderings(column));
+    column: $table.accountId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get usedKb => $composableBuilder(
-      column: $table.usedKb, builder: (column) => ColumnOrderings(column));
+    column: $table.usedKb,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get limitKb => $composableBuilder(
-      column: $table.limitKb, builder: (column) => ColumnOrderings(column));
+    column: $table.limitKb,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get checkedAtEpochMillis => $composableBuilder(
-      column: $table.checkedAtEpochMillis,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.checkedAtEpochMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $StorageQuotaAnnotationComposer
@@ -8134,26 +9596,32 @@ class $StorageQuotaAnnotationComposer
       $composableBuilder(column: $table.limitKb, builder: (column) => column);
 
   GeneratedColumn<int> get checkedAtEpochMillis => $composableBuilder(
-      column: $table.checkedAtEpochMillis, builder: (column) => column);
+    column: $table.checkedAtEpochMillis,
+    builder: (column) => column,
+  );
 }
 
-class $StorageQuotaTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    StorageQuota,
-    StorageQuotaData,
-    $StorageQuotaFilterComposer,
-    $StorageQuotaOrderingComposer,
-    $StorageQuotaAnnotationComposer,
-    $StorageQuotaCreateCompanionBuilder,
-    $StorageQuotaUpdateCompanionBuilder,
-    (
-      StorageQuotaData,
-      BaseReferences<_$GlassMailDatabase, StorageQuota, StorageQuotaData>
-    ),
-    StorageQuotaData,
-    PrefetchHooks Function()> {
+class $StorageQuotaTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          StorageQuota,
+          StorageQuotaData,
+          $StorageQuotaFilterComposer,
+          $StorageQuotaOrderingComposer,
+          $StorageQuotaAnnotationComposer,
+          $StorageQuotaCreateCompanionBuilder,
+          $StorageQuotaUpdateCompanionBuilder,
+          (
+            StorageQuotaData,
+            BaseReferences<_$GlassMailDatabase, StorageQuota, StorageQuotaData>,
+          ),
+          StorageQuotaData,
+          PrefetchHooks Function()
+        > {
   $StorageQuotaTableManager(_$GlassMailDatabase db, StorageQuota table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -8162,97 +9630,106 @@ class $StorageQuotaTableManager extends RootTableManager<
               $StorageQuotaOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $StorageQuotaAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> accountId = const Value.absent(),
-            Value<int> usedKb = const Value.absent(),
-            Value<int> limitKb = const Value.absent(),
-            Value<int> checkedAtEpochMillis = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              StorageQuotaCompanion(
-            accountId: accountId,
-            usedKb: usedKb,
-            limitKb: limitKb,
-            checkedAtEpochMillis: checkedAtEpochMillis,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String accountId,
-            required int usedKb,
-            required int limitKb,
-            required int checkedAtEpochMillis,
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              StorageQuotaCompanion.insert(
-            accountId: accountId,
-            usedKb: usedKb,
-            limitKb: limitKb,
-            checkedAtEpochMillis: checkedAtEpochMillis,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> accountId = const Value.absent(),
+                Value<int> usedKb = const Value.absent(),
+                Value<int> limitKb = const Value.absent(),
+                Value<int> checkedAtEpochMillis = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => StorageQuotaCompanion(
+                accountId: accountId,
+                usedKb: usedKb,
+                limitKb: limitKb,
+                checkedAtEpochMillis: checkedAtEpochMillis,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String accountId,
+                required int usedKb,
+                required int limitKb,
+                required int checkedAtEpochMillis,
+                Value<int> rowid = const Value.absent(),
+              }) => StorageQuotaCompanion.insert(
+                accountId: accountId,
+                usedKb: usedKb,
+                limitKb: limitKb,
+                checkedAtEpochMillis: checkedAtEpochMillis,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<StorageQuota, StorageQuotaData>(table),
-                    BaseReferences<_$GlassMailDatabase, StorageQuota,
-                        StorageQuotaData>(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<StorageQuota, StorageQuotaData>(table),
+                  BaseReferences<
+                    _$GlassMailDatabase,
+                    StorageQuota,
+                    StorageQuotaData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
-        ));
+        ),
+      );
 }
 
-typedef $StorageQuotaProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    StorageQuota,
-    StorageQuotaData,
-    $StorageQuotaFilterComposer,
-    $StorageQuotaOrderingComposer,
-    $StorageQuotaAnnotationComposer,
-    $StorageQuotaCreateCompanionBuilder,
-    $StorageQuotaUpdateCompanionBuilder,
-    (
+typedef $StorageQuotaProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      StorageQuota,
       StorageQuotaData,
-      BaseReferences<_$GlassMailDatabase, StorageQuota, StorageQuotaData>
-    ),
-    StorageQuotaData,
-    PrefetchHooks Function()>;
-typedef $PendingMutationsCreateCompanionBuilder = PendingMutationsCompanion
-    Function({
-  required String mutationId,
-  required String accountId,
-  Value<String?> mailboxId,
-  required String messageId,
-  Value<int?> targetUid,
-  required String type,
-  Value<String?> payload,
-  required String state,
-  required int retryCount,
-  required int createdAtEpochMillis,
-  Value<String?> lastErrorCode,
-  Value<String> previousFlags,
-  Value<String> previousLabels,
-  Value<int> rowid,
-});
-typedef $PendingMutationsUpdateCompanionBuilder = PendingMutationsCompanion
-    Function({
-  Value<String> mutationId,
-  Value<String> accountId,
-  Value<String?> mailboxId,
-  Value<String> messageId,
-  Value<int?> targetUid,
-  Value<String> type,
-  Value<String?> payload,
-  Value<String> state,
-  Value<int> retryCount,
-  Value<int> createdAtEpochMillis,
-  Value<String?> lastErrorCode,
-  Value<String> previousFlags,
-  Value<String> previousLabels,
-  Value<int> rowid,
-});
+      $StorageQuotaFilterComposer,
+      $StorageQuotaOrderingComposer,
+      $StorageQuotaAnnotationComposer,
+      $StorageQuotaCreateCompanionBuilder,
+      $StorageQuotaUpdateCompanionBuilder,
+      (
+        StorageQuotaData,
+        BaseReferences<_$GlassMailDatabase, StorageQuota, StorageQuotaData>,
+      ),
+      StorageQuotaData,
+      PrefetchHooks Function()
+    >;
+typedef $PendingMutationsCreateCompanionBuilder =
+    PendingMutationsCompanion Function({
+      required String mutationId,
+      required String accountId,
+      Value<String?> mailboxId,
+      required String messageId,
+      Value<int?> targetUid,
+      required String type,
+      Value<String?> payload,
+      required String state,
+      required int retryCount,
+      required int createdAtEpochMillis,
+      Value<String?> lastErrorCode,
+      Value<String> previousFlags,
+      Value<String> previousLabels,
+      Value<int> rowid,
+    });
+typedef $PendingMutationsUpdateCompanionBuilder =
+    PendingMutationsCompanion Function({
+      Value<String> mutationId,
+      Value<String> accountId,
+      Value<String?> mailboxId,
+      Value<String> messageId,
+      Value<int?> targetUid,
+      Value<String> type,
+      Value<String?> payload,
+      Value<String> state,
+      Value<int> retryCount,
+      Value<int> createdAtEpochMillis,
+      Value<String?> lastErrorCode,
+      Value<String> previousFlags,
+      Value<String> previousLabels,
+      Value<int> rowid,
+    });
 
-final class $PendingMutationsReferences extends BaseReferences<
-    _$GlassMailDatabase, PendingMutations, PendingMutation> {
+final class $PendingMutationsReferences
+    extends
+        BaseReferences<_$GlassMailDatabase, PendingMutations, PendingMutation> {
   $PendingMutationsReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static Accounts _accountIdTable(_$GlassMailDatabase db) => db.accounts
@@ -8261,12 +9738,15 @@ final class $PendingMutationsReferences extends BaseReferences<
   $AccountsProcessedTableManager get accountId {
     final $_column = $_itemColumn<String>('accountId')!;
 
-    final manager = $AccountsTableManager($_db, $_db.accounts)
-        .filter((f) => f.accountId.sqlEquals($_column));
+    final manager = $AccountsTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.accountId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 
   static Messages _messageIdTable(_$GlassMailDatabase db) => db.messages
@@ -8275,12 +9755,15 @@ final class $PendingMutationsReferences extends BaseReferences<
   $MessagesProcessedTableManager get messageId {
     final $_column = $_itemColumn<String>('messageId')!;
 
-    final manager = $MessagesTableManager($_db, $_db.messages)
-        .filter((f) => f.messageId.sqlEquals($_column));
+    final manager = $MessagesTableManager(
+      $_db,
+      $_db.messages,
+    ).filter((f) => f.messageId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_messageIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 }
 
@@ -8294,77 +9777,103 @@ class $PendingMutationsFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get mutationId => $composableBuilder(
-      column: $table.mutationId, builder: (column) => ColumnFilters(column));
+    column: $table.mutationId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get mailboxId => $composableBuilder(
-      column: $table.mailboxId, builder: (column) => ColumnFilters(column));
+    column: $table.mailboxId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get targetUid => $composableBuilder(
-      column: $table.targetUid, builder: (column) => ColumnFilters(column));
+    column: $table.targetUid,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get type => $composableBuilder(
-      column: $table.type, builder: (column) => ColumnFilters(column));
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get payload => $composableBuilder(
-      column: $table.payload, builder: (column) => ColumnFilters(column));
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get state => $composableBuilder(
-      column: $table.state, builder: (column) => ColumnFilters(column));
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get retryCount => $composableBuilder(
-      column: $table.retryCount, builder: (column) => ColumnFilters(column));
+    column: $table.retryCount,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get createdAtEpochMillis => $composableBuilder(
-      column: $table.createdAtEpochMillis,
-      builder: (column) => ColumnFilters(column));
+    column: $table.createdAtEpochMillis,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get lastErrorCode => $composableBuilder(
-      column: $table.lastErrorCode, builder: (column) => ColumnFilters(column));
+    column: $table.lastErrorCode,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get previousFlags => $composableBuilder(
-      column: $table.previousFlags, builder: (column) => ColumnFilters(column));
+    column: $table.previousFlags,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get previousLabels => $composableBuilder(
-      column: $table.previousLabels,
-      builder: (column) => ColumnFilters(column));
+    column: $table.previousLabels,
+    builder: (column) => ColumnFilters(column),
+  );
 
   $AccountsFilterComposer get accountId {
     final $AccountsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsFilterComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $MessagesFilterComposer get messageId {
     final $MessagesFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesFilterComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesFilterComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -8379,79 +9888,103 @@ class $PendingMutationsOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get mutationId => $composableBuilder(
-      column: $table.mutationId, builder: (column) => ColumnOrderings(column));
+    column: $table.mutationId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get mailboxId => $composableBuilder(
-      column: $table.mailboxId, builder: (column) => ColumnOrderings(column));
+    column: $table.mailboxId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get targetUid => $composableBuilder(
-      column: $table.targetUid, builder: (column) => ColumnOrderings(column));
+    column: $table.targetUid,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get type => $composableBuilder(
-      column: $table.type, builder: (column) => ColumnOrderings(column));
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get payload => $composableBuilder(
-      column: $table.payload, builder: (column) => ColumnOrderings(column));
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get state => $composableBuilder(
-      column: $table.state, builder: (column) => ColumnOrderings(column));
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get retryCount => $composableBuilder(
-      column: $table.retryCount, builder: (column) => ColumnOrderings(column));
+    column: $table.retryCount,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get createdAtEpochMillis => $composableBuilder(
-      column: $table.createdAtEpochMillis,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.createdAtEpochMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get lastErrorCode => $composableBuilder(
-      column: $table.lastErrorCode,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.lastErrorCode,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get previousFlags => $composableBuilder(
-      column: $table.previousFlags,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.previousFlags,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get previousLabels => $composableBuilder(
-      column: $table.previousLabels,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.previousLabels,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   $AccountsOrderingComposer get accountId {
     final $AccountsOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsOrderingComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $MessagesOrderingComposer get messageId {
     final $MessagesOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesOrderingComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesOrderingComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -8466,7 +9999,9 @@ class $PendingMutationsAnnotationComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   GeneratedColumn<String> get mutationId => $composableBuilder(
-      column: $table.mutationId, builder: (column) => column);
+    column: $table.mutationId,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get mailboxId =>
       $composableBuilder(column: $table.mailboxId, builder: (column) => column);
@@ -8484,75 +10019,95 @@ class $PendingMutationsAnnotationComposer
       $composableBuilder(column: $table.state, builder: (column) => column);
 
   GeneratedColumn<int> get retryCount => $composableBuilder(
-      column: $table.retryCount, builder: (column) => column);
+    column: $table.retryCount,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get createdAtEpochMillis => $composableBuilder(
-      column: $table.createdAtEpochMillis, builder: (column) => column);
+    column: $table.createdAtEpochMillis,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get lastErrorCode => $composableBuilder(
-      column: $table.lastErrorCode, builder: (column) => column);
+    column: $table.lastErrorCode,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get previousFlags => $composableBuilder(
-      column: $table.previousFlags, builder: (column) => column);
+    column: $table.previousFlags,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get previousLabels => $composableBuilder(
-      column: $table.previousLabels, builder: (column) => column);
+    column: $table.previousLabels,
+    builder: (column) => column,
+  );
 
   $AccountsAnnotationComposer get accountId {
     final $AccountsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsAnnotationComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $MessagesAnnotationComposer get messageId {
     final $MessagesAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.messageId,
-        referencedTable: $db.messages,
-        getReferencedColumn: (t) => t.messageId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MessagesAnnotationComposer(
-              $db: $db,
-              $table: $db.messages,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.messageId,
+      referencedTable: $db.messages,
+      getReferencedColumn: (t) => t.messageId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MessagesAnnotationComposer(
+            $db: $db,
+            $table: $db.messages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
 
-class $PendingMutationsTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    PendingMutations,
-    PendingMutation,
-    $PendingMutationsFilterComposer,
-    $PendingMutationsOrderingComposer,
-    $PendingMutationsAnnotationComposer,
-    $PendingMutationsCreateCompanionBuilder,
-    $PendingMutationsUpdateCompanionBuilder,
-    (PendingMutation, $PendingMutationsReferences),
-    PendingMutation,
-    PrefetchHooks Function({bool accountId, bool messageId})> {
+class $PendingMutationsTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          PendingMutations,
+          PendingMutation,
+          $PendingMutationsFilterComposer,
+          $PendingMutationsOrderingComposer,
+          $PendingMutationsAnnotationComposer,
+          $PendingMutationsCreateCompanionBuilder,
+          $PendingMutationsUpdateCompanionBuilder,
+          (PendingMutation, $PendingMutationsReferences),
+          PendingMutation,
+          PrefetchHooks Function({bool accountId, bool messageId})
+        > {
   $PendingMutationsTableManager(_$GlassMailDatabase db, PendingMutations table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -8561,82 +10116,85 @@ class $PendingMutationsTableManager extends RootTableManager<
               $PendingMutationsOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $PendingMutationsAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> mutationId = const Value.absent(),
-            Value<String> accountId = const Value.absent(),
-            Value<String?> mailboxId = const Value.absent(),
-            Value<String> messageId = const Value.absent(),
-            Value<int?> targetUid = const Value.absent(),
-            Value<String> type = const Value.absent(),
-            Value<String?> payload = const Value.absent(),
-            Value<String> state = const Value.absent(),
-            Value<int> retryCount = const Value.absent(),
-            Value<int> createdAtEpochMillis = const Value.absent(),
-            Value<String?> lastErrorCode = const Value.absent(),
-            Value<String> previousFlags = const Value.absent(),
-            Value<String> previousLabels = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              PendingMutationsCompanion(
-            mutationId: mutationId,
-            accountId: accountId,
-            mailboxId: mailboxId,
-            messageId: messageId,
-            targetUid: targetUid,
-            type: type,
-            payload: payload,
-            state: state,
-            retryCount: retryCount,
-            createdAtEpochMillis: createdAtEpochMillis,
-            lastErrorCode: lastErrorCode,
-            previousFlags: previousFlags,
-            previousLabels: previousLabels,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String mutationId,
-            required String accountId,
-            Value<String?> mailboxId = const Value.absent(),
-            required String messageId,
-            Value<int?> targetUid = const Value.absent(),
-            required String type,
-            Value<String?> payload = const Value.absent(),
-            required String state,
-            required int retryCount,
-            required int createdAtEpochMillis,
-            Value<String?> lastErrorCode = const Value.absent(),
-            Value<String> previousFlags = const Value.absent(),
-            Value<String> previousLabels = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              PendingMutationsCompanion.insert(
-            mutationId: mutationId,
-            accountId: accountId,
-            mailboxId: mailboxId,
-            messageId: messageId,
-            targetUid: targetUid,
-            type: type,
-            payload: payload,
-            state: state,
-            retryCount: retryCount,
-            createdAtEpochMillis: createdAtEpochMillis,
-            lastErrorCode: lastErrorCode,
-            previousFlags: previousFlags,
-            previousLabels: previousLabels,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> mutationId = const Value.absent(),
+                Value<String> accountId = const Value.absent(),
+                Value<String?> mailboxId = const Value.absent(),
+                Value<String> messageId = const Value.absent(),
+                Value<int?> targetUid = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String?> payload = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<int> createdAtEpochMillis = const Value.absent(),
+                Value<String?> lastErrorCode = const Value.absent(),
+                Value<String> previousFlags = const Value.absent(),
+                Value<String> previousLabels = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PendingMutationsCompanion(
+                mutationId: mutationId,
+                accountId: accountId,
+                mailboxId: mailboxId,
+                messageId: messageId,
+                targetUid: targetUid,
+                type: type,
+                payload: payload,
+                state: state,
+                retryCount: retryCount,
+                createdAtEpochMillis: createdAtEpochMillis,
+                lastErrorCode: lastErrorCode,
+                previousFlags: previousFlags,
+                previousLabels: previousLabels,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String mutationId,
+                required String accountId,
+                Value<String?> mailboxId = const Value.absent(),
+                required String messageId,
+                Value<int?> targetUid = const Value.absent(),
+                required String type,
+                Value<String?> payload = const Value.absent(),
+                required String state,
+                required int retryCount,
+                required int createdAtEpochMillis,
+                Value<String?> lastErrorCode = const Value.absent(),
+                Value<String> previousFlags = const Value.absent(),
+                Value<String> previousLabels = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PendingMutationsCompanion.insert(
+                mutationId: mutationId,
+                accountId: accountId,
+                mailboxId: mailboxId,
+                messageId: messageId,
+                targetUid: targetUid,
+                type: type,
+                payload: payload,
+                state: state,
+                retryCount: retryCount,
+                createdAtEpochMillis: createdAtEpochMillis,
+                lastErrorCode: lastErrorCode,
+                previousFlags: previousFlags,
+                previousLabels: previousLabels,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<PendingMutations, PendingMutation>(table),
-                    $PendingMutationsReferences(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<PendingMutations, PendingMutation>(table),
+                  $PendingMutationsReferences(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: ({accountId = false, messageId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
+              addJoins:
+                  <
+                    T extends TableManagerState<
                       dynamic,
                       dynamic,
                       dynamic,
@@ -8647,75 +10205,85 @@ class $PendingMutationsTableManager extends RootTableManager<
                       dynamic,
                       dynamic,
                       dynamic,
-                      dynamic>>(state) {
-                if (accountId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.accountId,
-                    referencedTable:
-                        $PendingMutationsReferences._accountIdTable(db),
-                    referencedColumn: $PendingMutationsReferences
-                        ._accountIdTable(db)
-                        .accountId,
-                  ) as T;
-                }
-                if (messageId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.messageId,
-                    referencedTable:
-                        $PendingMutationsReferences._messageIdTable(db),
-                    referencedColumn: $PendingMutationsReferences
-                        ._messageIdTable(db)
-                        .messageId,
-                  ) as T;
-                }
+                      dynamic
+                    >
+                  >(state) {
+                    if (accountId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.accountId,
+                                referencedTable: $PendingMutationsReferences
+                                    ._accountIdTable(db),
+                                referencedColumn: $PendingMutationsReferences
+                                    ._accountIdTable(db)
+                                    .accountId,
+                              )
+                              as T;
+                    }
+                    if (messageId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.messageId,
+                                referencedTable: $PendingMutationsReferences
+                                    ._messageIdTable(db),
+                                referencedColumn: $PendingMutationsReferences
+                                    ._messageIdTable(db)
+                                    .messageId,
+                              )
+                              as T;
+                    }
 
-                return state;
-              },
+                    return state;
+                  },
               getPrefetchedDataCallback: (items) async {
                 return [];
               },
             );
           },
-        ));
+        ),
+      );
 }
 
-typedef $PendingMutationsProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    PendingMutations,
-    PendingMutation,
-    $PendingMutationsFilterComposer,
-    $PendingMutationsOrderingComposer,
-    $PendingMutationsAnnotationComposer,
-    $PendingMutationsCreateCompanionBuilder,
-    $PendingMutationsUpdateCompanionBuilder,
-    (PendingMutation, $PendingMutationsReferences),
-    PendingMutation,
-    PrefetchHooks Function({bool accountId, bool messageId})>;
-typedef $SyncCheckpointsCreateCompanionBuilder = SyncCheckpointsCompanion
-    Function({
-  required String mailboxId,
-  required String accountId,
-  required int uidValidity,
-  required int highestKnownUid,
-  required int syncGeneration,
-  Value<int?> lastSuccessfulSyncEpochMillis,
-  Value<int> rowid,
-});
-typedef $SyncCheckpointsUpdateCompanionBuilder = SyncCheckpointsCompanion
-    Function({
-  Value<String> mailboxId,
-  Value<String> accountId,
-  Value<int> uidValidity,
-  Value<int> highestKnownUid,
-  Value<int> syncGeneration,
-  Value<int?> lastSuccessfulSyncEpochMillis,
-  Value<int> rowid,
-});
+typedef $PendingMutationsProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      PendingMutations,
+      PendingMutation,
+      $PendingMutationsFilterComposer,
+      $PendingMutationsOrderingComposer,
+      $PendingMutationsAnnotationComposer,
+      $PendingMutationsCreateCompanionBuilder,
+      $PendingMutationsUpdateCompanionBuilder,
+      (PendingMutation, $PendingMutationsReferences),
+      PendingMutation,
+      PrefetchHooks Function({bool accountId, bool messageId})
+    >;
+typedef $SyncCheckpointsCreateCompanionBuilder =
+    SyncCheckpointsCompanion Function({
+      required String mailboxId,
+      required String accountId,
+      required int uidValidity,
+      required int highestKnownUid,
+      required int syncGeneration,
+      Value<int?> lastSuccessfulSyncEpochMillis,
+      Value<int> rowid,
+    });
+typedef $SyncCheckpointsUpdateCompanionBuilder =
+    SyncCheckpointsCompanion Function({
+      Value<String> mailboxId,
+      Value<String> accountId,
+      Value<int> uidValidity,
+      Value<int> highestKnownUid,
+      Value<int> syncGeneration,
+      Value<int?> lastSuccessfulSyncEpochMillis,
+      Value<int> rowid,
+    });
 
-final class $SyncCheckpointsReferences extends BaseReferences<
-    _$GlassMailDatabase, SyncCheckpoints, SyncCheckpoint> {
+final class $SyncCheckpointsReferences
+    extends
+        BaseReferences<_$GlassMailDatabase, SyncCheckpoints, SyncCheckpoint> {
   $SyncCheckpointsReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static Mailboxes _mailboxIdTable(_$GlassMailDatabase db) => db.mailboxes
@@ -8724,12 +10292,15 @@ final class $SyncCheckpointsReferences extends BaseReferences<
   $MailboxesProcessedTableManager get mailboxId {
     final $_column = $_itemColumn<String>('mailboxId')!;
 
-    final manager = $MailboxesTableManager($_db, $_db.mailboxes)
-        .filter((f) => f.mailboxId.sqlEquals($_column));
+    final manager = $MailboxesTableManager(
+      $_db,
+      $_db.mailboxes,
+    ).filter((f) => f.mailboxId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_mailboxIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 
   static Accounts _accountIdTable(_$GlassMailDatabase db) => db.accounts
@@ -8738,12 +10309,15 @@ final class $SyncCheckpointsReferences extends BaseReferences<
   $AccountsProcessedTableManager get accountId {
     final $_column = $_itemColumn<String>('accountId')!;
 
-    final manager = $AccountsTableManager($_db, $_db.accounts)
-        .filter((f) => f.accountId.sqlEquals($_column));
+    final manager = $AccountsTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.accountId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 }
 
@@ -8757,57 +10331,68 @@ class $SyncCheckpointsFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<int> get uidValidity => $composableBuilder(
-      column: $table.uidValidity, builder: (column) => ColumnFilters(column));
+    column: $table.uidValidity,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get highestKnownUid => $composableBuilder(
-      column: $table.highestKnownUid,
-      builder: (column) => ColumnFilters(column));
+    column: $table.highestKnownUid,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get syncGeneration => $composableBuilder(
-      column: $table.syncGeneration,
-      builder: (column) => ColumnFilters(column));
+    column: $table.syncGeneration,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get lastSuccessfulSyncEpochMillis => $composableBuilder(
-      column: $table.lastSuccessfulSyncEpochMillis,
-      builder: (column) => ColumnFilters(column));
+    column: $table.lastSuccessfulSyncEpochMillis,
+    builder: (column) => ColumnFilters(column),
+  );
 
   $MailboxesFilterComposer get mailboxId {
     final $MailboxesFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.mailboxId,
-        referencedTable: $db.mailboxes,
-        getReferencedColumn: (t) => t.mailboxId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxesFilterComposer(
-              $db: $db,
-              $table: $db.mailboxes,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.mailboxId,
+      referencedTable: $db.mailboxes,
+      getReferencedColumn: (t) => t.mailboxId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxesFilterComposer(
+            $db: $db,
+            $table: $db.mailboxes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $AccountsFilterComposer get accountId {
     final $AccountsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsFilterComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -8822,57 +10407,68 @@ class $SyncCheckpointsOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<int> get uidValidity => $composableBuilder(
-      column: $table.uidValidity, builder: (column) => ColumnOrderings(column));
+    column: $table.uidValidity,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get highestKnownUid => $composableBuilder(
-      column: $table.highestKnownUid,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.highestKnownUid,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get syncGeneration => $composableBuilder(
-      column: $table.syncGeneration,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.syncGeneration,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get lastSuccessfulSyncEpochMillis => $composableBuilder(
-      column: $table.lastSuccessfulSyncEpochMillis,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.lastSuccessfulSyncEpochMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   $MailboxesOrderingComposer get mailboxId {
     final $MailboxesOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.mailboxId,
-        referencedTable: $db.mailboxes,
-        getReferencedColumn: (t) => t.mailboxId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxesOrderingComposer(
-              $db: $db,
-              $table: $db.mailboxes,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.mailboxId,
+      referencedTable: $db.mailboxes,
+      getReferencedColumn: (t) => t.mailboxId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxesOrderingComposer(
+            $db: $db,
+            $table: $db.mailboxes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $AccountsOrderingComposer get accountId {
     final $AccountsOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsOrderingComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -8887,73 +10483,90 @@ class $SyncCheckpointsAnnotationComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   GeneratedColumn<int> get uidValidity => $composableBuilder(
-      column: $table.uidValidity, builder: (column) => column);
+    column: $table.uidValidity,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get highestKnownUid => $composableBuilder(
-      column: $table.highestKnownUid, builder: (column) => column);
+    column: $table.highestKnownUid,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get syncGeneration => $composableBuilder(
-      column: $table.syncGeneration, builder: (column) => column);
+    column: $table.syncGeneration,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get lastSuccessfulSyncEpochMillis => $composableBuilder(
-      column: $table.lastSuccessfulSyncEpochMillis,
-      builder: (column) => column);
+    column: $table.lastSuccessfulSyncEpochMillis,
+    builder: (column) => column,
+  );
 
   $MailboxesAnnotationComposer get mailboxId {
     final $MailboxesAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.mailboxId,
-        referencedTable: $db.mailboxes,
-        getReferencedColumn: (t) => t.mailboxId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $MailboxesAnnotationComposer(
-              $db: $db,
-              $table: $db.mailboxes,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.mailboxId,
+      referencedTable: $db.mailboxes,
+      getReferencedColumn: (t) => t.mailboxId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $MailboxesAnnotationComposer(
+            $db: $db,
+            $table: $db.mailboxes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 
   $AccountsAnnotationComposer get accountId {
     final $AccountsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsAnnotationComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
 
-class $SyncCheckpointsTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    SyncCheckpoints,
-    SyncCheckpoint,
-    $SyncCheckpointsFilterComposer,
-    $SyncCheckpointsOrderingComposer,
-    $SyncCheckpointsAnnotationComposer,
-    $SyncCheckpointsCreateCompanionBuilder,
-    $SyncCheckpointsUpdateCompanionBuilder,
-    (SyncCheckpoint, $SyncCheckpointsReferences),
-    SyncCheckpoint,
-    PrefetchHooks Function({bool mailboxId, bool accountId})> {
+class $SyncCheckpointsTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          SyncCheckpoints,
+          SyncCheckpoint,
+          $SyncCheckpointsFilterComposer,
+          $SyncCheckpointsOrderingComposer,
+          $SyncCheckpointsAnnotationComposer,
+          $SyncCheckpointsCreateCompanionBuilder,
+          $SyncCheckpointsUpdateCompanionBuilder,
+          (SyncCheckpoint, $SyncCheckpointsReferences),
+          SyncCheckpoint,
+          PrefetchHooks Function({bool mailboxId, bool accountId})
+        > {
   $SyncCheckpointsTableManager(_$GlassMailDatabase db, SyncCheckpoints table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -8962,54 +10575,59 @@ class $SyncCheckpointsTableManager extends RootTableManager<
               $SyncCheckpointsOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $SyncCheckpointsAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> mailboxId = const Value.absent(),
-            Value<String> accountId = const Value.absent(),
-            Value<int> uidValidity = const Value.absent(),
-            Value<int> highestKnownUid = const Value.absent(),
-            Value<int> syncGeneration = const Value.absent(),
-            Value<int?> lastSuccessfulSyncEpochMillis = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              SyncCheckpointsCompanion(
-            mailboxId: mailboxId,
-            accountId: accountId,
-            uidValidity: uidValidity,
-            highestKnownUid: highestKnownUid,
-            syncGeneration: syncGeneration,
-            lastSuccessfulSyncEpochMillis: lastSuccessfulSyncEpochMillis,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String mailboxId,
-            required String accountId,
-            required int uidValidity,
-            required int highestKnownUid,
-            required int syncGeneration,
-            Value<int?> lastSuccessfulSyncEpochMillis = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              SyncCheckpointsCompanion.insert(
-            mailboxId: mailboxId,
-            accountId: accountId,
-            uidValidity: uidValidity,
-            highestKnownUid: highestKnownUid,
-            syncGeneration: syncGeneration,
-            lastSuccessfulSyncEpochMillis: lastSuccessfulSyncEpochMillis,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> mailboxId = const Value.absent(),
+                Value<String> accountId = const Value.absent(),
+                Value<int> uidValidity = const Value.absent(),
+                Value<int> highestKnownUid = const Value.absent(),
+                Value<int> syncGeneration = const Value.absent(),
+                Value<int?> lastSuccessfulSyncEpochMillis =
+                    const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncCheckpointsCompanion(
+                mailboxId: mailboxId,
+                accountId: accountId,
+                uidValidity: uidValidity,
+                highestKnownUid: highestKnownUid,
+                syncGeneration: syncGeneration,
+                lastSuccessfulSyncEpochMillis: lastSuccessfulSyncEpochMillis,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String mailboxId,
+                required String accountId,
+                required int uidValidity,
+                required int highestKnownUid,
+                required int syncGeneration,
+                Value<int?> lastSuccessfulSyncEpochMillis =
+                    const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncCheckpointsCompanion.insert(
+                mailboxId: mailboxId,
+                accountId: accountId,
+                uidValidity: uidValidity,
+                highestKnownUid: highestKnownUid,
+                syncGeneration: syncGeneration,
+                lastSuccessfulSyncEpochMillis: lastSuccessfulSyncEpochMillis,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<SyncCheckpoints, SyncCheckpoint>(table),
-                    $SyncCheckpointsReferences(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<SyncCheckpoints, SyncCheckpoint>(table),
+                  $SyncCheckpointsReferences(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: ({mailboxId = false, accountId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
+              addJoins:
+                  <
+                    T extends TableManagerState<
                       dynamic,
                       dynamic,
                       dynamic,
@@ -9020,82 +10638,93 @@ class $SyncCheckpointsTableManager extends RootTableManager<
                       dynamic,
                       dynamic,
                       dynamic,
-                      dynamic>>(state) {
-                if (mailboxId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.mailboxId,
-                    referencedTable:
-                        $SyncCheckpointsReferences._mailboxIdTable(db),
-                    referencedColumn: $SyncCheckpointsReferences
-                        ._mailboxIdTable(db)
-                        .mailboxId,
-                  ) as T;
-                }
-                if (accountId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.accountId,
-                    referencedTable:
-                        $SyncCheckpointsReferences._accountIdTable(db),
-                    referencedColumn: $SyncCheckpointsReferences
-                        ._accountIdTable(db)
-                        .accountId,
-                  ) as T;
-                }
+                      dynamic
+                    >
+                  >(state) {
+                    if (mailboxId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.mailboxId,
+                                referencedTable: $SyncCheckpointsReferences
+                                    ._mailboxIdTable(db),
+                                referencedColumn: $SyncCheckpointsReferences
+                                    ._mailboxIdTable(db)
+                                    .mailboxId,
+                              )
+                              as T;
+                    }
+                    if (accountId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.accountId,
+                                referencedTable: $SyncCheckpointsReferences
+                                    ._accountIdTable(db),
+                                referencedColumn: $SyncCheckpointsReferences
+                                    ._accountIdTable(db)
+                                    .accountId,
+                              )
+                              as T;
+                    }
 
-                return state;
-              },
+                    return state;
+                  },
               getPrefetchedDataCallback: (items) async {
                 return [];
               },
             );
           },
-        ));
+        ),
+      );
 }
 
-typedef $SyncCheckpointsProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    SyncCheckpoints,
-    SyncCheckpoint,
-    $SyncCheckpointsFilterComposer,
-    $SyncCheckpointsOrderingComposer,
-    $SyncCheckpointsAnnotationComposer,
-    $SyncCheckpointsCreateCompanionBuilder,
-    $SyncCheckpointsUpdateCompanionBuilder,
-    (SyncCheckpoint, $SyncCheckpointsReferences),
-    SyncCheckpoint,
-    PrefetchHooks Function({bool mailboxId, bool accountId})>;
-typedef $DraftsCreateCompanionBuilder = DraftsCompanion Function({
-  required String draftId,
-  required String accountId,
-  required String toAddresses,
-  required String ccAddresses,
-  required String bccAddresses,
-  required String subject,
-  required String body,
-  Value<String?> inReplyTo,
-  required String references,
-  required String status,
-  required int updatedAtEpochMillis,
-  required String attachments,
-  Value<int> rowid,
-});
-typedef $DraftsUpdateCompanionBuilder = DraftsCompanion Function({
-  Value<String> draftId,
-  Value<String> accountId,
-  Value<String> toAddresses,
-  Value<String> ccAddresses,
-  Value<String> bccAddresses,
-  Value<String> subject,
-  Value<String> body,
-  Value<String?> inReplyTo,
-  Value<String> references,
-  Value<String> status,
-  Value<int> updatedAtEpochMillis,
-  Value<String> attachments,
-  Value<int> rowid,
-});
+typedef $SyncCheckpointsProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      SyncCheckpoints,
+      SyncCheckpoint,
+      $SyncCheckpointsFilterComposer,
+      $SyncCheckpointsOrderingComposer,
+      $SyncCheckpointsAnnotationComposer,
+      $SyncCheckpointsCreateCompanionBuilder,
+      $SyncCheckpointsUpdateCompanionBuilder,
+      (SyncCheckpoint, $SyncCheckpointsReferences),
+      SyncCheckpoint,
+      PrefetchHooks Function({bool mailboxId, bool accountId})
+    >;
+typedef $DraftsCreateCompanionBuilder =
+    DraftsCompanion Function({
+      required String draftId,
+      required String accountId,
+      required String toAddresses,
+      required String ccAddresses,
+      required String bccAddresses,
+      required String subject,
+      required String body,
+      Value<String?> inReplyTo,
+      required String references,
+      required String status,
+      required int updatedAtEpochMillis,
+      required String attachments,
+      Value<int> rowid,
+    });
+typedef $DraftsUpdateCompanionBuilder =
+    DraftsCompanion Function({
+      Value<String> draftId,
+      Value<String> accountId,
+      Value<String> toAddresses,
+      Value<String> ccAddresses,
+      Value<String> bccAddresses,
+      Value<String> subject,
+      Value<String> body,
+      Value<String?> inReplyTo,
+      Value<String> references,
+      Value<String> status,
+      Value<int> updatedAtEpochMillis,
+      Value<String> attachments,
+      Value<int> rowid,
+    });
 
 final class $DraftsReferences
     extends BaseReferences<_$GlassMailDatabase, Drafts, Draft> {
@@ -9107,12 +10736,15 @@ final class $DraftsReferences
   $AccountsProcessedTableManager get accountId {
     final $_column = $_itemColumn<String>('accountId')!;
 
-    final manager = $AccountsTableManager($_db, $_db.accounts)
-        .filter((f) => f.accountId.sqlEquals($_column));
+    final manager = $AccountsTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.accountId.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
   }
 }
 
@@ -9125,56 +10757,80 @@ class $DraftsFilterComposer extends Composer<_$GlassMailDatabase, Drafts> {
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get draftId => $composableBuilder(
-      column: $table.draftId, builder: (column) => ColumnFilters(column));
+    column: $table.draftId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get toAddresses => $composableBuilder(
-      column: $table.toAddresses, builder: (column) => ColumnFilters(column));
+    column: $table.toAddresses,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get ccAddresses => $composableBuilder(
-      column: $table.ccAddresses, builder: (column) => ColumnFilters(column));
+    column: $table.ccAddresses,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get bccAddresses => $composableBuilder(
-      column: $table.bccAddresses, builder: (column) => ColumnFilters(column));
+    column: $table.bccAddresses,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get subject => $composableBuilder(
-      column: $table.subject, builder: (column) => ColumnFilters(column));
+    column: $table.subject,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get body => $composableBuilder(
-      column: $table.body, builder: (column) => ColumnFilters(column));
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get inReplyTo => $composableBuilder(
-      column: $table.inReplyTo, builder: (column) => ColumnFilters(column));
+    column: $table.inReplyTo,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get references => $composableBuilder(
-      column: $table.references, builder: (column) => ColumnFilters(column));
+    column: $table.references,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get status => $composableBuilder(
-      column: $table.status, builder: (column) => ColumnFilters(column));
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get updatedAtEpochMillis => $composableBuilder(
-      column: $table.updatedAtEpochMillis,
-      builder: (column) => ColumnFilters(column));
+    column: $table.updatedAtEpochMillis,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get attachments => $composableBuilder(
-      column: $table.attachments, builder: (column) => ColumnFilters(column));
+    column: $table.attachments,
+    builder: (column) => ColumnFilters(column),
+  );
 
   $AccountsFilterComposer get accountId {
     final $AccountsFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsFilterComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -9188,57 +10844,80 @@ class $DraftsOrderingComposer extends Composer<_$GlassMailDatabase, Drafts> {
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get draftId => $composableBuilder(
-      column: $table.draftId, builder: (column) => ColumnOrderings(column));
+    column: $table.draftId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get toAddresses => $composableBuilder(
-      column: $table.toAddresses, builder: (column) => ColumnOrderings(column));
+    column: $table.toAddresses,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get ccAddresses => $composableBuilder(
-      column: $table.ccAddresses, builder: (column) => ColumnOrderings(column));
+    column: $table.ccAddresses,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get bccAddresses => $composableBuilder(
-      column: $table.bccAddresses,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.bccAddresses,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get subject => $composableBuilder(
-      column: $table.subject, builder: (column) => ColumnOrderings(column));
+    column: $table.subject,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get body => $composableBuilder(
-      column: $table.body, builder: (column) => ColumnOrderings(column));
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get inReplyTo => $composableBuilder(
-      column: $table.inReplyTo, builder: (column) => ColumnOrderings(column));
+    column: $table.inReplyTo,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get references => $composableBuilder(
-      column: $table.references, builder: (column) => ColumnOrderings(column));
+    column: $table.references,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get status => $composableBuilder(
-      column: $table.status, builder: (column) => ColumnOrderings(column));
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get updatedAtEpochMillis => $composableBuilder(
-      column: $table.updatedAtEpochMillis,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.updatedAtEpochMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<String> get attachments => $composableBuilder(
-      column: $table.attachments, builder: (column) => ColumnOrderings(column));
+    column: $table.attachments,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   $AccountsOrderingComposer get accountId {
     final $AccountsOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsOrderingComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
@@ -9255,13 +10934,19 @@ class $DraftsAnnotationComposer extends Composer<_$GlassMailDatabase, Drafts> {
       $composableBuilder(column: $table.draftId, builder: (column) => column);
 
   GeneratedColumn<String> get toAddresses => $composableBuilder(
-      column: $table.toAddresses, builder: (column) => column);
+    column: $table.toAddresses,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get ccAddresses => $composableBuilder(
-      column: $table.ccAddresses, builder: (column) => column);
+    column: $table.ccAddresses,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get bccAddresses => $composableBuilder(
-      column: $table.bccAddresses, builder: (column) => column);
+    column: $table.bccAddresses,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get subject =>
       $composableBuilder(column: $table.subject, builder: (column) => column);
@@ -9273,52 +10958,65 @@ class $DraftsAnnotationComposer extends Composer<_$GlassMailDatabase, Drafts> {
       $composableBuilder(column: $table.inReplyTo, builder: (column) => column);
 
   GeneratedColumn<String> get references => $composableBuilder(
-      column: $table.references, builder: (column) => column);
+    column: $table.references,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
   GeneratedColumn<int> get updatedAtEpochMillis => $composableBuilder(
-      column: $table.updatedAtEpochMillis, builder: (column) => column);
+    column: $table.updatedAtEpochMillis,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get attachments => $composableBuilder(
-      column: $table.attachments, builder: (column) => column);
+    column: $table.attachments,
+    builder: (column) => column,
+  );
 
   $AccountsAnnotationComposer get accountId {
     final $AccountsAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.accountId,
-        referencedTable: $db.accounts,
-        getReferencedColumn: (t) => t.accountId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $AccountsAnnotationComposer(
-              $db: $db,
-              $table: $db.accounts,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $AccountsAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return composer;
   }
 }
 
-class $DraftsTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    Drafts,
-    Draft,
-    $DraftsFilterComposer,
-    $DraftsOrderingComposer,
-    $DraftsAnnotationComposer,
-    $DraftsCreateCompanionBuilder,
-    $DraftsUpdateCompanionBuilder,
-    (Draft, $DraftsReferences),
-    Draft,
-    PrefetchHooks Function({bool accountId})> {
+class $DraftsTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          Drafts,
+          Draft,
+          $DraftsFilterComposer,
+          $DraftsOrderingComposer,
+          $DraftsAnnotationComposer,
+          $DraftsCreateCompanionBuilder,
+          $DraftsUpdateCompanionBuilder,
+          (Draft, $DraftsReferences),
+          Draft,
+          PrefetchHooks Function({bool accountId})
+        > {
   $DraftsTableManager(_$GlassMailDatabase db, Drafts table)
-      : super(TableManagerState(
+    : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -9327,78 +11025,81 @@ class $DraftsTableManager extends RootTableManager<
               $DraftsOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $DraftsAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> draftId = const Value.absent(),
-            Value<String> accountId = const Value.absent(),
-            Value<String> toAddresses = const Value.absent(),
-            Value<String> ccAddresses = const Value.absent(),
-            Value<String> bccAddresses = const Value.absent(),
-            Value<String> subject = const Value.absent(),
-            Value<String> body = const Value.absent(),
-            Value<String?> inReplyTo = const Value.absent(),
-            Value<String> references = const Value.absent(),
-            Value<String> status = const Value.absent(),
-            Value<int> updatedAtEpochMillis = const Value.absent(),
-            Value<String> attachments = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              DraftsCompanion(
-            draftId: draftId,
-            accountId: accountId,
-            toAddresses: toAddresses,
-            ccAddresses: ccAddresses,
-            bccAddresses: bccAddresses,
-            subject: subject,
-            body: body,
-            inReplyTo: inReplyTo,
-            references: references,
-            status: status,
-            updatedAtEpochMillis: updatedAtEpochMillis,
-            attachments: attachments,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String draftId,
-            required String accountId,
-            required String toAddresses,
-            required String ccAddresses,
-            required String bccAddresses,
-            required String subject,
-            required String body,
-            Value<String?> inReplyTo = const Value.absent(),
-            required String references,
-            required String status,
-            required int updatedAtEpochMillis,
-            required String attachments,
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              DraftsCompanion.insert(
-            draftId: draftId,
-            accountId: accountId,
-            toAddresses: toAddresses,
-            ccAddresses: ccAddresses,
-            bccAddresses: bccAddresses,
-            subject: subject,
-            body: body,
-            inReplyTo: inReplyTo,
-            references: references,
-            status: status,
-            updatedAtEpochMillis: updatedAtEpochMillis,
-            attachments: attachments,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> draftId = const Value.absent(),
+                Value<String> accountId = const Value.absent(),
+                Value<String> toAddresses = const Value.absent(),
+                Value<String> ccAddresses = const Value.absent(),
+                Value<String> bccAddresses = const Value.absent(),
+                Value<String> subject = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<String?> inReplyTo = const Value.absent(),
+                Value<String> references = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> updatedAtEpochMillis = const Value.absent(),
+                Value<String> attachments = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DraftsCompanion(
+                draftId: draftId,
+                accountId: accountId,
+                toAddresses: toAddresses,
+                ccAddresses: ccAddresses,
+                bccAddresses: bccAddresses,
+                subject: subject,
+                body: body,
+                inReplyTo: inReplyTo,
+                references: references,
+                status: status,
+                updatedAtEpochMillis: updatedAtEpochMillis,
+                attachments: attachments,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String draftId,
+                required String accountId,
+                required String toAddresses,
+                required String ccAddresses,
+                required String bccAddresses,
+                required String subject,
+                required String body,
+                Value<String?> inReplyTo = const Value.absent(),
+                required String references,
+                required String status,
+                required int updatedAtEpochMillis,
+                required String attachments,
+                Value<int> rowid = const Value.absent(),
+              }) => DraftsCompanion.insert(
+                draftId: draftId,
+                accountId: accountId,
+                toAddresses: toAddresses,
+                ccAddresses: ccAddresses,
+                bccAddresses: bccAddresses,
+                subject: subject,
+                body: body,
+                inReplyTo: inReplyTo,
+                references: references,
+                status: status,
+                updatedAtEpochMillis: updatedAtEpochMillis,
+                attachments: attachments,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<Drafts, Draft>(table),
-                    $DraftsReferences(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<Drafts, Draft>(table),
+                  $DraftsReferences(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: ({accountId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
+              addJoins:
+                  <
+                    T extends TableManagerState<
                       dynamic,
                       dynamic,
                       dynamic,
@@ -9409,51 +11110,60 @@ class $DraftsTableManager extends RootTableManager<
                       dynamic,
                       dynamic,
                       dynamic,
-                      dynamic>>(state) {
-                if (accountId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.accountId,
-                    referencedTable: $DraftsReferences._accountIdTable(db),
-                    referencedColumn:
-                        $DraftsReferences._accountIdTable(db).accountId,
-                  ) as T;
-                }
+                      dynamic
+                    >
+                  >(state) {
+                    if (accountId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.accountId,
+                                referencedTable: $DraftsReferences
+                                    ._accountIdTable(db),
+                                referencedColumn: $DraftsReferences
+                                    ._accountIdTable(db)
+                                    .accountId,
+                              )
+                              as T;
+                    }
 
-                return state;
-              },
+                    return state;
+                  },
               getPrefetchedDataCallback: (items) async {
                 return [];
               },
             );
           },
-        ));
+        ),
+      );
 }
 
-typedef $DraftsProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    Drafts,
-    Draft,
-    $DraftsFilterComposer,
-    $DraftsOrderingComposer,
-    $DraftsAnnotationComposer,
-    $DraftsCreateCompanionBuilder,
-    $DraftsUpdateCompanionBuilder,
-    (Draft, $DraftsReferences),
-    Draft,
-    PrefetchHooks Function({bool accountId})>;
-typedef $NotificationStateCreateCompanionBuilder = NotificationStateCompanion
-    Function({
-  required String accountId,
-  required int baselineEstablished,
-  Value<int> rowid,
-});
-typedef $NotificationStateUpdateCompanionBuilder = NotificationStateCompanion
-    Function({
-  Value<String> accountId,
-  Value<int> baselineEstablished,
-  Value<int> rowid,
-});
+typedef $DraftsProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      Drafts,
+      Draft,
+      $DraftsFilterComposer,
+      $DraftsOrderingComposer,
+      $DraftsAnnotationComposer,
+      $DraftsCreateCompanionBuilder,
+      $DraftsUpdateCompanionBuilder,
+      (Draft, $DraftsReferences),
+      Draft,
+      PrefetchHooks Function({bool accountId})
+    >;
+typedef $NotificationStateCreateCompanionBuilder =
+    NotificationStateCompanion Function({
+      required String accountId,
+      required int baselineEstablished,
+      Value<int> rowid,
+    });
+typedef $NotificationStateUpdateCompanionBuilder =
+    NotificationStateCompanion Function({
+      Value<String> accountId,
+      Value<int> baselineEstablished,
+      Value<int> rowid,
+    });
 
 class $NotificationStateFilterComposer
     extends Composer<_$GlassMailDatabase, NotificationState> {
@@ -9465,11 +11175,14 @@ class $NotificationStateFilterComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnFilters<String> get accountId => $composableBuilder(
-      column: $table.accountId, builder: (column) => ColumnFilters(column));
+    column: $table.accountId,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<int> get baselineEstablished => $composableBuilder(
-      column: $table.baselineEstablished,
-      builder: (column) => ColumnFilters(column));
+    column: $table.baselineEstablished,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $NotificationStateOrderingComposer
@@ -9482,11 +11195,14 @@ class $NotificationStateOrderingComposer
     super.$removeJoinBuilderFromRootComposer,
   });
   ColumnOrderings<String> get accountId => $composableBuilder(
-      column: $table.accountId, builder: (column) => ColumnOrderings(column));
+    column: $table.accountId,
+    builder: (column) => ColumnOrderings(column),
+  );
 
   ColumnOrderings<int> get baselineEstablished => $composableBuilder(
-      column: $table.baselineEstablished,
-      builder: (column) => ColumnOrderings(column));
+    column: $table.baselineEstablished,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $NotificationStateAnnotationComposer
@@ -9502,28 +11218,38 @@ class $NotificationStateAnnotationComposer
       $composableBuilder(column: $table.accountId, builder: (column) => column);
 
   GeneratedColumn<int> get baselineEstablished => $composableBuilder(
-      column: $table.baselineEstablished, builder: (column) => column);
+    column: $table.baselineEstablished,
+    builder: (column) => column,
+  );
 }
 
-class $NotificationStateTableManager extends RootTableManager<
-    _$GlassMailDatabase,
-    NotificationState,
-    NotificationStateData,
-    $NotificationStateFilterComposer,
-    $NotificationStateOrderingComposer,
-    $NotificationStateAnnotationComposer,
-    $NotificationStateCreateCompanionBuilder,
-    $NotificationStateUpdateCompanionBuilder,
-    (
-      NotificationStateData,
-      BaseReferences<_$GlassMailDatabase, NotificationState,
-          NotificationStateData>
-    ),
-    NotificationStateData,
-    PrefetchHooks Function()> {
+class $NotificationStateTableManager
+    extends
+        RootTableManager<
+          _$GlassMailDatabase,
+          NotificationState,
+          NotificationStateData,
+          $NotificationStateFilterComposer,
+          $NotificationStateOrderingComposer,
+          $NotificationStateAnnotationComposer,
+          $NotificationStateCreateCompanionBuilder,
+          $NotificationStateUpdateCompanionBuilder,
+          (
+            NotificationStateData,
+            BaseReferences<
+              _$GlassMailDatabase,
+              NotificationState,
+              NotificationStateData
+            >,
+          ),
+          NotificationStateData,
+          PrefetchHooks Function()
+        > {
   $NotificationStateTableManager(
-      _$GlassMailDatabase db, NotificationState table)
-      : super(TableManagerState(
+    _$GlassMailDatabase db,
+    NotificationState table,
+  ) : super(
+        TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
@@ -9532,54 +11258,64 @@ class $NotificationStateTableManager extends RootTableManager<
               $NotificationStateOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $NotificationStateAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback: ({
-            Value<String> accountId = const Value.absent(),
-            Value<int> baselineEstablished = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              NotificationStateCompanion(
-            accountId: accountId,
-            baselineEstablished: baselineEstablished,
-            rowid: rowid,
-          ),
-          createCompanionCallback: ({
-            required String accountId,
-            required int baselineEstablished,
-            Value<int> rowid = const Value.absent(),
-          }) =>
-              NotificationStateCompanion.insert(
-            accountId: accountId,
-            baselineEstablished: baselineEstablished,
-            rowid: rowid,
-          ),
+          updateCompanionCallback:
+              ({
+                Value<String> accountId = const Value.absent(),
+                Value<int> baselineEstablished = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => NotificationStateCompanion(
+                accountId: accountId,
+                baselineEstablished: baselineEstablished,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String accountId,
+                required int baselineEstablished,
+                Value<int> rowid = const Value.absent(),
+              }) => NotificationStateCompanion.insert(
+                accountId: accountId,
+                baselineEstablished: baselineEstablished,
+                rowid: rowid,
+              ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable<NotificationState, NotificationStateData>(
-                        table),
-                    BaseReferences<_$GlassMailDatabase, NotificationState,
-                        NotificationStateData>(db, table, e)
-                  ))
+              .map(
+                (e) => (
+                  e.readTable<NotificationState, NotificationStateData>(table),
+                  BaseReferences<
+                    _$GlassMailDatabase,
+                    NotificationState,
+                    NotificationStateData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
-        ));
+        ),
+      );
 }
 
-typedef $NotificationStateProcessedTableManager = ProcessedTableManager<
-    _$GlassMailDatabase,
-    NotificationState,
-    NotificationStateData,
-    $NotificationStateFilterComposer,
-    $NotificationStateOrderingComposer,
-    $NotificationStateAnnotationComposer,
-    $NotificationStateCreateCompanionBuilder,
-    $NotificationStateUpdateCompanionBuilder,
-    (
+typedef $NotificationStateProcessedTableManager =
+    ProcessedTableManager<
+      _$GlassMailDatabase,
+      NotificationState,
       NotificationStateData,
-      BaseReferences<_$GlassMailDatabase, NotificationState,
-          NotificationStateData>
-    ),
-    NotificationStateData,
-    PrefetchHooks Function()>;
+      $NotificationStateFilterComposer,
+      $NotificationStateOrderingComposer,
+      $NotificationStateAnnotationComposer,
+      $NotificationStateCreateCompanionBuilder,
+      $NotificationStateUpdateCompanionBuilder,
+      (
+        NotificationStateData,
+        BaseReferences<
+          _$GlassMailDatabase,
+          NotificationState,
+          NotificationStateData
+        >,
+      ),
+      NotificationStateData,
+      PrefetchHooks Function()
+    >;
 
 class $GlassMailDatabaseManager {
   final _$GlassMailDatabase _db;

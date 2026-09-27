@@ -24,8 +24,8 @@ final class ParsedMessageBody {
     required this.previewSnippet,
     Map<String, String> headers = const {},
     List<ParsedAttachmentInfo> attachments = const [],
-  })  : headers = Map.unmodifiable(headers),
-        attachments = List.unmodifiable(attachments);
+  }) : headers = Map.unmodifiable(headers),
+       attachments = List.unmodifiable(attachments);
 
   final String? plainText;
   final String? htmlText;
@@ -58,7 +58,8 @@ abstract final class MimeDecoder {
       try {
         final bytes = switch (encoding) {
           'B' => Uint8List.fromList(
-              base64.decode(encoded.replaceAll(RegExp(r'\s'), ''))),
+            base64.decode(encoded.replaceAll(RegExp(r'\s'), '')),
+          ),
           'Q' => _decodeQuotedPrintableBytes(encoded, header: true),
           _ => null,
         };
@@ -93,13 +94,14 @@ abstract final class MimeDecoder {
     final cleanPlain = parsed.plainText == null
         ? null
         : _normalizeWhitespace(parsed.plainText!);
-    final cleanHtmlText =
-        parsed.htmlText == null ? null : htmlToPlainText(parsed.htmlText!);
+    final cleanHtmlText = parsed.htmlText == null
+        ? null
+        : htmlToPlainText(parsed.htmlText!);
     final bestText = cleanPlain?.trim().isNotEmpty == true
         ? cleanPlain!
         : cleanHtmlText?.trim().isNotEmpty == true
-            ? cleanHtmlText!
-            : '';
+        ? cleanHtmlText!
+        : '';
 
     return ParsedMessageBody(
       plainText: cleanPlain ?? cleanHtmlText,
@@ -117,8 +119,11 @@ abstract final class MimeDecoder {
           '',
         )
         .replaceAll(
-          RegExp(r'<script.*?>.*?</script>',
-              caseSensitive: false, dotAll: true),
+          RegExp(
+            r'<script.*?>.*?</script>',
+            caseSensitive: false,
+            dotAll: true,
+          ),
           '',
         )
         .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
@@ -184,9 +189,11 @@ abstract final class MimeDecoder {
       }
     }
     final disposition = headers['content-disposition'] ?? '';
-    final fileName = _extractParameter(disposition, 'filename') ??
+    final fileName =
+        _extractParameter(disposition, 'filename') ??
         _extractParameter(contentType, 'name');
-    final isAttachment = fileName != null ||
+    final isAttachment =
+        fileName != null ||
         disposition.toLowerCase().startsWith('attachment') ||
         (!mimeType.startsWith('text/') && !mimeType.startsWith('multipart/'));
     if (isAttachment && partId.isNotEmpty) {
@@ -228,14 +235,17 @@ abstract final class MimeDecoder {
       if (trimmed.isEmpty || trimmed == '--') continue;
       childIndex++;
       final headerEnd = _findHeaderEnd(trimmed);
-      final headerSection =
-          headerEnd > 0 ? trimmed.substring(0, headerEnd) : '';
+      final headerSection = headerEnd > 0
+          ? trimmed.substring(0, headerEnd)
+          : '';
       _checkHeaderSize(headerSection);
-      final bodySection =
-          headerEnd > 0 ? trimmed.substring(headerEnd) : trimmed;
+      final bodySection = headerEnd > 0
+          ? trimmed.substring(headerEnd)
+          : trimmed;
       final headers = _parseHeaders(headerSection);
-      final childPartId =
-          partId.isEmpty ? '$childIndex' : '$partId.$childIndex';
+      final childPartId = partId.isEmpty
+          ? '$childIndex'
+          : '$partId.$childIndex';
       final parsed = _parseBodyParts(
         headers['content-type'] ?? 'text/plain',
         headers['content-transfer-encoding']?.toLowerCase().trim() ?? '7bit',
@@ -282,7 +292,9 @@ abstract final class MimeDecoder {
       case 'base64':
         try {
           return _decodeCharset(
-              base64.decode(content.replaceAll(RegExp(r'\s'), '')), charset);
+            base64.decode(content.replaceAll(RegExp(r'\s'), '')),
+            charset,
+          );
         } on Object {
           return content;
         }
@@ -309,8 +321,10 @@ abstract final class MimeDecoder {
           if (index < input.length && input[index] == '\r') index++;
           if (index < input.length && input[index] == '\n') index++;
         } else if (index + 2 < input.length) {
-          final byte =
-              int.tryParse(input.substring(index + 1, index + 3), radix: 16);
+          final byte = int.tryParse(
+            input.substring(index + 1, index + 3),
+            radix: 16,
+          );
           if (byte == null) {
             output.addByte(character);
             index++;
@@ -336,8 +350,7 @@ abstract final class MimeDecoder {
       'iso-8859-1' ||
       'latin1' ||
       'latin-1' ||
-      'iso8859-1' =>
-        latin1.decode(bytes),
+      'iso8859-1' => latin1.decode(bytes),
       'windows-1252' || 'cp1252' => _decodeWindows1252(bytes),
       'us-ascii' || 'ascii' => ascii.decode(bytes, allowInvalid: true),
       'utf-16' => _decodeUtf16(bytes),
@@ -347,10 +360,7 @@ abstract final class MimeDecoder {
     };
   }
 
-  static String _decodeUtf16(
-    List<int> bytes, {
-    bool? defaultLittleEndian,
-  }) {
+  static String _decodeUtf16(List<int> bytes, {bool? defaultLittleEndian}) {
     var offset = 0;
     var littleEndian = defaultLittleEndian ?? false;
     if (bytes.length >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe) {
@@ -364,8 +374,9 @@ abstract final class MimeDecoder {
     for (var index = offset; index + 1 < bytes.length; index += 2) {
       final first = bytes[index];
       final second = bytes[index + 1];
-      codeUnits
-          .add(littleEndian ? first | (second << 8) : (first << 8) | second);
+      codeUnits.add(
+        littleEndian ? first | (second << 8) : (first << 8) | second,
+      );
     }
     return String.fromCharCodes(codeUnits);
   }
@@ -405,8 +416,12 @@ abstract final class MimeDecoder {
       0x017e,
       0x0178,
     ];
-    return String.fromCharCodes(bytes.map((byte) =>
-        byte >= 0x80 && byte <= 0x9f ? windows1252[byte - 0x80] : byte));
+    return String.fromCharCodes(
+      bytes.map(
+        (byte) =>
+            byte >= 0x80 && byte <= 0x9f ? windows1252[byte - 0x80] : byte,
+      ),
+    );
   }
 
   static String _extractCharset(String contentType) =>

@@ -110,13 +110,13 @@ final class ImapClient {
             return null;
           }
           return ImapMailboxRecord(
-            attributes: values[1]
-                .listValue
+            attributes: values[1].listValue
                 .map((value) => value.atomValue)
                 .whereType<String>()
                 .toSet(),
             delimiter: values[2].atomValue,
-            name: values[3].atomValue ??
+            name:
+                values[3].atomValue ??
                 utf8.decode(values[3].literalValue ?? const []),
           );
         })
@@ -163,9 +163,7 @@ final class ImapClient {
     if (!_validUidRange.hasMatch(uidRange) || uidRange.length > 1024) {
       throw ArgumentError.value(uidRange, 'uidRange', 'Invalid UID set');
     }
-    final fields = StringBuffer(
-      'UID FLAGS ENVELOPE INTERNALDATE RFC822.SIZE',
-    );
+    final fields = StringBuffer('UID FLAGS ENVELOPE INTERNALDATE RFC822.SIZE');
     if (gmailExtensions) {
       fields.write(' X-GM-MSGID X-GM-THRID X-GM-LABELS');
     }
@@ -212,15 +210,21 @@ final class ImapClient {
       throw ArgumentError.value(limit, 'limit', 'Must be in 1..500');
     }
     final mailboxes = await listMailboxes();
-    final mailbox = mailboxes
-            .where((entry) => entry.attributes
-                .any((attribute) => attribute.toLowerCase() == r'\drafts'))
+    final mailbox =
+        mailboxes
+            .where(
+              (entry) => entry.attributes.any(
+                (attribute) => attribute.toLowerCase() == r'\drafts',
+              ),
+            )
             .map((entry) => entry.name)
             .firstOrNull ??
         const ['[Gmail]/Drafts', 'Drafts', 'Draft']
-            .where((name) => mailboxes.any(
-                  (entry) => entry.name.toLowerCase() == name.toLowerCase(),
-                ))
+            .where(
+              (name) => mailboxes.any(
+                (entry) => entry.name.toLowerCase() == name.toLowerCase(),
+              ),
+            )
             .firstOrNull;
     if (mailbox == null) return const [];
     final selected = await selectMailbox(mailbox);
@@ -251,28 +255,36 @@ final class ImapClient {
       ).firstMatch(messageId ?? '')?.group(1);
       final internalDate = responses
           .whereType<ImapUntagged>()
-          .where((response) =>
-              response.values.length > 2 &&
-              response.values[1].atomValue?.toUpperCase() == 'FETCH')
-          .map((response) =>
-              response.values[2].listValue.attribute('INTERNALDATE')?.atomValue)
+          .where(
+            (response) =>
+                response.values.length > 2 &&
+                response.values[1].atomValue?.toUpperCase() == 'FETCH',
+          )
+          .map(
+            (response) => response.values[2].listValue
+                .attribute('INTERNALDATE')
+                ?.atomValue,
+          )
           .whereType<String>()
           .firstOrNull;
-      result.add(ImapRemoteDraft(
-        uid: uid,
-        uidValidity: selected.uidValidity,
-        draftId: stableId,
-        to: _parseAddressList(header['to']),
-        cc: _parseAddressList(header['cc']),
-        bcc: _parseAddressList(header['bcc']),
-        subject: MimeDecoder.decodeMimeWords(header['subject']),
-        body: parsed.plainText ?? parsed.htmlText ?? '',
-        inReplyTo: header['in-reply-to'],
-        references: _parseReferences(header['references']),
-        updatedAtEpochMillis: _parseImapDate(internalDate) ??
-            DateTime.tryParse(header['date'] ?? '')?.millisecondsSinceEpoch ??
-            0,
-      ));
+      result.add(
+        ImapRemoteDraft(
+          uid: uid,
+          uidValidity: selected.uidValidity,
+          draftId: stableId,
+          to: _parseAddressList(header['to']),
+          cc: _parseAddressList(header['cc']),
+          bcc: _parseAddressList(header['bcc']),
+          subject: MimeDecoder.decodeMimeWords(header['subject']),
+          body: parsed.plainText ?? parsed.htmlText ?? '',
+          inReplyTo: header['in-reply-to'],
+          references: _parseReferences(header['references']),
+          updatedAtEpochMillis:
+              _parseImapDate(internalDate) ??
+              DateTime.tryParse(header['date'] ?? '')?.millisecondsSinceEpoch ??
+              0,
+        ),
+      );
     }
     return result;
   }
@@ -296,8 +308,12 @@ final class ImapClient {
     final before = await _draftUids(draftId);
     await append(draftsMailbox, rawMessage, flag: r'\Draft');
     final after = await _draftUids(draftId);
-    final newUid = after.difference(before).fold<int?>(
-        null, (best, uid) => best == null || uid > best ? uid : best);
+    final newUid = after
+        .difference(before)
+        .fold<int?>(
+          null,
+          (best, uid) => best == null || uid > best ? uid : best,
+        );
     if (newUid == null) {
       throw const ImapProtocolException(
         'Draft APPEND completed without a discoverable new UID',
@@ -346,8 +362,11 @@ final class ImapClient {
     await _execute(command);
   }
 
-  Future<void> append(String mailbox, Uint8List rawMessage,
-      {String flag = r'\Seen'}) async {
+  Future<void> append(
+    String mailbox,
+    Uint8List rawMessage, {
+    String flag = r'\Seen',
+  }) async {
     if (rawMessage.isEmpty || rawMessage.length > maxImapAppendBytes) {
       throw ArgumentError.value(rawMessage.length, 'rawMessage.length');
     }
@@ -425,8 +444,9 @@ final class ImapClient {
     final trashExists = (await listMailboxes()).any(
       (item) =>
           item.name == mailbox &&
-          item.attributes
-              .any((attribute) => attribute.toUpperCase() == r'\TRASH'),
+          item.attributes.any(
+            (attribute) => attribute.toUpperCase() == r'\TRASH',
+          ),
     );
     if (!trashExists) {
       throw const ImapProtocolException(
@@ -667,9 +687,9 @@ final class ImapClient {
   static List<String> _parseReferences(String? value) => value == null
       ? const []
       : RegExp(r'<[^<>]+>')
-          .allMatches(value)
-          .map((match) => match.group(0)!)
-          .toList(growable: false);
+            .allMatches(value)
+            .map((match) => match.group(0)!)
+            .toList(growable: false);
 
   static int? _parseImapDate(String? value) {
     if (value == null) return null;
@@ -704,7 +724,8 @@ final class ImapClient {
     final offsetMinutes = int.parse(match[8]!) * 60 + int.parse(match[9]!);
     return date
         .subtract(
-            Duration(minutes: match[7] == '+' ? offsetMinutes : -offsetMinutes))
+          Duration(minutes: match[7] == '+' ? offsetMinutes : -offsetMinutes),
+        )
         .millisecondsSinceEpoch;
   }
 
