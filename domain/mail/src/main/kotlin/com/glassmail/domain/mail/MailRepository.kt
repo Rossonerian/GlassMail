@@ -35,7 +35,6 @@ interface MailRepository {
     suspend fun removeAccount(accountId: String)
     suspend fun synchronize(accountId: String): MailSyncResult
     suspend fun applyMutation(mutation: MailMutation)
-    suspend fun applyMutations(mutations: List<MailMutation>) { mutations.forEach { applyMutation(it) } }
     suspend fun undoPendingArchive(messageId: String): Boolean = false
     suspend fun seedDebugMailbox(count: Int)
     suspend fun clearDebugMailbox()

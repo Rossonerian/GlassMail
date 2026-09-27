@@ -2013,7 +2013,6 @@ class _ComposeRouteState extends State<_ComposeRoute> {
         TextField(
           controller: _subject,
           onChanged: (_) => _scheduleSave(),
-          textCapitalization: TextCapitalization.sentences,
           decoration: const InputDecoration(labelText: 'Subject'),
         ),
         Align(
@@ -2054,7 +2053,6 @@ class _ComposeRouteState extends State<_ComposeRoute> {
           minLines: 10,
           maxLines: null,
           keyboardType: TextInputType.multiline,
-          textCapitalization: TextCapitalization.sentences,
           decoration: const InputDecoration(
             hintText: 'Write your message',
             border: InputBorder.none,
@@ -3067,19 +3065,16 @@ class _MailTemplateDialogState extends State<_MailTemplateDialog> {
           children: [
             TextField(
               controller: _name,
-              textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(labelText: 'Template name'),
             ),
             TextField(
               controller: _subject,
-              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(labelText: 'Subject'),
             ),
             TextField(
               controller: _body,
               minLines: 4,
               maxLines: 8,
-              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(labelText: 'Message body'),
             ),
           ],

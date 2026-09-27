@@ -1,3 +1,4 @@
+cat << 'INNER_EOF' > .github/workflows/flutter_ci.yml
 name: GlassMail Flutter CI
 
 on:
@@ -49,3 +50,4 @@ jobs:
 
       - name: Build iOS IPA
         run: flutter build ios --release --no-codesign
+INNER_EOF
