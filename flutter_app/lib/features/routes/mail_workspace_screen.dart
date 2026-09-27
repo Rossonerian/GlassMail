@@ -372,9 +372,8 @@ class _MailWorkspaceScreenState extends State<MailWorkspaceScreen>
     ),
   );
 
-  void _openGlassLab() => Navigator.of(
-    context,
-  ).push(MaterialPageRoute<void>(builder: (_) => const GlassLabScreen()));
+  void _openGlassLab() => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => const GlassLabScreen()));
 }
 
 class _InboxRoute extends StatelessWidget {
@@ -2110,8 +2109,7 @@ class _SentRoute extends StatelessWidget {
                 ? _EmptyState(
                     icon: Icons.send_outlined,
                     title: 'No sent messages cached',
-                    detail:
-                        'Sync to check the server Sent folder. Messages sent on this device will appear here too.',
+                    detail: 'Sync to check the server Sent folder. Messages sent on this device will appear here too.',
                     action: OutlinedButton.icon(
                       onPressed: () =>
                           repository.synchronize(account!.accountId),
@@ -2628,8 +2626,7 @@ Future<void> _addScreenedSender(
     builder: (_) => const _TextEntryDialog(
       title: 'Local sender screener',
       label: 'Sender email address',
-      helper:
-          'Messages from this address will be hidden in GlassMail. Gmail will still receive them.',
+      helper: 'Messages from this address will be hidden in GlassMail. Gmail will still receive them.',
     ),
   );
   if (sender != null) await store.setSenderMuted(sender, true);
@@ -3257,9 +3254,8 @@ class _ScheduledSendTile extends StatelessWidget {
             draft == null ||
             draft.status == DraftStatus.sent ||
             draft.status == DraftStatus.failed;
-        final due = DateTime.fromMillisecondsSinceEpoch(
-          scheduled.atEpochMillis,
-        ).toLocal();
+        final due = DateTime.fromMillisecondsSinceEpoch(scheduled.atEpochMillis)
+            .toLocal();
         return ListTile(
           leading: Icon(
             complete
@@ -3679,9 +3675,10 @@ String _formatQuota(int sizeKb) => sizeKb < 1024
 
 String _formatDate(int? timestamp) => timestamp == null
     ? 'Sent mail'
-    : DateTime.fromMillisecondsSinceEpoch(
-        timestamp,
-      ).toLocal().toString().substring(0, 16);
+    : DateTime.fromMillisecondsSinceEpoch(timestamp)
+          .toLocal()
+          .toString()
+          .substring(0, 16);
 
 List<String> _parseAddresses(String input) =>
     input.split(RegExp(r'[,;\s]+')).where((value) => value.isNotEmpty).toList();
