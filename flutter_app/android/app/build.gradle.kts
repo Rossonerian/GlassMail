@@ -1,8 +1,21 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Load signing config from key.properties (if present) or environment variables.
+val keyPropertiesFile = rootProject.file("key.properties")
+val keyProperties = Properties()
+if (keyPropertiesFile.exists()) {
+    keyProperties.load(FileInputStream(keyPropertiesFile))
+}
+
+fun signingProp(propName: String, envName: String): String? =
+    keyProperties.getProperty(propName) ?: System.getenv(envName)
 
 android {
     namespace = "com.glassmail.dev.glassmail"
@@ -26,6 +39,31 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    signingConfigs {
+        create("release") {
+            val storeFilePath = signingProp("storeFile", "GLASSMAIL_KEYSTORE")
+            val storePass    = signingProp("storePassword", "GLASSMAIL_KEYSTORE_PASSWORD")
+            val keyAlias_    = signingProp("keyAlias", "GLASSMAIL_KEY_ALIAS")
+            val keyPass      = signingProp("keyPassword", "GLASSMAIL_KEY_PASSWORD")
+
+            if (storeFilePath != null && storePass != null && keyAlias_ != null && keyPass != null) {
+                storeFile      = file(storeFilePath)
+                storePassword  = storePass
+                keyAlias       = keyAlias_
+                keyPassword    = keyPass
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+            // Shrinking / obfuscation disabled for v1; enable when ProGuard rules are tuned.
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
     }
 
 }
