@@ -459,6 +459,12 @@ class GlassMailDatabase extends _$GlassMailDatabase {
       (select(mailboxMessages)..where((row) => row.messageId.equals(messageId)))
           .get();
 
+  Future<List<MailboxMessage>> membershipsForMessages(Iterable<String> messageIds) async {
+    final ids = messageIds.toList();
+    if (ids.isEmpty) return const [];
+    return (select(mailboxMessages)..where((row) => row.messageId.isIn(ids))).get();
+  }
+
   Future<List<String>> messageIds(Iterable<String> messageIds) async {
     final ids = messageIds.toList();
     if (ids.isEmpty) return const [];
