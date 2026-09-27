@@ -292,6 +292,8 @@ private fun SwipeAction.asMutationType(): String = when (this) {
     SwipeAction.STAR -> "star"
 }
 
+// ⚡ Bolt: Extracted DateTimeFormatter instances to static properties to prevent
+// object allocation and pattern compilation overhead during list recomposition
 private val sameYearFormatter = java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US)
 private val olderFormatter = java.time.format.DateTimeFormatter.ofPattern("MM/dd/yy", java.util.Locale.US)
 

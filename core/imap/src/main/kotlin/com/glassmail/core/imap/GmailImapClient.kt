@@ -677,6 +677,8 @@ private object GmailFetchMapper {
     }.getOrNull()
 }
 
+// ⚡ Bolt: Extracted DateTimeFormatter instance to static property to prevent
+// object allocation and pattern compilation overhead during data parsing loop
 private val internalDateFormatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss Z", Locale.US)
 
 private fun parseRemoteDraft(uid: Long, internalDate: String?, raw: ByteArray): ImapRemoteDraft {
