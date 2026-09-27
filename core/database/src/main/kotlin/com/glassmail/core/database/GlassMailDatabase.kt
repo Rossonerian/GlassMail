@@ -308,6 +308,9 @@ interface MailDao {
     @Query("UPDATE attachments SET downloadState = :state WHERE attachmentId = :attachmentId")
     suspend fun setAttachmentState(attachmentId: String, state: String)
 
+    @Query("UPDATE attachments SET downloadState = :state WHERE attachmentId IN (:attachmentIds)")
+    suspend fun setAttachmentStates(attachmentIds: List<String>, state: String)
+
     @Query("UPDATE attachments SET lastAccessedAtEpochMillis = :timestamp WHERE attachmentId = :attachmentId")
     suspend fun markAttachmentAccessed(attachmentId: String, timestamp: Long)
 

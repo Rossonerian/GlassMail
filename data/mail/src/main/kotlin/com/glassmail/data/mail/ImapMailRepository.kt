@@ -129,11 +129,15 @@ class ImapMailRepository(
         val attachments = database.mailDao().cachedAttachments(accountId)
         var bytes = attachments.sumOf { it.sizeBytes ?: 0L }
         val limitBytes = settings.attachmentCacheLimitMb * 1024L * 1024L
+        val evictIds = mutableListOf<String>()
         attachments.forEach { attachment ->
             if (bytes <= limitBytes) return@forEach
             attachmentPath(attachment)?.delete()
-            database.mailDao().setAttachmentState(attachment.attachmentId, com.glassmail.core.database.DownloadState.NOT_FETCHED)
+            evictIds.add(attachment.attachmentId)
             bytes -= attachment.sizeBytes ?: 0L
+        }
+        if (evictIds.isNotEmpty()) {
+            database.mailDao().setAttachmentStates(evictIds, com.glassmail.core.database.DownloadState.NOT_FETCHED)
         }
     }
 
