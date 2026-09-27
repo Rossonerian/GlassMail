@@ -58,3 +58,9 @@ Similar to above, override the `packages` input (e.g., `packages: 'cmdline-tools
 
 ## UNVERIFIED Details
 - **Exact Action Log Trace:** The GitHub Actions raw logs could not be downloaded directly via the GitHub API (`Must have admin rights to Repository`) or GitHub CLI (authentication required for the `gh run view` command). The exact error snippet is inferred from identical verified issues affecting `setup-android@v3` and `ubuntu-latest` nodes in GitHub Actions in recent weeks where the `tools` package failing causes the exact `cmdline-tools/7.0/bin/sdkmanager failed with exit code 1` trace. The structural metadata extracted (via GitHub Actions API endpoints fetching JSON representation of steps) confirms this is exactly where and how it fails.
+
+---
+
+### Update: Resolved
+
+As of PR #2, this issue has been resolved by explicitly pinning the `cmdline-tools-version: 11479570` in both `flutter.yml` and `android.yml`. All workflows are now green.
