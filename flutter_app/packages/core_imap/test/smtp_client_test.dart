@@ -125,7 +125,7 @@ void main() {
       expect(uncertainWire.closed, isTrue);
     });
 
-    test('classifies authentication failure and rejects absent STARTTLS',
+    test('handles authentication challenges, failures and absent STARTTLS',
         () async {
       final rejectedTls = _FakeSmtpWire([
         SmtpReply(code: 220, lines: ['ready']),
@@ -136,6 +136,7 @@ void main() {
         throwsA(isA<SmtpProtocolException>()),
       );
 
+      // AUTH PLAIN with 535 failure
       final authWire = _FakeSmtpWire([
         ..._startTlsReplies(),
         SmtpReply(code: 535, lines: ['authentication failed']),
@@ -153,6 +154,98 @@ void main() {
               Uint8List.fromList(utf8.encode('Subject: test\r\n\r\nbody')),
         ),
         throwsA(isA<SmtpAuthenticationException>()),
+      );
+
+      // AUTH PLAIN with 334 challenge
+      final plainChallengeWire = _FakeSmtpWire([
+        ..._startTlsReplies(),
+        SmtpReply(code: 334, lines: ['challenge']),
+        SmtpReply(code: 535, lines: ['authentication failed']),
+      ]);
+      final plainChallengeClient = await SmtpClient.negotiateStartTls(
+        plainChallengeWire,
+        host: 'smtp.test',
+      );
+      await expectLater(
+        plainChallengeClient.sendRaw(
+          email: 'sender@example.com',
+          credentialUtf8: Uint8List.fromList(utf8.encode('secret')),
+          recipients: ['to@example.com'],
+          rawMessage:
+              Uint8List.fromList(utf8.encode('Subject: test\r\n\r\nbody')),
+        ),
+        throwsA(isA<SmtpAuthenticationException>()),
+      );
+
+      // AUTH LOGIN with success at first step
+      final loginSuccessWire = _FakeSmtpWire([
+        SmtpReply(code: 220, lines: ['ready']),
+        SmtpReply(code: 250, lines: ['host', 'STARTTLS', 'AUTH LOGIN']),
+        SmtpReply(code: 220, lines: ['begin TLS']),
+        SmtpReply(code: 250, lines: ['host', 'AUTH LOGIN']),
+        SmtpReply(code: 235, lines: ['authenticated']),
+        SmtpReply(code: 250, lines: ['sender accepted']),
+        SmtpReply(code: 250, lines: ['recipient accepted']),
+        SmtpReply(code: 354, lines: ['send message']),
+        SmtpReply(code: 250, lines: ['queued']),
+      ]);
+      final loginSuccessClient = await SmtpClient.negotiateStartTls(
+        loginSuccessWire,
+        host: 'smtp.test',
+      );
+      await loginSuccessClient.sendRaw(
+        email: 'sender@example.com',
+        credentialUtf8: Uint8List.fromList(utf8.encode('secret')),
+        recipients: ['to@example.com'],
+        rawMessage:
+            Uint8List.fromList(utf8.encode('Subject: test\r\n\r\nbody')),
+      );
+
+      // AUTH LOGIN with 535 failure after username challenge
+      final loginFailWire = _FakeSmtpWire([
+        SmtpReply(code: 220, lines: ['ready']),
+        SmtpReply(code: 250, lines: ['host', 'STARTTLS', 'AUTH LOGIN']),
+        SmtpReply(code: 220, lines: ['begin TLS']),
+        SmtpReply(code: 250, lines: ['host', 'AUTH LOGIN']),
+        SmtpReply(code: 334, lines: ['username']),
+        SmtpReply(code: 334, lines: ['password']),
+        SmtpReply(code: 535, lines: ['authentication failed']),
+      ]);
+      final loginFailClient = await SmtpClient.negotiateStartTls(
+        loginFailWire,
+        host: 'smtp.test',
+      );
+      await expectLater(
+        loginFailClient.sendRaw(
+          email: 'sender@example.com',
+          credentialUtf8: Uint8List.fromList(utf8.encode('secret')),
+          recipients: ['to@example.com'],
+          rawMessage:
+              Uint8List.fromList(utf8.encode('Subject: test\r\n\r\nbody')),
+        ),
+        throwsA(isA<SmtpAuthenticationException>()),
+      );
+
+      // AUTH CRAM-MD5 (unsupported)
+      final unsupportedAuthWire = _FakeSmtpWire([
+        SmtpReply(code: 220, lines: ['ready']),
+        SmtpReply(code: 250, lines: ['host', 'STARTTLS', 'AUTH CRAM-MD5']),
+        SmtpReply(code: 220, lines: ['begin TLS']),
+        SmtpReply(code: 250, lines: ['host', 'AUTH CRAM-MD5']),
+      ]);
+      final unsupportedAuthClient = await SmtpClient.negotiateStartTls(
+        unsupportedAuthWire,
+        host: 'smtp.test',
+      );
+      await expectLater(
+        unsupportedAuthClient.sendRaw(
+          email: 'sender@example.com',
+          credentialUtf8: Uint8List.fromList(utf8.encode('secret')),
+          recipients: ['to@example.com'],
+          rawMessage:
+              Uint8List.fromList(utf8.encode('Subject: test\r\n\r\nbody')),
+        ),
+        throwsA(isA<SmtpProtocolException>()),
       );
     });
   });
