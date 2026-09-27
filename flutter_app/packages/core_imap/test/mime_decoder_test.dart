@@ -131,6 +131,27 @@ JVBERi0xLjQ=
       );
     });
 
+    test('parses message with no Content-Type header (defaults to text/plain)',
+        () {
+      final plain = MimeDecoder.parseRfc822(
+        Uint8List.fromList(
+          utf8.encode(
+            'Subject: No Content-Type\r\n\r\n'
+            'Hello, this is a plain text email body without headers.',
+          ),
+        ),
+      );
+      expect(
+        plain.plainText,
+        'Hello, this is a plain text email body without headers.',
+      );
+      expect(
+        plain.previewSnippet,
+        'Hello, this is a plain text email body without headers.',
+      );
+      expect(plain.headers['content-type'], isNull);
+    });
+
     test('bounds input size and multipart recursion and part count', () {
       expect(
         () => MimeDecoder.parseRfc822(
