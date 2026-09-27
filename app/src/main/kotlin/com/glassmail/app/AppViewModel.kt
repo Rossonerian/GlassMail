@@ -145,16 +145,16 @@ class AppViewModel(
         val messages = messageIds.distinct()
         val currentThread = messages.mapNotNull { id -> readerUiState.value.thread.firstOrNull { it.messageId == id } }
         val star = type == "star" && currentThread.any { !it.starred }
-        messages.forEach { messageId ->
-            val account = accountForMessage(messageId) ?: return@forEach
+        val mutations = messages.mapNotNull { messageId ->
+            val account = accountForMessage(messageId) ?: return@mapNotNull null
             val inboxId = "${account.accountId}:INBOX"
-            val mutation = when (type) {
+            when (type) {
                 "star" -> MailMutation.Star(account.accountId, messageId, inboxId, star)
                 "archive", "mute" -> MailMutation.Archive(account.accountId, messageId, inboxId)
                 else -> MailMutation.Delete(account.accountId, messageId, inboxId)
             }
-            repository.applyMutation(mutation)
         }
+        repository.applyMutations(mutations)
     }
 
     fun undoArchive(actionId: String) = viewModelScope.launch {
