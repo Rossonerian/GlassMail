@@ -44,7 +44,7 @@ abstract interface class MailContentSource {
 
 final class ImapMailContentSource implements MailContentSource {
   ImapMailContentSource({ImapContentConnector? connect})
-      : _connect = connect ?? ImapClient.connect;
+    : _connect = connect ?? ImapClient.connect;
 
   final ImapContentConnector _connect;
 
@@ -127,28 +127,29 @@ final class LocalFirstMailRepository
     ImapContentConnector? imapConnector,
     NewMailCallback? onNewMessages,
     int Function()? clock,
-  })  : _database = database,
-        _credentialStore = credentialStore,
-        _mutationQueue = mutationQueue,
-        _outgoingQueue = outgoingQueue,
-        _sentMailboxSource = sentMailboxSource,
-        _contentSource = contentSource ??
-            ImapMailContentSource(connect: imapConnector ?? ImapClient.connect),
-        _remoteDraftSource = remoteDraftSource ?? ImapMailDraftRemoteSource(),
-        _trashMailboxSource = trashMailboxSource,
-        _attachmentRoot = attachmentRoot ?? getApplicationSupportDirectory,
-        _imapConnector = imapConnector ?? ImapClient.connect,
-        _onAccountAdded = onAccountAdded,
-        _onAccountRemoved = onAccountRemoved,
-        _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch),
-        _sync = MailboxSyncCoordinator(
-          database: database,
-          credentialStore: credentialStore,
-          source: inboxSource ?? ImapInboxPageSource(),
-          clock: clock,
-          onNewMessages: onNewMessages,
-          flushPendingMutations: mutationQueue.flush,
-        );
+  }) : _database = database,
+       _credentialStore = credentialStore,
+       _mutationQueue = mutationQueue,
+       _outgoingQueue = outgoingQueue,
+       _sentMailboxSource = sentMailboxSource,
+       _contentSource =
+           contentSource ??
+           ImapMailContentSource(connect: imapConnector ?? ImapClient.connect),
+       _remoteDraftSource = remoteDraftSource ?? ImapMailDraftRemoteSource(),
+       _trashMailboxSource = trashMailboxSource,
+       _attachmentRoot = attachmentRoot ?? getApplicationSupportDirectory,
+       _imapConnector = imapConnector ?? ImapClient.connect,
+       _onAccountAdded = onAccountAdded,
+       _onAccountRemoved = onAccountRemoved,
+       _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch),
+       _sync = MailboxSyncCoordinator(
+         database: database,
+         credentialStore: credentialStore,
+         source: inboxSource ?? ImapInboxPageSource(),
+         clock: clock,
+         onNewMessages: onNewMessages,
+         flushPendingMutations: mutationQueue.flush,
+       );
 
   static const debugAccountId = 'debug-fixture';
   static const _attachmentLimitBytes = 8 * 1024 * 1024;
@@ -229,7 +230,8 @@ final class LocalFirstMailRepository
       fileBytes += bytes.length;
       if (fileBytes > _backupDataLimitBytes) {
         throw const FormatException(
-            'Backup attachments exceed the size limit.');
+          'Backup attachments exceed the size limit.',
+        );
       }
       files[entry.key] = bytes;
     }
@@ -271,21 +273,24 @@ final class LocalFirstMailRepository
 
   @override
   Stream<List<MailAccount>> observeAccounts() => _database.watchAccounts().map(
-        (accounts) => List.unmodifiable(accounts.map(_toMailAccount)),
-      );
+    (accounts) => List.unmodifiable(accounts.map(_toMailAccount)),
+  );
 
   @override
-  Stream<AccountSyncSummary?> observeAccount(String accountId) =>
-      _database.watchAccountSummary(accountId).map((summary) => summary == null
-          ? null
-          : AccountSyncSummary(
-              accountId: summary.accountId,
-              email: summary.email,
-              syncState: summary.syncState,
-              messageCount: summary.messageCount,
-              gmailExtensionsEnabled: summary.gmailExtensionsEnabled,
-              lastSyncedAtEpochMillis: summary.lastSyncedAtEpochMillis,
-            ));
+  Stream<AccountSyncSummary?> observeAccount(String accountId) => _database
+      .watchAccountSummary(accountId)
+      .map(
+        (summary) => summary == null
+            ? null
+            : AccountSyncSummary(
+                accountId: summary.accountId,
+                email: summary.email,
+                syncState: summary.syncState,
+                messageCount: summary.messageCount,
+                gmailExtensionsEnabled: summary.gmailExtensionsEnabled,
+                lastSyncedAtEpochMillis: summary.lastSyncedAtEpochMillis,
+              ),
+      );
 
   @override
   Stream<List<MailListItem>> observeInbox(String accountId) =>
@@ -317,24 +322,25 @@ final class LocalFirstMailRepository
   Stream<List<MailListItem>> observeInboxCategory(
     String accountId,
     String category,
-  ) =>
-      _database
-          .watchInbox(_inboxId(accountId), category: category)
-          .map(_toMailListItems);
+  ) => _database
+      .watchInbox(_inboxId(accountId), category: category)
+      .map(_toMailListItems);
 
   @override
   Stream<List<MailListItem>> observeUnifiedInbox(
     List<String> accountIds,
     String category,
-  ) =>
-      _combineLatestLists(accountIds
-              .map((id) => observeInboxCategory(id, category))
-              .toList(growable: false))
-          .map(_mergeMailLists);
+  ) => _combineLatestLists(
+    accountIds
+        .map((id) => observeInboxCategory(id, category))
+        .toList(growable: false),
+  ).map(_mergeMailLists);
 
   @override
   Stream<Map<String, int>> observeCategoryUnreadCounts(String accountId) =>
-      _database.watchCategoryUnreadCounts(_inboxId(accountId)).map(
+      _database
+          .watchCategoryUnreadCounts(_inboxId(accountId))
+          .map(
             (rows) => Map.unmodifiable({
               for (final row in rows) row.category: row.unreadCount,
             }),
@@ -343,11 +349,9 @@ final class LocalFirstMailRepository
   @override
   Stream<Map<String, int>> observeUnifiedCategoryUnreadCounts(
     List<String> accountIds,
-  ) =>
-      _combineLatestLists(accountIds
-              .map(observeCategoryUnreadCounts)
-              .toList(growable: false))
-          .map(_mergeUnreadCounts);
+  ) => _combineLatestLists(
+    accountIds.map(observeCategoryUnreadCounts).toList(growable: false),
+  ).map(_mergeUnreadCounts);
 
   @override
   Stream<List<MailListItem>> search(String accountId, String query) {
@@ -365,42 +369,50 @@ final class LocalFirstMailRepository
   ) {
     final terms = _ftsTerms(query);
     if (terms.isEmpty) return Stream.value(const []);
-    return _combineLatestLists(accountIds
-            .map((id) => _database
+    return _combineLatestLists(
+      accountIds
+          .map(
+            (id) => _database
                 .searchTerms(_inboxId(id), terms)
-                .map(_toMailListItems))
-            .toList(growable: false))
-        .map(_mergeMailLists);
+                .map(_toMailListItems),
+          )
+          .toList(growable: false),
+    ).map(_mergeMailLists);
   }
 
   @override
-  Stream<MailCacheSettings> observeCacheSettings(String accountId) =>
-      _database.watchCacheConfig(accountId).map((config) => config == null
-          ? const MailCacheSettings()
-          : MailCacheSettings(
-              offlineMessageCount: config.offlineMessageCount,
-              attachmentCacheLimitMb: config.attachmentCacheLimitMb,
-              autoEvictReadOlderThanDays: config.autoEvictReadOlderThanDays,
-              prefetchUnreadBodies: config.prefetchUnreadBodies != 0,
-            ));
+  Stream<MailCacheSettings> observeCacheSettings(String accountId) => _database
+      .watchCacheConfig(accountId)
+      .map(
+        (config) => config == null
+            ? const MailCacheSettings()
+            : MailCacheSettings(
+                offlineMessageCount: config.offlineMessageCount,
+                attachmentCacheLimitMb: config.attachmentCacheLimitMb,
+                autoEvictReadOlderThanDays: config.autoEvictReadOlderThanDays,
+                prefetchUnreadBodies: config.prefetchUnreadBodies != 0,
+              ),
+      );
 
   @override
-  Stream<StorageQuota?> observeStorageQuota(String accountId) =>
-      _database.watchStorageQuota(accountId).map((quota) => quota == null
-          ? null
-          : StorageQuota(
-              usedKb: quota.usedKb,
-              limitKb: quota.limitKb,
-              checkedAtEpochMillis: quota.checkedAtEpochMillis,
-            ));
+  Stream<StorageQuota?> observeStorageQuota(String accountId) => _database
+      .watchStorageQuota(accountId)
+      .map(
+        (quota) => quota == null
+            ? null
+            : StorageQuota(
+                usedKb: quota.usedKb,
+                limitKb: quota.limitKb,
+                checkedAtEpochMillis: quota.checkedAtEpochMillis,
+              ),
+      );
 
   @override
   Stream<MailMessage?> observeMessage(String messageId) => _combineLatest2(
-        _database.watchMessage(messageId),
-        _database.watchAttachments(messageId),
-        (row, attachments) =>
-            row == null ? null : _toMailMessage(row, attachments),
-      );
+    _database.watchMessage(messageId),
+    _database.watchAttachments(messageId),
+    (row, attachments) => row == null ? null : _toMailMessage(row, attachments),
+  );
 
   @override
   Stream<List<MailMessage>> observeThread(String messageId) =>
@@ -410,33 +422,31 @@ final class LocalFirstMailRepository
   Stream<List<MailMessage>> observeThreadInMailbox(
     String messageId,
     String mailboxId,
-  ) =>
-      _observeThread(messageId, mailboxId: mailboxId);
+  ) => _observeThread(messageId, mailboxId: mailboxId);
 
   Stream<List<MailMessage>> _observeThread(
     String messageId, {
     String? mailboxId,
-  }) =>
-      _switchMap(
-        _database.watchThread(messageId, mailboxId: mailboxId),
-        (rows) {
-          if (rows.isEmpty) return Stream.value(const []);
-          return _combineLatestLists(
-            rows
-                .map((row) => _database.watchAttachments(row.messageId))
-                .toList(growable: false),
-          ).map((attachments) => List.unmodifiable([
-                for (var index = 0; index < rows.length; index++)
-                  _toMailMessage(rows[index], attachments[index]),
-              ]));
-        },
-      );
+  }) => _switchMap(_database.watchThread(messageId, mailboxId: mailboxId), (
+    rows,
+  ) {
+    if (rows.isEmpty) return Stream.value(const []);
+    return _combineLatestLists(
+      rows
+          .map((row) => _database.watchAttachments(row.messageId))
+          .toList(growable: false),
+    ).map(
+      (attachments) => List.unmodifiable([
+        for (var index = 0; index < rows.length; index++)
+          _toMailMessage(rows[index], attachments[index]),
+      ]),
+    );
+  });
 
   @override
-  Stream<List<MailDraft>> observeDrafts(String accountId) =>
-      _database.watchDrafts(accountId).map((drafts) => List.unmodifiable(
-            drafts.map(_toMailDraft),
-          ));
+  Stream<List<MailDraft>> observeDrafts(String accountId) => _database
+      .watchDrafts(accountId)
+      .map((drafts) => List.unmodifiable(drafts.map(_toMailDraft)));
 
   @override
   Stream<MailDraft?> observeDraft(String draftId) => _database
@@ -455,21 +465,24 @@ final class LocalFirstMailRepository
         !email.contains('@')) {
       credentialUtf8.fillRange(0, credentialUtf8.length, 0);
       throw ArgumentError(
-          'A non-empty account ID and valid email are required');
+        'A non-empty account ID and valid email are required',
+      );
     }
     await _credentialStore.store(accountId, credentialUtf8);
     try {
       await _database.transaction(() async {
-        await _database.saveAccount(AccountsCompanion.insert(
-          accountId: accountId,
-          email: email.trim(),
-          createdAtEpochMillis: _clock(),
-          syncState: syncState,
-          gmailExtensionsEnabled: 0,
-        ));
-        await _database.saveCacheConfig(CacheConfigCompanion.insert(
-          accountId: accountId,
-        ));
+        await _database.saveAccount(
+          AccountsCompanion.insert(
+            accountId: accountId,
+            email: email.trim(),
+            createdAtEpochMillis: _clock(),
+            syncState: syncState,
+            gmailExtensionsEnabled: 0,
+          ),
+        );
+        await _database.saveCacheConfig(
+          CacheConfigCompanion.insert(accountId: accountId),
+        );
       });
     } on Object {
       await _credentialStore.delete(accountId);
@@ -584,28 +597,32 @@ final class LocalFirstMailRepository
         snapshot.uidValidity,
         message,
       );
-      messageRows.add(MessagesCompanion.insert(
-        messageId: messageId,
-        accountId: accountId,
-        gmailMessageId: Value(message.gmailMessageId),
-        gmailThreadId: Value(message.gmailThreadId),
-        subject: Value(message.subject),
-        sender: Value(message.sender),
-        sentAtEpochMillis: Value(message.sentAtEpochMillis),
-        sizeBytes: Value(message.sizeBytes),
-        category: const Value('PRIMARY'),
-        listUnsubscribe: Value(message.listUnsubscribe),
-        listUnsubscribePost: Value(message.listUnsubscribePost),
-        contentKind: 'PLAIN',
-        bodyDownloadState: 'NOT_FETCHED',
-      ));
-      memberships.add(MailboxMessagesCompanion.insert(
-        mailboxId: mailboxId,
-        uid: message.uid,
-        messageId: messageId,
-        flags: (message.flags.toList()..sort()).join(' '),
-        labels: (message.labels.toList()..sort()).join('\u001f'),
-      ));
+      messageRows.add(
+        MessagesCompanion.insert(
+          messageId: messageId,
+          accountId: accountId,
+          gmailMessageId: Value(message.gmailMessageId),
+          gmailThreadId: Value(message.gmailThreadId),
+          subject: Value(message.subject),
+          sender: Value(message.sender),
+          sentAtEpochMillis: Value(message.sentAtEpochMillis),
+          sizeBytes: Value(message.sizeBytes),
+          category: const Value('PRIMARY'),
+          listUnsubscribe: Value(message.listUnsubscribe),
+          listUnsubscribePost: Value(message.listUnsubscribePost),
+          contentKind: 'PLAIN',
+          bodyDownloadState: 'NOT_FETCHED',
+        ),
+      );
+      memberships.add(
+        MailboxMessagesCompanion.insert(
+          mailboxId: mailboxId,
+          uid: message.uid,
+          messageId: messageId,
+          flags: (message.flags.toList()..sort()).join(' '),
+          labels: (message.labels.toList()..sort()).join('\u001f'),
+        ),
+      );
     }
 
     final now = _clock();
@@ -664,7 +681,8 @@ final class LocalFirstMailRepository
           message.uid > highestKnownUid ||
           !seenUids.add(message.uid)) {
         throw const ImapProtocolException(
-            'Trash mailbox returned invalid UIDs');
+          'Trash mailbox returned invalid UIDs',
+        );
       }
     }
 
@@ -676,28 +694,32 @@ final class LocalFirstMailRepository
         snapshot.uidValidity,
         message,
       );
-      messageRows.add(MessagesCompanion.insert(
-        messageId: messageId,
-        accountId: accountId,
-        gmailMessageId: Value(message.gmailMessageId),
-        gmailThreadId: Value(message.gmailThreadId),
-        subject: Value(message.subject),
-        sender: Value(message.sender),
-        sentAtEpochMillis: Value(message.sentAtEpochMillis),
-        sizeBytes: Value(message.sizeBytes),
-        category: const Value('PRIMARY'),
-        listUnsubscribe: Value(message.listUnsubscribe),
-        listUnsubscribePost: Value(message.listUnsubscribePost),
-        contentKind: 'PLAIN',
-        bodyDownloadState: 'NOT_FETCHED',
-      ));
-      memberships.add(MailboxMessagesCompanion.insert(
-        mailboxId: mailboxId,
-        uid: message.uid,
-        messageId: messageId,
-        flags: (message.flags.toList()..sort()).join(' '),
-        labels: (message.labels.toList()..sort()).join('\u001f'),
-      ));
+      messageRows.add(
+        MessagesCompanion.insert(
+          messageId: messageId,
+          accountId: accountId,
+          gmailMessageId: Value(message.gmailMessageId),
+          gmailThreadId: Value(message.gmailThreadId),
+          subject: Value(message.subject),
+          sender: Value(message.sender),
+          sentAtEpochMillis: Value(message.sentAtEpochMillis),
+          sizeBytes: Value(message.sizeBytes),
+          category: const Value('PRIMARY'),
+          listUnsubscribe: Value(message.listUnsubscribe),
+          listUnsubscribePost: Value(message.listUnsubscribePost),
+          contentKind: 'PLAIN',
+          bodyDownloadState: 'NOT_FETCHED',
+        ),
+      );
+      memberships.add(
+        MailboxMessagesCompanion.insert(
+          mailboxId: mailboxId,
+          uid: message.uid,
+          messageId: messageId,
+          flags: (message.flags.toList()..sort()).join(' '),
+          labels: (message.labels.toList()..sort()).join('\u001f'),
+        ),
+      );
     }
     await _database.commitMailboxSnapshot(
       mailbox: MailboxesCompanion.insert(
@@ -733,14 +755,16 @@ final class LocalFirstMailRepository
     required String mailboxId,
   }) async {
     final account = await _database.accountById(accountId);
-    final message = await (_database.select(_database.messages)
-          ..where((row) =>
-              row.messageId.equals(messageId) &
-              row.accountId.equals(accountId)))
-        .getSingleOrNull();
-    final mailbox = await (_database.select(_database.mailboxes)
-          ..where((row) => row.mailboxId.equals(mailboxId)))
-        .getSingleOrNull();
+    final message =
+        await (_database.select(_database.messages)..where(
+              (row) =>
+                  row.messageId.equals(messageId) &
+                  row.accountId.equals(accountId),
+            ))
+            .getSingleOrNull();
+    final mailbox = await (_database.select(
+      _database.mailboxes,
+    )..where((row) => row.mailboxId.equals(mailboxId))).getSingleOrNull();
     if (account == null ||
         message == null ||
         mailbox == null ||
@@ -749,11 +773,12 @@ final class LocalFirstMailRepository
     }
     if ((await _database.activeMutationsForMessage(messageId)).isNotEmpty) {
       throw StateError(
-          'Sync pending message actions before permanent deletion.');
+        'Sync pending message actions before permanent deletion.',
+      );
     }
-    final membership = (await _database.membershipsForMessage(messageId))
-        .where((row) => row.mailboxId == mailboxId)
-        .firstOrNull;
+    final membership = (await _database.membershipsForMessage(
+      messageId,
+    )).where((row) => row.mailboxId == mailboxId).firstOrNull;
     if (membership == null) {
       throw StateError('Message is not present in the selected Trash mailbox.');
     }
@@ -795,13 +820,15 @@ final class LocalFirstMailRepository
         settings.autoEvictReadOlderThanDays < 0) {
       throw ArgumentError('Cache limits cannot be negative');
     }
-    await _database.saveCacheConfig(CacheConfigCompanion.insert(
-      accountId: accountId,
-      offlineMessageCount: Value(settings.offlineMessageCount),
-      attachmentCacheLimitMb: Value(settings.attachmentCacheLimitMb),
-      autoEvictReadOlderThanDays: Value(settings.autoEvictReadOlderThanDays),
-      prefetchUnreadBodies: Value(settings.prefetchUnreadBodies ? 1 : 0),
-    ));
+    await _database.saveCacheConfig(
+      CacheConfigCompanion.insert(
+        accountId: accountId,
+        offlineMessageCount: Value(settings.offlineMessageCount),
+        attachmentCacheLimitMb: Value(settings.attachmentCacheLimitMb),
+        autoEvictReadOlderThanDays: Value(settings.autoEvictReadOlderThanDays),
+        prefetchUnreadBodies: Value(settings.prefetchUnreadBodies ? 1 : 0),
+      ),
+    );
     await enforceCacheLimits(accountId);
   }
 
@@ -816,13 +843,11 @@ final class LocalFirstMailRepository
             autoEvictReadOlderThanDays: config.autoEvictReadOlderThanDays,
             prefetchUnreadBodies: config.prefetchUnreadBodies != 0,
           );
-    final before = _clock() -
+    final before =
+        _clock() -
         Duration(days: settings.autoEvictReadOlderThanDays).inMilliseconds;
     await _database.evictOldReadBodies(accountId, before);
-    await _database.evictExcessBodies(
-      accountId,
-      settings.offlineMessageCount,
-    );
+    await _database.evictExcessBodies(accountId, settings.offlineMessageCount);
 
     final root = await _attachmentRoot();
     final attachments = await _database.cachedAttachments(accountId);
@@ -869,12 +894,14 @@ final class LocalFirstMailRepository
         limitKb: remote.limitKb,
         checkedAtEpochMillis: _clock(),
       );
-      await _database.saveStorageQuota(StorageQuotaCompanion.insert(
-        accountId: accountId,
-        usedKb: quota.usedKb,
-        limitKb: quota.limitKb,
-        checkedAtEpochMillis: quota.checkedAtEpochMillis,
-      ));
+      await _database.saveStorageQuota(
+        StorageQuotaCompanion.insert(
+          accountId: accountId,
+          usedKb: quota.usedKb,
+          limitKb: quota.limitKb,
+          checkedAtEpochMillis: quota.checkedAtEpochMillis,
+        ),
+      );
       return MailOperationSuccess(quota);
     } on Object catch (error, stackTrace) {
       return MailOperationFailure(error, stackTrace: stackTrace);
@@ -891,16 +918,17 @@ final class LocalFirstMailRepository
         final cached = await observeMessage(messageId).first;
         if (cached?.body != null) return MailOperationSuccess(cached!);
       }
-      final message = await (_database.select(_database.messages)
-            ..where((row) => row.messageId.equals(messageId)))
-          .getSingleOrNull();
+      final message = await (_database.select(
+        _database.messages,
+      )..where((row) => row.messageId.equals(messageId))).getSingleOrNull();
       if (message == null) {
         return MailOperationFailure(StateError('Message is unavailable'));
       }
       final membership = await _membershipFor(messageId, message.accountId);
       if (membership == null) {
         return MailOperationFailure(
-            StateError('Mailbox mapping is unavailable'));
+          StateError('Mailbox mapping is unavailable'),
+        );
       }
       final account = await _database.accountById(message.accountId);
       if (account == null) {
@@ -915,7 +943,7 @@ final class LocalFirstMailRepository
       );
       final remoteMailbox =
           await _database.mailboxRemoteName(membership.mailboxId) ??
-              membership.mailboxId.substringAfterColon;
+          membership.mailboxId.substringAfterColon;
       final parsed = await _credentialStore.withCredential(
         account.accountId,
         (credential) => _contentSource.fetchBody(
@@ -944,18 +972,20 @@ final class LocalFirstMailRepository
           contentKind: parsed.htmlText == null ? 'PLAIN' : 'HTML',
           downloadState: 'AVAILABLE',
         );
-        await _database.saveAttachments(parsed.attachments.map((attachment) {
-          final id = _attachmentId(messageId, attachment.partId);
-          return AttachmentsCompanion.insert(
-            attachmentId: id,
-            messageId: messageId,
-            partId: attachment.partId,
-            fileName: Value(attachment.fileName),
-            mimeType: Value(attachment.mimeType),
-            sizeBytes: Value(attachment.sizeBytes),
-            downloadState: 'NOT_FETCHED',
-          );
-        }));
+        await _database.saveAttachments(
+          parsed.attachments.map((attachment) {
+            final id = _attachmentId(messageId, attachment.partId);
+            return AttachmentsCompanion.insert(
+              attachmentId: id,
+              messageId: messageId,
+              partId: attachment.partId,
+              fileName: Value(attachment.fileName),
+              mimeType: Value(attachment.mimeType),
+              sizeBytes: Value(attachment.sizeBytes),
+              downloadState: 'NOT_FETCHED',
+            );
+          }),
+        );
       });
       await enforceCacheLimits(message.accountId);
       final loaded = await observeMessage(messageId).first;
@@ -966,9 +996,9 @@ final class LocalFirstMailRepository
       }
       return MailOperationSuccess<MailMessage>(loaded);
     } on Object catch (error, stackTrace) {
-      final failed = await (_database.select(_database.messages)
-            ..where((row) => row.messageId.equals(messageId)))
-          .getSingleOrNull();
+      final failed = await (_database.select(
+        _database.messages,
+      )..where((row) => row.messageId.equals(messageId))).getSingleOrNull();
       if (failed != null) {
         await _database.updateMessageBody(
           messageId: messageId,
@@ -998,11 +1028,13 @@ final class LocalFirstMailRepository
         return MailOperationFailure(StateError('Attachment is unavailable'));
       }
       final currentAttachment = attachment;
-      final message = await (_database.select(_database.messages)
-            ..where((row) =>
-                row.messageId.equals(currentAttachment.messageId) &
-                row.accountId.equals(accountId)))
-          .getSingleOrNull();
+      final message =
+          await (_database.select(_database.messages)..where(
+                (row) =>
+                    row.messageId.equals(currentAttachment.messageId) &
+                    row.accountId.equals(accountId),
+              ))
+              .getSingleOrNull();
       if (message == null) {
         return MailOperationFailure(
           StateError('Attachment does not belong to this account'),
@@ -1010,26 +1042,30 @@ final class LocalFirstMailRepository
       }
       final root = await _attachmentRoot();
       final target = _attachmentFile(root, accountId, attachmentId);
-      final safeName =
-          sanitizeAttachmentName(attachment.fileName ?? 'attachment');
+      final safeName = sanitizeAttachmentName(
+        attachment.fileName ?? 'attachment',
+      );
       final mimeType = attachment.mimeType ?? 'application/octet-stream';
       if (attachment.downloadState == 'AVAILABLE' && await target.exists()) {
         await _database.markAttachmentAccessed(attachmentId, _clock());
-        return MailOperationSuccess(DownloadedAttachment(
-          filePath: target.path,
-          fileName: safeName,
-          mimeType: mimeType,
-        ));
+        return MailOperationSuccess(
+          DownloadedAttachment(
+            filePath: target.path,
+            fileName: safeName,
+            mimeType: mimeType,
+          ),
+        );
       }
       final membership = await _membershipFor(message.messageId, accountId);
       if (membership == null) {
         return MailOperationFailure(
-            StateError('Mailbox mapping is unavailable'));
+          StateError('Mailbox mapping is unavailable'),
+        );
       }
       await _database.setAttachmentDownloadState(attachmentId, 'FETCHING');
       final remoteMailbox =
           await _database.mailboxRemoteName(membership.mailboxId) ??
-              membership.mailboxId.substringAfterColon;
+          membership.mailboxId.substringAfterColon;
       final payload = await _credentialStore.withCredential(
         accountId,
         (credential) => _contentSource.fetchAttachment(
@@ -1063,11 +1099,13 @@ final class LocalFirstMailRepository
           StateError('Attachment exceeds the configured cache limit'),
         );
       }
-      return MailOperationSuccess(DownloadedAttachment(
-        filePath: target.path,
-        fileName: safeName,
-        mimeType: mimeType,
-      ));
+      return MailOperationSuccess(
+        DownloadedAttachment(
+          filePath: target.path,
+          fileName: safeName,
+          mimeType: mimeType,
+        ),
+      );
     } on Object catch (error, stackTrace) {
       if (attachment != null) {
         await _database.setAttachmentDownloadState(attachmentId, 'FAILED');
@@ -1096,30 +1134,24 @@ final class LocalFirstMailRepository
     if (account == null) return;
     // Remote deletion is best effort; the local delete is already durable.
     try {
-      await _credentialStore.withCredential(
-        account.accountId,
-        (credential) {
-          final location = _remoteDraftLocation(draftId);
-          return _remoteDraftSource.delete(
-            email: account.email,
-            credentialUtf8: credential,
-            draftId: draftId,
-            remoteUid: location?.$2,
-            remoteUidValidity: location?.$1,
-          );
-        },
-      );
+      await _credentialStore.withCredential(account.accountId, (credential) {
+        final location = _remoteDraftLocation(draftId);
+        return _remoteDraftSource.delete(
+          email: account.email,
+          credentialUtf8: credential,
+          draftId: draftId,
+          remoteUid: location?.$2,
+          remoteUidValidity: location?.$1,
+        );
+      });
     } on Object {
       // The local delete is durable; a later IMAP sync can remove a stale copy.
     }
   }
 
   @override
-  Future<bool> cancelQueuedSend(String draftId) async =>
-      _database.restoreQueuedDraft(
-        draftId: draftId,
-        updatedAtEpochMillis: _clock(),
-      );
+  Future<bool> cancelQueuedSend(String draftId) async => _database
+      .restoreQueuedDraft(draftId: draftId, updatedAtEpochMillis: _clock());
 
   @override
   Future<SendMailResult> send(MailAccount account, OutgoingMail mail) async {
@@ -1135,12 +1167,14 @@ final class LocalFirstMailRepository
       references: mail.references,
       attachments: mail.attachments
           .where((attachment) => attachment.uri != null)
-          .map((attachment) => DraftAttachment(
-                uri: attachment.uri!,
-                fileName: attachment.fileName,
-                mimeType: attachment.mimeType,
-                sizeBytes: attachment.sizeBytes,
-              ))
+          .map(
+            (attachment) => DraftAttachment(
+              uri: attachment.uri!,
+              fileName: attachment.fileName,
+              mimeType: attachment.mimeType,
+              sizeBytes: attachment.sizeBytes,
+            ),
+          )
           .toList(growable: false),
     );
     await saveDraft(draft);
@@ -1153,16 +1187,18 @@ final class LocalFirstMailRepository
       throw ArgumentError.value(count, 'count');
     }
     await clearDebugMailbox();
-    await _database.saveAccount(AccountsCompanion.insert(
-      accountId: debugAccountId,
-      email: 'debug@glassmail.local',
-      createdAtEpochMillis: _clock(),
-      syncState: 'READY',
-      gmailExtensionsEnabled: 0,
-    ));
-    await _database.saveCacheConfig(CacheConfigCompanion.insert(
-      accountId: debugAccountId,
-    ));
+    await _database.saveAccount(
+      AccountsCompanion.insert(
+        accountId: debugAccountId,
+        email: 'debug@glassmail.local',
+        createdAtEpochMillis: _clock(),
+        syncState: 'READY',
+        gmailExtensionsEnabled: 0,
+      ),
+    );
+    await _database.saveCacheConfig(
+      CacheConfigCompanion.insert(accountId: debugAccountId),
+    );
     await _database.saveMailboxes([
       MailboxesCompanion.insert(
         mailboxId: _inboxId(debugAccountId),
@@ -1173,14 +1209,16 @@ final class LocalFirstMailRepository
         messageCount: count,
       ),
     ]);
-    await _database.saveCheckpoint(SyncCheckpointsCompanion.insert(
-      mailboxId: _inboxId(debugAccountId),
-      accountId: debugAccountId,
-      uidValidity: 1,
-      highestKnownUid: count,
-      syncGeneration: 1,
-      lastSuccessfulSyncEpochMillis: Value(_clock()),
-    ));
+    await _database.saveCheckpoint(
+      SyncCheckpointsCompanion.insert(
+        mailboxId: _inboxId(debugAccountId),
+        accountId: debugAccountId,
+        uidValidity: 1,
+        highestKnownUid: count,
+        syncGeneration: 1,
+        lastSuccessfulSyncEpochMillis: Value(_clock()),
+      ),
+    );
     for (var start = 1; start <= count; start += 200) {
       final end = min(count, start + 199);
       final messages = <MessagesCompanion>[];
@@ -1193,56 +1231,61 @@ final class LocalFirstMailRepository
         final category = index % 17 == 0
             ? MailCategory.social
             : index % 13 == 0
-                ? MailCategory.promotions
-                : index % 11 == 0
-                    ? MailCategory.updates
-                    : index % 7 == 0
-                        ? MailCategory.forums
-                        : MailCategory.primary;
+            ? MailCategory.promotions
+            : index % 11 == 0
+            ? MailCategory.updates
+            : index % 7 == 0
+            ? MailCategory.forums
+            : MailCategory.primary;
         final subject = _debugSubjects[(index - 1) % _debugSubjects.length];
         final preview =
             'Local deterministic fixture $index for inbox and search.';
-        messages.add(MessagesCompanion.insert(
-          messageId: id,
-          accountId: debugAccountId,
-          gmailMessageId: Value('debug-$index'),
-          gmailThreadId: Value('thread-${(index - 1) ~/ 3}'),
-          subject: Value(subject),
-          sender: Value(sender),
-          sentAtEpochMillis: Value(1735689600000 - index * 60000),
-          sizeBytes: Value(1024 + index),
-          category: Value(category),
-          preview: Value(preview),
-          body: Value(preview),
-          contentKind: 'PLAIN',
-          bodyDownloadState: 'AVAILABLE',
-        ));
+        messages.add(
+          MessagesCompanion.insert(
+            messageId: id,
+            accountId: debugAccountId,
+            gmailMessageId: Value('debug-$index'),
+            gmailThreadId: Value('thread-${(index - 1) ~/ 3}'),
+            subject: Value(subject),
+            sender: Value(sender),
+            sentAtEpochMillis: Value(1735689600000 - index * 60000),
+            sizeBytes: Value(1024 + index),
+            category: Value(category),
+            preview: Value(preview),
+            body: Value(preview),
+            contentKind: 'PLAIN',
+            bodyDownloadState: 'AVAILABLE',
+          ),
+        );
         final flags = <String>[];
         if (index % 3 != 0) flags.add(r'\Seen');
         if (index % 5 == 0) flags.add(r'\Flagged');
-        memberships.add(MailboxMessagesCompanion.insert(
-          mailboxId: _inboxId(debugAccountId),
-          uid: index,
-          messageId: id,
-          flags: flags.join(' '),
-          labels: index % 5 == 0 ? 'STARRED\u001fINBOX' : 'INBOX',
-        ));
-        if (index % 7 == 0) {
-          labels.add(MessageLabelsCompanion.insert(
+        memberships.add(
+          MailboxMessagesCompanion.insert(
+            mailboxId: _inboxId(debugAccountId),
+            uid: index,
             messageId: id,
-            label: 'Travel',
-          ));
+            flags: flags.join(' '),
+            labels: index % 5 == 0 ? 'STARRED\u001fINBOX' : 'INBOX',
+          ),
+        );
+        if (index % 7 == 0) {
+          labels.add(
+            MessageLabelsCompanion.insert(messageId: id, label: 'Travel'),
+          );
         }
         if (index % 9 == 0) {
-          attachments.add(AttachmentsCompanion.insert(
-            attachmentId: '$id:1',
-            messageId: id,
-            partId: '1',
-            fileName: Value('fixture-$index.pdf'),
-            mimeType: const Value('application/pdf'),
-            sizeBytes: const Value(4096),
-            downloadState: 'NOT_FETCHED',
-          ));
+          attachments.add(
+            AttachmentsCompanion.insert(
+              attachmentId: '$id:1',
+              messageId: id,
+              partId: '1',
+              fileName: Value('fixture-$index.pdf'),
+              mimeType: const Value('application/pdf'),
+              sizeBytes: const Value(4096),
+              downloadState: 'NOT_FETCHED',
+            ),
+          );
         }
       }
       await _database.transaction(() async {
@@ -1292,7 +1335,8 @@ final class LocalFirstMailRepository
     final encodedAccount = _fileKey(accountId);
     for (final remoteDraft in remote) {
       final remoteId = remoteDraft.draftId;
-      final id = remoteId != null &&
+      final id =
+          remoteId != null &&
               RegExp(r'^[A-Za-z0-9._-]{1,128}$').hasMatch(remoteId)
           ? remoteId
           : 'remote-${encodedAccount.substring(0, min(32, encodedAccount.length))}-${remoteDraft.uidValidity ?? 0}-${remoteDraft.uid}';
@@ -1317,8 +1361,9 @@ final class LocalFirstMailRepository
           references: remoteDraft.references,
           status: DraftStatus.draft,
           updatedAtEpochMillis: remoteTime,
-          attachments:
-              local == null ? const [] : _toMailDraft(local).attachments,
+          attachments: local == null
+              ? const []
+              : _toMailDraft(local).attachments,
         );
         await saveDraft(replacement);
         final saved = await _database.watchDraft(id).first;
@@ -1360,20 +1405,19 @@ final class LocalFirstMailRepository
 
 String _inboxId(String accountId) => '$accountId:INBOX';
 String _sentMailboxId(String accountId) => '$accountId:SENT';
-bool _isTrashRemoteName(String name) => const {
-      '[gmail]/trash',
-      'trash',
-      'bin',
-    }.contains(name.toLowerCase());
+bool _isTrashRemoteName(String name) =>
+    const {'[gmail]/trash', 'trash', 'bin'}.contains(name.toLowerCase());
 
 MailAccount _toMailAccount(Account account) => MailAccount(
-      accountId: account.accountId,
-      email: account.email,
-      syncState: account.syncState,
-    );
+  accountId: account.accountId,
+  email: account.email,
+  syncState: account.syncState,
+);
 
 List<MailListItem> _toMailListItems(List<MailboxMessageRow> rows) =>
-    List.unmodifiable(rows.map((row) => MailListItem(
+    List.unmodifiable(
+      rows.map(
+        (row) => MailListItem(
           messageId: row.messageId,
           threadId: row.gmailThreadId,
           sender: row.sender ?? '',
@@ -1385,7 +1429,9 @@ List<MailListItem> _toMailListItems(List<MailboxMessageRow> rows) =>
           labels: _decodeLabels(row.labels),
           hasAttachment: row.hasAttachment,
           category: row.category,
-        )));
+        ),
+      ),
+    );
 
 List<MailListItem> _mergeMailLists(List<List<MailListItem>> lists) {
   final merged = [for (final list in lists) ...list];
@@ -1416,46 +1462,47 @@ Map<String, int> _mergeUnreadCounts(List<Map<String, int>> values) {
 MailMessage _toMailMessage(
   MessageDetailRow row,
   List<Attachment> attachments,
-) =>
-    MailMessage(
-      messageId: row.messageId,
-      threadId: row.gmailThreadId,
-      sender: row.sender ?? '',
-      subject: row.subject ?? '',
-      preview: row.preview ?? '',
-      body: row.body,
-      html: row.contentKind == 'HTML',
-      sentAtEpochMillis: row.sentAtEpochMillis,
-      unread: !_decodeFlags(row.flags).contains(r'\Seen'),
-      starred: _decodeFlags(row.flags).contains(r'\Flagged'),
-      labels: _decodeLabels(row.labels),
-      attachments: attachments
-          .map((attachment) => MailAttachment(
-                attachmentId: attachment.attachmentId,
-                fileName: attachment.fileName,
-                mimeType: attachment.mimeType,
-                sizeBytes: attachment.sizeBytes,
-                downloadState: attachment.downloadState,
-              ))
-          .toList(growable: false),
-      listUnsubscribe: row.listUnsubscribe,
-      listUnsubscribePost: row.listUnsubscribePost,
-    );
+) => MailMessage(
+  messageId: row.messageId,
+  threadId: row.gmailThreadId,
+  sender: row.sender ?? '',
+  subject: row.subject ?? '',
+  preview: row.preview ?? '',
+  body: row.body,
+  html: row.contentKind == 'HTML',
+  sentAtEpochMillis: row.sentAtEpochMillis,
+  unread: !_decodeFlags(row.flags).contains(r'\Seen'),
+  starred: _decodeFlags(row.flags).contains(r'\Flagged'),
+  labels: _decodeLabels(row.labels),
+  attachments: attachments
+      .map(
+        (attachment) => MailAttachment(
+          attachmentId: attachment.attachmentId,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          downloadState: attachment.downloadState,
+        ),
+      )
+      .toList(growable: false),
+  listUnsubscribe: row.listUnsubscribe,
+  listUnsubscribePost: row.listUnsubscribePost,
+);
 
 MailDraft _toMailDraft(Draft draft) => MailDraft(
-      draftId: draft.draftId,
-      accountId: draft.accountId,
-      to: _decodeUnitList(draft.toAddresses),
-      cc: _decodeUnitList(draft.ccAddresses),
-      bcc: _decodeUnitList(draft.bccAddresses),
-      subject: draft.subject,
-      body: draft.body,
-      inReplyTo: draft.inReplyTo,
-      references: _decodeUnitList(draft.references),
-      status: DraftStatus.fromStorageValue(draft.status),
-      updatedAtEpochMillis: draft.updatedAtEpochMillis,
-      attachments: _decodeStoredAttachments(draft.attachments),
-    );
+  draftId: draft.draftId,
+  accountId: draft.accountId,
+  to: _decodeUnitList(draft.toAddresses),
+  cc: _decodeUnitList(draft.ccAddresses),
+  bcc: _decodeUnitList(draft.bccAddresses),
+  subject: draft.subject,
+  body: draft.body,
+  inReplyTo: draft.inReplyTo,
+  references: _decodeUnitList(draft.references),
+  status: DraftStatus.fromStorageValue(draft.status),
+  updatedAtEpochMillis: draft.updatedAtEpochMillis,
+  attachments: _decodeStoredAttachments(draft.attachments),
+);
 
 List<String> _ftsTerms(String input) {
   final tokens = RegExp(r'[\p{L}\p{N}_]+', unicode: true)
@@ -1481,8 +1528,13 @@ String _attachmentId(String messageId, String partId) =>
 String _fileKey(String value) =>
     base64Url.encode(utf8.encode(value)).replaceAll('=', '');
 
-File _attachmentFile(Directory root, String accountId, String attachmentId) => File(
-    '${root.path}/attachments/${_fileKey(accountId)}/${_fileKey(attachmentId)}');
+File _attachmentFile(
+  Directory root,
+  String accountId,
+  String attachmentId,
+) => File(
+  '${root.path}/attachments/${_fileKey(accountId)}/${_fileKey(attachmentId)}',
+);
 
 const _debugSenders = [
   'Ada Lovelace <ada@example.test>',
@@ -1516,28 +1568,33 @@ List<DraftAttachment> _decodeStoredAttachments(String encoded) => encoded
     .split('\u001e')
     .map((row) => row.split('\u001f'))
     .where((parts) => parts.length == 4 && int.tryParse(parts[3]) != null)
-    .map((parts) => DraftAttachment(
-          uri: parts[0],
-          fileName: parts[1],
-          mimeType: parts[2],
-          sizeBytes: int.parse(parts[3]),
-        ))
+    .map(
+      (parts) => DraftAttachment(
+        uri: parts[0],
+        fileName: parts[1],
+        mimeType: parts[2],
+        sizeBytes: int.parse(parts[3]),
+      ),
+    )
     .toList();
 
 int _estimateJsonStringBytes(Object? value) {
   if (value is String) return utf8.encode(value).length + 2;
   if (value is Map) {
     return value.entries.fold<int>(
-        2,
-        (total, entry) =>
-            total +
-            _estimateJsonStringBytes(entry.key.toString()) +
-            _estimateJsonStringBytes(entry.value) +
-            2);
+      2,
+      (total, entry) =>
+          total +
+          _estimateJsonStringBytes(entry.key.toString()) +
+          _estimateJsonStringBytes(entry.value) +
+          2,
+    );
   }
   if (value is Iterable) {
     return value.fold<int>(
-        2, (total, item) => total + _estimateJsonStringBytes(item) + 1);
+      2,
+      (total, item) => total + _estimateJsonStringBytes(item) + 1,
+    );
   }
   return 16;
 }
@@ -1547,7 +1604,8 @@ void _validateBackupAttachmentPath(String relativePath) {
   if (!relativePath.startsWith('attachments/') ||
       segments.length < 3 ||
       segments.any(
-          (segment) => segment.isEmpty || segment == '.' || segment == '..') ||
+        (segment) => segment.isEmpty || segment == '.' || segment == '..',
+      ) ||
       segments.any((segment) => segment.contains(':'))) {
     throw const FormatException('Backup contains an unsafe attachment path.');
   }
@@ -1569,36 +1627,42 @@ void _rewriteDraftAttachmentPaths(
     }
     final encoded = rawDraft['attachments']! as String;
     if (encoded.isEmpty) continue;
-    rawDraft['attachments'] = encoded.split('\u001e').map((entry) {
-      final parts = entry.split('\u001f');
-      if (parts.length != 4) {
-        throw const FormatException('Backup draft attachment is malformed.');
-      }
-      final uri = Uri.tryParse(parts[0]);
-      final originalPath =
-          uri != null && uri.scheme == 'file' ? uri.toFilePath() : parts[0];
-      final slashPath = originalPath.replaceAll('\\', '/');
-      const marker = '/attachments/';
-      final markerIndex = slashPath.lastIndexOf(marker);
-      if (markerIndex < 0) {
-        throw const FormatException(
-          'A draft attachment is outside GlassMail local storage.',
-        );
-      }
-      final relativePath =
-          'attachments/${slashPath.substring(markerIndex + marker.length)}';
-      _validateBackupAttachmentPath(relativePath);
-      if (!restoredFiles.contains(relativePath)) {
-        throw const FormatException(
-          'A draft attachment is missing from the backup.',
-        );
-      }
-      parts[0] = Uri.file(
-        '$rootPath${Platform.pathSeparator}'
-        '${relativePath.replaceAll('/', Platform.pathSeparator)}',
-      ).toString();
-      return parts.join('\u001f');
-    }).join('\u001e');
+    rawDraft['attachments'] = encoded
+        .split('\u001e')
+        .map((entry) {
+          final parts = entry.split('\u001f');
+          if (parts.length != 4) {
+            throw const FormatException(
+              'Backup draft attachment is malformed.',
+            );
+          }
+          final uri = Uri.tryParse(parts[0]);
+          final originalPath = uri != null && uri.scheme == 'file'
+              ? uri.toFilePath()
+              : parts[0];
+          final slashPath = originalPath.replaceAll('\\', '/');
+          const marker = '/attachments/';
+          final markerIndex = slashPath.lastIndexOf(marker);
+          if (markerIndex < 0) {
+            throw const FormatException(
+              'A draft attachment is outside GlassMail local storage.',
+            );
+          }
+          final relativePath =
+              'attachments/${slashPath.substring(markerIndex + marker.length)}';
+          _validateBackupAttachmentPath(relativePath);
+          if (!restoredFiles.contains(relativePath)) {
+            throw const FormatException(
+              'A draft attachment is missing from the backup.',
+            );
+          }
+          parts[0] = Uri.file(
+            '$rootPath${Platform.pathSeparator}'
+            '${relativePath.replaceAll('/', Platform.pathSeparator)}',
+          ).toString();
+          return parts.join('\u001f');
+        })
+        .join('\u001e');
   }
 }
 
@@ -1628,25 +1692,27 @@ Stream<R> _combineLatest2<A, B, R>(
   controller = StreamController<R>(
     onListen: () {
       firstSub = first.listen(
-          (value) {
-            firstValue = value;
-            hasFirst = true;
-            emit();
-          },
-          onError: controller.addError,
-          onDone: () {
-            if (++completed == 2) controller.close();
-          });
+        (value) {
+          firstValue = value;
+          hasFirst = true;
+          emit();
+        },
+        onError: controller.addError,
+        onDone: () {
+          if (++completed == 2) controller.close();
+        },
+      );
       secondSub = second.listen(
-          (value) {
-            secondValue = value;
-            hasSecond = true;
-            emit();
-          },
-          onError: controller.addError,
-          onDone: () {
-            if (++completed == 2) controller.close();
-          });
+        (value) {
+          secondValue = value;
+          hasSecond = true;
+          emit();
+        },
+        onError: controller.addError,
+        onDone: () {
+          if (++completed == 2) controller.close();
+        },
+      );
     },
     onCancel: () async {
       await firstSub?.cancel();
@@ -1666,7 +1732,8 @@ Stream<List<T>> _combineLatestLists<T>(List<Stream<T>> sources) {
   controller = StreamController<List<T>>(
     onListen: () {
       for (var index = 0; index < sources.length; index++) {
-        subscriptions.add(sources[index].listen(
+        subscriptions.add(
+          sources[index].listen(
             (value) {
               values[index] = value;
               ready[index] = true;
@@ -1677,7 +1744,9 @@ Stream<List<T>> _combineLatestLists<T>(List<Stream<T>> sources) {
             onError: controller.addError,
             onDone: () {
               if (++completed == sources.length) controller.close();
-            }));
+            },
+          ),
+        );
       }
     },
     onCancel: () async {
@@ -1689,10 +1758,7 @@ Stream<List<T>> _combineLatestLists<T>(List<Stream<T>> sources) {
   return controller.stream;
 }
 
-Stream<R> _switchMap<T, R>(
-  Stream<T> source,
-  Stream<R> Function(T) convert,
-) {
+Stream<R> _switchMap<T, R>(Stream<T> source, Stream<R> Function(T) convert) {
   late StreamController<R> controller;
   StreamSubscription<T>? sourceSub;
   StreamSubscription<R>? innerSub;
@@ -1700,21 +1766,22 @@ Stream<R> _switchMap<T, R>(
   controller = StreamController<R>(
     onListen: () {
       sourceSub = source.listen(
-          (value) async {
-            await innerSub?.cancel();
-            innerSub = convert(value).listen(
-              controller.add,
-              onError: controller.addError,
-              onDone: () {
-                if (sourceDone) controller.close();
-              },
-            );
-          },
-          onError: controller.addError,
-          onDone: () {
-            sourceDone = true;
-            if (innerSub == null) controller.close();
-          });
+        (value) async {
+          await innerSub?.cancel();
+          innerSub = convert(value).listen(
+            controller.add,
+            onError: controller.addError,
+            onDone: () {
+              if (sourceDone) controller.close();
+            },
+          );
+        },
+        onError: controller.addError,
+        onDone: () {
+          sourceDone = true;
+          if (innerSub == null) controller.close();
+        },
+      );
     },
     onCancel: () async {
       await sourceSub?.cancel();

@@ -8,9 +8,7 @@ void main() {
   group('MIME decoder', () {
     test('decodes Q and Base64 RFC 2047 words and adjacent encoded words', () {
       expect(
-        MimeDecoder.decodeMimeWords(
-          '=?UTF-8?Q?=E2=8F=B0_Important_Update!?=',
-        ),
+        MimeDecoder.decodeMimeWords('=?UTF-8?Q?=E2=8F=B0_Important_Update!?='),
         '⏰ Important Update!',
       );
       expect(
@@ -18,15 +16,10 @@ void main() {
         'Hello World',
       );
       expect(
-        MimeDecoder.decodeMimeWords(
-          '=?UTF-8?Q?Hello_?=  =?UTF-8?Q?World!?=',
-        ),
+        MimeDecoder.decodeMimeWords('=?UTF-8?Q?Hello_?=  =?UTF-8?Q?World!?='),
         'Hello World!',
       );
-      expect(
-        MimeDecoder.decodeMimeWords('A plain subject'),
-        'A plain subject',
-      );
+      expect(MimeDecoder.decodeMimeWords('A plain subject'), 'A plain subject');
     });
 
     test('parses plain UTF-8 and multipart alternative content', () {
@@ -65,9 +58,10 @@ Content-Type: text/html; charset=utf-8
       expect(parsed.attachments, isEmpty);
     });
 
-    test('finds stable nested IMAP part IDs and bounded attachment metadata',
-        () {
-      const mixed = '''
+    test(
+      'finds stable nested IMAP part IDs and bounded attachment metadata',
+      () {
+        const mixed = '''
 Content-Type: multipart/mixed; boundary="outer"
 
 --outer
@@ -90,17 +84,18 @@ Content-Transfer-Encoding: base64
 JVBERi0xLjQ=
 --outer--
 ''';
-      final parsed = MimeDecoder.parseRfc822(
-        Uint8List.fromList(utf8.encode(mixed)),
-      );
+        final parsed = MimeDecoder.parseRfc822(
+          Uint8List.fromList(utf8.encode(mixed)),
+        );
 
-      expect(parsed.plainText, contains('Hello from the body.'));
-      expect(parsed.attachments, hasLength(1));
-      expect(parsed.attachments.single.partId, '2');
-      expect(parsed.attachments.single.fileName, 'report.pdf');
-      expect(parsed.attachments.single.mimeType, 'application/pdf');
-      expect(parsed.attachments.single.sizeBytes, 8);
-    });
+        expect(parsed.plainText, contains('Hello from the body.'));
+        expect(parsed.attachments, hasLength(1));
+        expect(parsed.attachments.single.partId, '2');
+        expect(parsed.attachments.single.fileName, 'report.pdf');
+        expect(parsed.attachments.single.mimeType, 'application/pdf');
+        expect(parsed.attachments.single.sizeBytes, 8);
+      },
+    );
 
     test('decodes transfer encoding, folded headers and safe preview text', () {
       final message = MimeDecoder.parseRfc822(
@@ -114,10 +109,7 @@ JVBERi0xLjQ=
         ),
       );
       expect(message.plainText, 'A base64 body');
-      expect(
-        MimeDecoder.decodeMimeWords('=?UTF-8?Q?caf=C3=A9?='),
-        'café',
-      );
+      expect(MimeDecoder.decodeMimeWords('=?UTF-8?Q?caf=C3=A9?='), 'café');
     });
 
     test('strips script/style markup and decodes HTML entities', () {
@@ -133,9 +125,8 @@ JVBERi0xLjQ=
 
     test('bounds input size and multipart recursion and part count', () {
       expect(
-        () => MimeDecoder.parseRfc822(
-          Uint8List(MimeDecoder.maxMessageBytes + 1),
-        ),
+        () =>
+            MimeDecoder.parseRfc822(Uint8List(MimeDecoder.maxMessageBytes + 1)),
         throwsA(isA<ImapProtocolException>()),
       );
 
@@ -155,7 +146,8 @@ JVBERi0xLjQ=
 
       var nested = 'Content-Type: text/plain\r\n\r\nhello';
       for (var index = 0; index <= MimeDecoder.maxMultipartDepth; index++) {
-        nested = 'Content-Type: multipart/mixed; boundary="b$index"\r\n\r\n'
+        nested =
+            'Content-Type: multipart/mixed; boundary="b$index"\r\n\r\n'
             '--b$index\r\n$nested\r\n--b$index--\r\n';
       }
       expect(

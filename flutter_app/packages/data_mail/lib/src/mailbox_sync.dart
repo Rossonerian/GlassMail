@@ -33,7 +33,7 @@ typedef ImapClientConnector = Future<ImapClient> Function();
 /// Gmail IMAP adapter for one bounded INBOX UID page.
 final class ImapInboxPageSource implements InboxPageSource {
   ImapInboxPageSource({ImapClientConnector? connect})
-      : _connect = connect ?? ImapClient.connect;
+    : _connect = connect ?? ImapClient.connect;
 
   final ImapClientConnector _connect;
 
@@ -61,7 +61,8 @@ final class ImapInboxPageSource implements InboxPageSource {
       };
       final mailboxes = await client.listMailboxes();
       final inbox = await client.selectMailbox('INBOX');
-      final reset = expectedUidValidity != null &&
+      final reset =
+          expectedUidValidity != null &&
           expectedUidValidity != inbox.uidValidity;
       final effectiveAfterUid = reset ? 0 : afterUid;
       final firstUid = max(1, effectiveAfterUid + 1);
@@ -76,10 +77,12 @@ final class ImapInboxPageSource implements InboxPageSource {
       return GmailInboxSnapshot(
         capabilities: capabilities,
         mailboxes: mailboxes
-            .map((mailbox) => ImapMailbox(
-                  name: mailbox.name,
-                  attributes: mailbox.attributes,
-                ))
+            .map(
+              (mailbox) => ImapMailbox(
+                name: mailbox.name,
+                attributes: mailbox.attributes,
+              ),
+            )
             .toList(),
         inbox: ImapSelectedMailbox(
           uidValidity: inbox.uidValidity,
@@ -137,7 +140,7 @@ final class SentMailboxSnapshot {
 
 final class ImapSentMailboxPageSource implements SentMailboxPageSource {
   ImapSentMailboxPageSource({ImapClientConnector? connect})
-      : _connect = connect ?? ImapClient.connect;
+    : _connect = connect ?? ImapClient.connect;
 
   final ImapClientConnector _connect;
 
@@ -160,16 +163,22 @@ final class ImapSentMailboxPageSource implements SentMailboxPageSource {
         ...await client.capability(),
       };
       final mailboxes = await client.listMailboxes();
-      final sent = mailboxes
-              .where((mailbox) => mailbox.attributes
-                  .any((attribute) => attribute.toLowerCase() == r'\sent'))
+      final sent =
+          mailboxes
+              .where(
+                (mailbox) => mailbox.attributes.any(
+                  (attribute) => attribute.toLowerCase() == r'\sent',
+                ),
+              )
               .firstOrNull ??
           mailboxes
-              .where((mailbox) => const {
-                    '[gmail]/sent mail',
-                    'sent',
-                    'sent items',
-                  }.contains(mailbox.name.toLowerCase()))
+              .where(
+                (mailbox) => const {
+                  '[gmail]/sent mail',
+                  'sent',
+                  'sent items',
+                }.contains(mailbox.name.toLowerCase()),
+              )
               .firstOrNull;
       if (sent == null) return null;
 
@@ -237,7 +246,7 @@ final class TrashMailboxSnapshot {
 
 final class ImapTrashMailboxPageSource implements TrashMailboxPageSource {
   ImapTrashMailboxPageSource({ImapClientConnector? connect})
-      : _connect = connect ?? ImapClient.connect;
+    : _connect = connect ?? ImapClient.connect;
 
   final ImapClientConnector _connect;
 
@@ -260,16 +269,22 @@ final class ImapTrashMailboxPageSource implements TrashMailboxPageSource {
         ...await client.capability(),
       };
       final mailboxes = await client.listMailboxes();
-      final trash = mailboxes
-              .where((mailbox) => mailbox.attributes
-                  .any((attribute) => attribute.toLowerCase() == r'\trash'))
+      final trash =
+          mailboxes
+              .where(
+                (mailbox) => mailbox.attributes.any(
+                  (attribute) => attribute.toLowerCase() == r'\trash',
+                ),
+              )
               .firstOrNull ??
           mailboxes
-              .where((mailbox) => const {
-                    '[gmail]/trash',
-                    'trash',
-                    'bin',
-                  }.contains(mailbox.name.toLowerCase()))
+              .where(
+                (mailbox) => const {
+                  '[gmail]/trash',
+                  'trash',
+                  'bin',
+                }.contains(mailbox.name.toLowerCase()),
+              )
               .firstOrNull;
       if (trash == null) return null;
 
@@ -325,10 +340,12 @@ abstract final class GmailFetchMetadataMapper {
     final headerIndex = fields.indexWhere(
       (value) => value.atomValue?.toUpperCase().startsWith('BODY[') ?? false,
     );
-    final headerLiteral =
-        headerIndex < 0 ? null : fields[headerIndex + 1].literalValue;
+    final headerLiteral = headerIndex < 0
+        ? null
+        : fields[headerIndex + 1].literalValue;
     final headers = _parseSelectedHeaders(headerLiteral ?? const []);
-    final labels = fields
+    final labels =
+        fields
             .attribute('X-GM-LABELS')
             ?.listValue
             .map((value) => value.atomValue)
@@ -338,7 +355,8 @@ abstract final class GmailFetchMetadataMapper {
 
     return ImapMessageMetadata(
       uid: uid,
-      flags: fields
+      flags:
+          fields
               .attribute('FLAGS')
               ?.listValue
               .map((value) => value.atomValue)
@@ -370,15 +388,15 @@ abstract final class GmailFetchMetadataMapper {
     for (final address in addresses) {
       final fields = address.listValue;
       if (fields.length < 4) continue;
-      final personal = MimeDecoder.decodeMimeWords(fields[0].atomValue)
-          .trim()
-          .replaceAll(RegExp(r'^"|"$'), '');
+      final personal = MimeDecoder.decodeMimeWords(
+        fields[0].atomValue,
+      ).trim().replaceAll(RegExp(r'^"|"$'), '');
       final mailbox = fields[2].atomValue;
       final host = fields[3].atomValue;
-      final email = [mailbox, host]
-          .whereType<String>()
-          .where((part) => part.isNotEmpty)
-          .join('@');
+      final email = [
+        mailbox,
+        host,
+      ].whereType<String>().where((part) => part.isNotEmpty).join('@');
       if (personal.isNotEmpty && email.isNotEmpty) {
         return '$personal <$email>';
       }
@@ -464,12 +482,12 @@ final class MailboxSyncCoordinator {
     int Function()? clock,
     NewMailCallback? onNewMessages,
     Future<void> Function(String accountId)? flushPendingMutations,
-  })  : _database = database,
-        _credentialStore = credentialStore,
-        _source = source,
-        _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch),
-        _onNewMessages = onNewMessages,
-        _flushPendingMutations = flushPendingMutations;
+  }) : _database = database,
+       _credentialStore = credentialStore,
+       _source = source,
+       _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch),
+       _onNewMessages = onNewMessages,
+       _flushPendingMutations = flushPendingMutations;
 
   final GlassMailDatabase _database;
   final CredentialStore _credentialStore;
@@ -501,7 +519,9 @@ final class MailboxSyncCoordinator {
       );
       if (snapshot == null) {
         await _database.setAccountSyncState(
-            accountId, 'ERROR_MISSING_CREDENTIAL');
+          accountId,
+          'ERROR_MISSING_CREDENTIAL',
+        );
         return const MailSyncFailure(MailSyncError.missingCredential);
       }
 
@@ -550,7 +570,8 @@ final class MailboxSyncCoordinator {
       return const MailSyncFailure(MailSyncError.protocol);
     }
 
-    final reset = previousCheckpoint != null &&
+    final reset =
+        previousCheckpoint != null &&
         previousCheckpoint.uidValidity != inbox.uidValidity;
     final priorUid = reset ? 0 : previousCheckpoint?.highestKnownUid ?? 0;
     if (snapshot.requestedThroughUid > priorUid + maxUidSlotsPerPage) {
@@ -568,21 +589,27 @@ final class MailboxSyncCoordinator {
     }
 
     final messageIds = snapshot.messages
-        .map((message) =>
-            canonicalMessageId(accountId, inbox.uidValidity, message))
+        .map(
+          (message) =>
+              canonicalMessageId(accountId, inbox.uidValidity, message),
+        )
         .toList(growable: false);
     final existingIds = (await _database.messageIds(messageIds)).toSet();
-    final notificationState =
-        await _database.notificationStateForAccount(accountId);
+    final notificationState = await _database.notificationStateForAccount(
+      accountId,
+    );
     final shouldNotify = notificationState?.baselineEstablished == 1;
     final newMessages = shouldNotify
         ? snapshot.messages
-            .where((message) => !existingIds.contains(
+              .where(
+                (message) => !existingIds.contains(
                   canonicalMessageId(accountId, inbox.uidValidity, message),
-                ))
-            .map(
-                (message) => _toListItem(accountId, inbox.uidValidity, message))
-            .toList(growable: false)
+                ),
+              )
+              .map(
+                (message) => _toListItem(accountId, inbox.uidValidity, message),
+              )
+              .toList(growable: false)
         : const <MailListItem>[];
 
     final mailboxRows = snapshot.mailboxes.map((mailbox) {
@@ -596,45 +623,55 @@ final class MailboxSyncCoordinator {
         messageCount: isInbox ? inbox.messageCount : 0,
       );
     }).toList();
-    if (!snapshot.mailboxes
-        .any((mailbox) => mailbox.name.toUpperCase() == 'INBOX')) {
-      mailboxRows.add(MailboxesCompanion.insert(
-        mailboxId: '$accountId:INBOX',
-        accountId: accountId,
-        remoteName: 'INBOX',
-        uidValidity: inbox.uidValidity,
-        uidNext: inbox.uidNext,
-        messageCount: inbox.messageCount,
-      ));
+    if (!snapshot.mailboxes.any(
+      (mailbox) => mailbox.name.toUpperCase() == 'INBOX',
+    )) {
+      mailboxRows.add(
+        MailboxesCompanion.insert(
+          mailboxId: '$accountId:INBOX',
+          accountId: accountId,
+          remoteName: 'INBOX',
+          uidValidity: inbox.uidValidity,
+          uidNext: inbox.uidNext,
+          messageCount: inbox.messageCount,
+        ),
+      );
     }
 
     final messageRows = <MessagesCompanion>[];
     final membershipRows = <MailboxMessagesCompanion>[];
     for (final message in snapshot.messages) {
-      final messageId =
-          canonicalMessageId(accountId, inbox.uidValidity, message);
-      messageRows.add(MessagesCompanion.insert(
-        messageId: messageId,
-        accountId: accountId,
-        gmailMessageId: Value(message.gmailMessageId),
-        gmailThreadId: Value(message.gmailThreadId),
-        subject: Value(message.subject),
-        sender: Value(message.sender),
-        sentAtEpochMillis: Value(message.sentAtEpochMillis),
-        sizeBytes: Value(message.sizeBytes),
-        category: Value(_resolveCategory(message)),
-        listUnsubscribe: Value(message.listUnsubscribe),
-        listUnsubscribePost: Value(message.listUnsubscribePost),
-        contentKind: 'PLAIN',
-        bodyDownloadState: 'NOT_FETCHED',
-      ));
-      membershipRows.add(MailboxMessagesCompanion.insert(
-        mailboxId: '$accountId:INBOX',
-        uid: message.uid,
-        messageId: messageId,
-        flags: (message.flags.toList()..sort()).join(' '),
-        labels: (message.labels.toList()..sort()).join('\u001f'),
-      ));
+      final messageId = canonicalMessageId(
+        accountId,
+        inbox.uidValidity,
+        message,
+      );
+      messageRows.add(
+        MessagesCompanion.insert(
+          messageId: messageId,
+          accountId: accountId,
+          gmailMessageId: Value(message.gmailMessageId),
+          gmailThreadId: Value(message.gmailThreadId),
+          subject: Value(message.subject),
+          sender: Value(message.sender),
+          sentAtEpochMillis: Value(message.sentAtEpochMillis),
+          sizeBytes: Value(message.sizeBytes),
+          category: Value(_resolveCategory(message)),
+          listUnsubscribe: Value(message.listUnsubscribe),
+          listUnsubscribePost: Value(message.listUnsubscribePost),
+          contentKind: 'PLAIN',
+          bodyDownloadState: 'NOT_FETCHED',
+        ),
+      );
+      membershipRows.add(
+        MailboxMessagesCompanion.insert(
+          mailboxId: '$accountId:INBOX',
+          uid: message.uid,
+          messageId: messageId,
+          flags: (message.flags.toList()..sort()).join(' '),
+          labels: (message.labels.toList()..sort()).join('\u001f'),
+        ),
+      );
     }
 
     final now = _clock();
@@ -658,8 +695,10 @@ final class MailboxSyncCoordinator {
           reset ? 0 : previousCheckpoint?.highestKnownUid ?? 0,
           max(
             snapshot.requestedThroughUid,
-            snapshot.messages
-                .fold<int>(0, (high, message) => max(high, message.uid)),
+            snapshot.messages.fold<int>(
+              0,
+              (high, message) => max(high, message.uid),
+            ),
           ),
         ),
         syncGeneration: previousGeneration + (reset ? 1 : 0),
@@ -685,7 +724,9 @@ final class MailboxSyncCoordinator {
   }
 
   Future<T> _serialized<T>(
-      String accountId, Future<T> Function() action) async {
+    String accountId,
+    Future<T> Function() action,
+  ) async {
     final previous = _accountTails[accountId] ?? Future<void>.value();
     final release = Completer<void>();
     final tail = release.future;
@@ -706,29 +747,27 @@ String canonicalMessageId(
   String accountId,
   int uidValidity,
   ImapMessageMetadata message,
-) =>
-    message.gmailMessageId == null
-        ? 'imap:$accountId:$uidValidity:${message.uid}'
-        : 'gmail:$accountId:${message.gmailMessageId}';
+) => message.gmailMessageId == null
+    ? 'imap:$accountId:$uidValidity:${message.uid}'
+    : 'gmail:$accountId:${message.gmailMessageId}';
 
 MailListItem _toListItem(
   String accountId,
   int uidValidity,
   ImapMessageMetadata message,
-) =>
-    MailListItem(
-      messageId: canonicalMessageId(accountId, uidValidity, message),
-      threadId: message.gmailThreadId,
-      sender: message.sender ?? '',
-      subject: message.subject ?? '',
-      preview: 'New message',
-      sentAtEpochMillis: message.sentAtEpochMillis,
-      unread: !message.flags.contains(r'\Seen'),
-      starred: message.flags.contains(r'\Flagged'),
-      labels: message.labels.toList(),
-      hasAttachment: false,
-      category: _resolveCategory(message),
-    );
+) => MailListItem(
+  messageId: canonicalMessageId(accountId, uidValidity, message),
+  threadId: message.gmailThreadId,
+  sender: message.sender ?? '',
+  subject: message.subject ?? '',
+  preview: 'New message',
+  sentAtEpochMillis: message.sentAtEpochMillis,
+  unread: !message.flags.contains(r'\Seen'),
+  starred: message.flags.contains(r'\Flagged'),
+  labels: message.labels.toList(),
+  hasAttachment: false,
+  category: _resolveCategory(message),
+);
 
 String _resolveCategory(ImapMessageMetadata message) {
   for (final label in message.labels) {
@@ -737,13 +776,20 @@ String _resolveCategory(ImapMessageMetadata message) {
     }
   }
   final sender = message.sender?.toLowerCase() ?? '';
-  final host =
-      sender.contains('@') ? sender.split('@').last.split('>').first : '';
+  final host = sender.contains('@')
+      ? sender.split('@').last.split('>').first
+      : '';
   final subject = message.subject?.toLowerCase() ?? '';
-  final listMail = message.precedence?.toLowerCase() == 'list' ||
+  final listMail =
+      message.precedence?.toLowerCase() == 'list' ||
       (message.listId?.isNotEmpty ?? false);
-  if ({'facebook.com', 'linkedin.com', 'instagram.com', 'twitter.com', 'x.com'}
-      .any((domain) => host == domain || host.endsWith('.$domain'))) {
+  if ({
+    'facebook.com',
+    'linkedin.com',
+    'instagram.com',
+    'twitter.com',
+    'x.com',
+  }.any((domain) => host == domain || host.endsWith('.$domain'))) {
     return MailCategory.social;
   }
   if (listMail ||
@@ -757,12 +803,20 @@ String _resolveCategory(ImapMessageMetadata message) {
   }
   if (sender.contains('no-reply') ||
       sender.contains('noreply') ||
-      ['security alert', 'verification code', 'receipt', 'shipping update']
-          .any(subject.contains)) {
+      [
+        'security alert',
+        'verification code',
+        'receipt',
+        'shipping update',
+      ].any(subject.contains)) {
     return MailCategory.updates;
   }
-  if (['sale', 'discount', 'special offer', 'newsletter']
-      .any(subject.contains)) {
+  if ([
+    'sale',
+    'discount',
+    'special offer',
+    'newsletter',
+  ].any(subject.contains)) {
     return MailCategory.promotions;
   }
   return MailCategory.primary;

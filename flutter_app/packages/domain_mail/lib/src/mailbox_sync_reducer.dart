@@ -35,7 +35,7 @@ final class ServerMailboxBatch with MailValueEquality {
 
 final class LocalMessage with MailValueEquality {
   LocalMessage({required this.canonicalId, required Set<String> flags})
-      : flags = Set.unmodifiable(flags);
+    : flags = Set.unmodifiable(flags);
 
   final String canonicalId;
   final Set<String> flags;
@@ -77,8 +77,8 @@ final class MailboxLocalState with MailValueEquality {
     required this.highestKnownUid,
     Map<int, LocalMessage> messages = const {},
     List<LocalMutation> pendingMutations = const [],
-  })  : messages = Map.unmodifiable(messages),
-        pendingMutations = List.unmodifiable(pendingMutations);
+  }) : messages = Map.unmodifiable(messages),
+       pendingMutations = List.unmodifiable(pendingMutations);
 
   final int uidValidity;
   final int highestKnownUid;
@@ -87,11 +87,11 @@ final class MailboxLocalState with MailValueEquality {
 
   @override
   List<Object?> get equalityProps => [
-        uidValidity,
-        highestKnownUid,
-        messages,
-        pendingMutations,
-      ];
+    uidValidity,
+    highestKnownUid,
+    messages,
+    pendingMutations,
+  ];
 }
 
 abstract final class MailboxSyncReducer {

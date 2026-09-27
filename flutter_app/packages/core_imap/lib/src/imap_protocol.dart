@@ -30,7 +30,7 @@ final class ImapLiteral extends ImapValue {
 
 final class ImapValueList extends ImapValue {
   ImapValueList(Iterable<ImapValue> values)
-      : values = List<ImapValue>.unmodifiable(values);
+    : values = List<ImapValue>.unmodifiable(values);
 
   final List<ImapValue> values;
 }
@@ -45,7 +45,7 @@ sealed class ImapResponse {
 
 final class ImapUntagged extends ImapResponse {
   ImapUntagged(Iterable<ImapValue> values)
-      : values = List<ImapValue>.unmodifiable(values);
+    : values = List<ImapValue>.unmodifiable(values);
 
   final List<ImapValue> values;
 }
@@ -79,10 +79,10 @@ final class ImapProtocolException implements Exception {
 
 extension ImapValueAccess on ImapValue {
   String? get atomValue => switch (this) {
-        ImapAtom(:final value) => value,
-        ImapQuoted(:final value) => value,
-        _ => null,
-      };
+    ImapAtom(:final value) => value,
+    ImapQuoted(:final value) => value,
+    _ => null,
+  };
 
   Uint8List? get literalValue =>
       this is ImapLiteral ? (this as ImapLiteral).bytes : null;
@@ -132,7 +132,7 @@ abstract final class ImapResponseParser {
 /// split across arbitrary socket packets. One reader must own a socket stream.
 final class ImapResponseReader {
   ImapResponseReader(Stream<List<int>> chunks)
-      : _iterator = StreamIterator<List<int>>(chunks);
+    : _iterator = StreamIterator<List<int>>(chunks);
 
   final StreamIterator<List<int>> _iterator;
   List<int> _chunk = const [];

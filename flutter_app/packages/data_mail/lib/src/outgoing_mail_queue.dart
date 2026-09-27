@@ -22,7 +22,7 @@ typedef SmtpClientConnector = Future<SmtpClient> Function();
 
 final class SecureSmtpMailTransport implements RawMailTransport {
   SecureSmtpMailTransport({SmtpClientConnector? connect})
-      : _connect = connect ?? SmtpClient.connect;
+    : _connect = connect ?? SmtpClient.connect;
 
   final SmtpClientConnector _connect;
 
@@ -59,7 +59,7 @@ typedef SentImapConnector = Future<ImapClient> Function();
 
 final class ImapSentCopyAppender implements SentCopyAppender {
   ImapSentCopyAppender({SentImapConnector? connect})
-      : _connect = connect ?? ImapClient.connect;
+    : _connect = connect ?? ImapClient.connect;
 
   final SentImapConnector _connect;
 
@@ -73,20 +73,26 @@ final class ImapSentCopyAppender implements SentCopyAppender {
     try {
       await client.login(email, credentialUtf8);
       final mailboxes = await client.listMailboxes();
-      final sent = mailboxes
-              .where((mailbox) => mailbox.attributes
-                  .any((attribute) => attribute.toLowerCase() == r'\sent'))
+      final sent =
+          mailboxes
+              .where(
+                (mailbox) => mailbox.attributes.any(
+                  (attribute) => attribute.toLowerCase() == r'\sent',
+                ),
+              )
               .map((mailbox) => mailbox.name)
               .firstOrNull ??
           const ['[Gmail]/Sent Mail', 'Sent', 'Sent Items']
-              .where((name) => mailboxes.any(
-                    (mailbox) =>
-                        mailbox.name.toLowerCase() == name.toLowerCase(),
-                  ))
+              .where(
+                (name) => mailboxes.any(
+                  (mailbox) => mailbox.name.toLowerCase() == name.toLowerCase(),
+                ),
+              )
               .firstOrNull;
       if (sent == null) {
         throw const ImapProtocolException(
-            'Server did not advertise a Sent mailbox');
+          'Server did not advertise a Sent mailbox',
+        );
       }
       await client.append(sent, rawMessage, flag: r'\Seen');
     } finally {
@@ -96,8 +102,11 @@ final class ImapSentCopyAppender implements SentCopyAppender {
 }
 
 abstract final class RawMailComposer {
-  static Future<Uint8List> compose(OutgoingMail mail,
-      {int? sentAtEpochMillis, bool allowEmptyRecipients = false}) async {
+  static Future<Uint8List> compose(
+    OutgoingMail mail, {
+    int? sentAtEpochMillis,
+    bool allowEmptyRecipients = false,
+  }) async {
     if (!_validOperationId.hasMatch(mail.operationId) ||
         !validateAddresses([mail.from]) ||
         (!allowEmptyRecipients ||
@@ -134,8 +143,9 @@ abstract final class RawMailComposer {
 
     final timestamp =
         sentAtEpochMillis ?? DateTime.now().millisecondsSinceEpoch;
-    final date =
-        _formatDate(DateTime.fromMillisecondsSinceEpoch(timestamp).toUtc());
+    final date = _formatDate(
+      DateTime.fromMillisecondsSinceEpoch(timestamp).toUtc(),
+    );
     final messageId = '<${mail.operationId}@glassmail.local>';
     final headers = <String>[
       'From: ${mail.from}',
@@ -227,8 +237,8 @@ abstract final class RawMailComposer {
 
   static String _safeMimeType(String value) =>
       RegExp(r'^[A-Za-z0-9!#$&^_.+-]+/[A-Za-z0-9!#$&^_.+-]+$').hasMatch(value)
-          ? value
-          : 'application/octet-stream';
+      ? value
+      : 'application/octet-stream';
 
   static String _formatDate(DateTime value) {
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -271,11 +281,11 @@ final class OutgoingMailQueue {
     required RawMailTransport transport,
     SentCopyAppender? sentCopyAppender,
     int Function()? clock,
-  })  : _database = database,
-        _credentialStore = credentialStore,
-        _transport = transport,
-        _sentCopyAppender = sentCopyAppender,
-        _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch);
+  }) : _database = database,
+       _credentialStore = credentialStore,
+       _transport = transport,
+       _sentCopyAppender = sentCopyAppender,
+       _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch);
 
   final GlassMailDatabase _database;
   final CredentialStore _credentialStore;
@@ -288,22 +298,24 @@ final class OutgoingMailQueue {
       save(_withStatus(draft, DraftStatus.queued));
 
   Future<void> save(MailDraft draft) async {
-    await _database.saveDraft(DraftsCompanion.insert(
-      draftId: draft.draftId,
-      accountId: draft.accountId,
-      toAddresses: _encodeList(draft.to),
-      ccAddresses: _encodeList(draft.cc),
-      bccAddresses: _encodeList(draft.bcc),
-      subject: draft.subject,
-      body: draft.body,
-      inReplyTo: Value(draft.inReplyTo),
-      references: _encodeList(draft.references),
-      status: draft.status.storageValue,
-      updatedAtEpochMillis: draft.updatedAtEpochMillis == 0
-          ? _clock()
-          : draft.updatedAtEpochMillis,
-      attachments: _encodeAttachments(draft.attachments),
-    ));
+    await _database.saveDraft(
+      DraftsCompanion.insert(
+        draftId: draft.draftId,
+        accountId: draft.accountId,
+        toAddresses: _encodeList(draft.to),
+        ccAddresses: _encodeList(draft.cc),
+        bccAddresses: _encodeList(draft.bcc),
+        subject: draft.subject,
+        body: draft.body,
+        inReplyTo: Value(draft.inReplyTo),
+        references: _encodeList(draft.references),
+        status: draft.status.storageValue,
+        updatedAtEpochMillis: draft.updatedAtEpochMillis == 0
+            ? _clock()
+            : draft.updatedAtEpochMillis,
+        attachments: _encodeAttachments(draft.attachments),
+      ),
+    );
   }
 
   Future<SendMailResult> send(
@@ -311,11 +323,10 @@ final class OutgoingMailQueue {
     MailDraft draft,
     OutgoingMail mail, {
     bool requireQueued = false,
-  }) =>
-      _serialized(
-        draft.draftId,
-        () => _send(account, draft, mail, requireQueued: requireQueued),
-      );
+  }) => _serialized(
+    draft.draftId,
+    () => _send(account, draft, mail, requireQueued: requireQueued),
+  );
 
   Future<SendMailResult> _send(
     MailAccount account,
@@ -347,8 +358,10 @@ final class OutgoingMailQueue {
 
     Uint8List rawMessage;
     try {
-      rawMessage =
-          await RawMailComposer.compose(mail, sentAtEpochMillis: _clock());
+      rawMessage = await RawMailComposer.compose(
+        mail,
+        sentAtEpochMillis: _clock(),
+      );
     } on FormatException {
       await save(_withStatus(draft, DraftStatus.failed));
       return const MailSendFailed(SendMailError.invalidMessage);
@@ -394,10 +407,9 @@ final class OutgoingMailQueue {
       return const MailSendFailed(SendMailError.network);
     } on SmtpRejectedException catch (error) {
       final retryable = error.code >= 400 && error.code < 500;
-      await save(_withStatus(
-        draft,
-        retryable ? DraftStatus.queued : DraftStatus.failed,
-      ));
+      await save(
+        _withStatus(draft, retryable ? DraftStatus.queued : DraftStatus.failed),
+      );
       return MailSendFailed(
         retryable ? SendMailError.network : SendMailError.protocol,
       );
@@ -426,34 +438,34 @@ final class OutgoingMailQueue {
   }
 
   MailDraft _withStatus(MailDraft draft, DraftStatus status) => MailDraft(
-        draftId: draft.draftId,
-        accountId: draft.accountId,
-        to: draft.to,
-        cc: draft.cc,
-        bcc: draft.bcc,
-        subject: draft.subject,
-        body: draft.body,
-        inReplyTo: draft.inReplyTo,
-        references: draft.references,
-        status: status,
-        updatedAtEpochMillis: _clock(),
-        attachments: draft.attachments,
-      );
+    draftId: draft.draftId,
+    accountId: draft.accountId,
+    to: draft.to,
+    cc: draft.cc,
+    bcc: draft.bcc,
+    subject: draft.subject,
+    body: draft.body,
+    inReplyTo: draft.inReplyTo,
+    references: draft.references,
+    status: status,
+    updatedAtEpochMillis: _clock(),
+    attachments: draft.attachments,
+  );
 
   static MailDraft _toMailDraft(Draft draft) => MailDraft(
-        draftId: draft.draftId,
-        accountId: draft.accountId,
-        to: _decodeList(draft.toAddresses),
-        cc: _decodeList(draft.ccAddresses),
-        bcc: _decodeList(draft.bccAddresses),
-        subject: draft.subject,
-        body: draft.body,
-        inReplyTo: draft.inReplyTo,
-        references: _decodeList(draft.references),
-        status: DraftStatus.fromStorageValue(draft.status),
-        updatedAtEpochMillis: draft.updatedAtEpochMillis,
-        attachments: _decodeAttachments(draft.attachments),
-      );
+    draftId: draft.draftId,
+    accountId: draft.accountId,
+    to: _decodeList(draft.toAddresses),
+    cc: _decodeList(draft.ccAddresses),
+    bcc: _decodeList(draft.bccAddresses),
+    subject: draft.subject,
+    body: draft.body,
+    inReplyTo: draft.inReplyTo,
+    references: _decodeList(draft.references),
+    status: DraftStatus.fromStorageValue(draft.status),
+    updatedAtEpochMillis: draft.updatedAtEpochMillis,
+    attachments: _decodeAttachments(draft.attachments),
+  );
 
   Future<T> _serialized<T>(String draftId, Future<T> Function() action) async {
     final previous = _draftTails[draftId] ?? Future<void>.value();
@@ -475,22 +487,26 @@ List<String> _decodeList(String encoded) =>
     encoded.split('\u001f').where((value) => value.isNotEmpty).toList();
 
 String _encodeAttachments(List<DraftAttachment> attachments) => attachments
-    .map((attachment) => [
-          attachment.uri,
-          attachment.fileName,
-          attachment.mimeType,
-          attachment.sizeBytes.toString(),
-        ].join('\u001f'))
+    .map(
+      (attachment) => [
+        attachment.uri,
+        attachment.fileName,
+        attachment.mimeType,
+        attachment.sizeBytes.toString(),
+      ].join('\u001f'),
+    )
     .join('\u001e');
 
 List<DraftAttachment> _decodeAttachments(String encoded) => encoded
     .split('\u001e')
     .map((row) => row.split('\u001f'))
     .where((parts) => parts.length == 4 && int.tryParse(parts[3]) != null)
-    .map((parts) => DraftAttachment(
-          uri: parts[0],
-          fileName: parts[1],
-          mimeType: parts[2],
-          sizeBytes: int.parse(parts[3]),
-        ))
+    .map(
+      (parts) => DraftAttachment(
+        uri: parts[0],
+        fileName: parts[1],
+        mimeType: parts[2],
+        sizeBytes: int.parse(parts[3]),
+      ),
+    )
     .toList();

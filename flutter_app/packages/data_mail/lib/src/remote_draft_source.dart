@@ -29,17 +29,16 @@ abstract interface class MailDraftRemoteSource {
 }
 
 typedef DraftImapConnector = Future<ImapClient> Function();
-typedef DraftAttachmentStream = Stream<List<int>> Function(
-  DraftAttachment attachment,
-);
+typedef DraftAttachmentStream =
+    Stream<List<int>> Function(DraftAttachment attachment);
 
 /// Uses stable Message-IDs and UIDPLUS-scoped deletion for remote Drafts.
 final class ImapMailDraftRemoteSource implements MailDraftRemoteSource {
   ImapMailDraftRemoteSource({
     DraftImapConnector? connect,
     DraftAttachmentStream? openAttachment,
-  })  : _connect = connect ?? ImapClient.connect,
-        _openAttachment = openAttachment ?? _fileAttachmentStream;
+  }) : _connect = connect ?? ImapClient.connect,
+       _openAttachment = openAttachment ?? _fileAttachmentStream;
 
   final DraftImapConnector _connect;
   final DraftAttachmentStream _openAttachment;
@@ -87,13 +86,15 @@ final class ImapMailDraftRemoteSource implements MailDraftRemoteSource {
         inReplyTo: draft.inReplyTo,
         references: draft.references,
         attachments: draft.attachments
-            .map((attachment) => OutgoingAttachment(
-                  uri: attachment.uri,
-                  fileName: attachment.fileName,
-                  mimeType: attachment.mimeType,
-                  sizeBytes: attachment.sizeBytes,
-                  openStream: () => _openAttachment(attachment),
-                ))
+            .map(
+              (attachment) => OutgoingAttachment(
+                uri: attachment.uri,
+                fileName: attachment.fileName,
+                mimeType: attachment.mimeType,
+                sizeBytes: attachment.sizeBytes,
+                openStream: () => _openAttachment(attachment),
+              ),
+            )
             .toList(growable: false),
       );
       final raw = await RawMailComposer.compose(
@@ -142,15 +143,19 @@ final class ImapMailDraftRemoteSource implements MailDraftRemoteSource {
 
 String? _findMailbox(List<ImapMailboxRecord> mailboxes) =>
     mailboxes
-        .where((mailbox) => mailbox.attributes.any(
-              (attribute) => attribute.toLowerCase() == r'\drafts',
-            ))
+        .where(
+          (mailbox) => mailbox.attributes.any(
+            (attribute) => attribute.toLowerCase() == r'\drafts',
+          ),
+        )
         .map((mailbox) => mailbox.name)
         .firstOrNull ??
     const ['[Gmail]/Drafts', 'Drafts', 'Draft']
-        .where((name) => mailboxes.any(
-              (mailbox) => mailbox.name.toLowerCase() == name.toLowerCase(),
-            ))
+        .where(
+          (name) => mailboxes.any(
+            (mailbox) => mailbox.name.toLowerCase() == name.toLowerCase(),
+          ),
+        )
         .firstOrNull;
 
 Stream<List<int>> _fileAttachmentStream(DraftAttachment attachment) {
@@ -160,6 +165,7 @@ Stream<List<int>> _fileAttachmentStream(DraftAttachment attachment) {
       'Draft attachment must be app-local or use a configured provider',
     );
   }
-  return File(uri?.scheme == 'file' ? uri!.toFilePath() : attachment.uri)
-      .openRead();
+  return File(
+    uri?.scheme == 'file' ? uri!.toFilePath() : attachment.uri,
+  ).openRead();
 }

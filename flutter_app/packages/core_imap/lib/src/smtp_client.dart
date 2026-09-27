@@ -62,7 +62,7 @@ abstract interface class SmtpWireConnection {
 
 final class SmtpReply {
   SmtpReply({required this.code, required Iterable<String> lines})
-      : lines = List.unmodifiable(lines);
+    : lines = List.unmodifiable(lines);
 
   final int code;
   final List<String> lines;
@@ -178,35 +178,30 @@ final class SmtpClient {
       payload.setRange(offset, offset + emailBytes.length, emailBytes);
       offset += emailBytes.length + 1;
       payload.setRange(offset, offset + credentialUtf8.length, credentialUtf8);
-      final reply = await _command(
-        'AUTH PLAIN ${base64.encode(payload)}',
-        [235, 334],
-        allowAuthenticationFailure: true,
-      );
+      final reply = await _command('AUTH PLAIN ${base64.encode(payload)}', [
+        235,
+        334,
+      ], allowAuthenticationFailure: true);
       if (reply.code == 334) {
-        await _command(
-          base64.encode(payload),
-          [235],
-          allowAuthenticationFailure: true,
-        );
+        await _command(base64.encode(payload), [
+          235,
+        ], allowAuthenticationFailure: true);
       }
       return;
     }
 
     if (authLine.contains('LOGIN')) {
-      var reply = await _command(
-        'AUTH LOGIN',
-        [334, 235],
-        allowAuthenticationFailure: true,
-      );
+      var reply = await _command('AUTH LOGIN', [
+        334,
+        235,
+      ], allowAuthenticationFailure: true);
       if (reply.code == 235) return;
-      reply =
-          await _command(emailBase64, [334], allowAuthenticationFailure: true);
-      reply = await _command(
-        secretBase64,
-        [235],
-        allowAuthenticationFailure: true,
-      );
+      reply = await _command(emailBase64, [
+        334,
+      ], allowAuthenticationFailure: true);
+      reply = await _command(secretBase64, [
+        235,
+      ], allowAuthenticationFailure: true);
       if (reply.code != 235) throw const SmtpAuthenticationException();
       return;
     }
@@ -261,7 +256,8 @@ final class SmtpClient {
         }
         if (output.length + 2 > maxSmtpMessageBytes) {
           throw const SmtpProtocolException(
-              'Normalized SMTP message exceeds limit');
+            'Normalized SMTP message exceeds limit',
+          );
         }
         output.add(const [0x0d, 0x0a]);
         atLineStart = true;
@@ -270,7 +266,8 @@ final class SmtpClient {
       if (output.length + (atLineStart && byte == 0x2e ? 2 : 1) >
           maxSmtpMessageBytes) {
         throw const SmtpProtocolException(
-            'Normalized SMTP message exceeds limit');
+          'Normalized SMTP message exceeds limit',
+        );
       }
       if (atLineStart && byte == 0x2e) output.addByte(0x2e);
       output.addByte(byte);
@@ -281,7 +278,8 @@ final class SmtpClient {
     final terminatorLength = hasTrailingNewline ? 3 : 5;
     if (output.length + terminatorLength > maxSmtpMessageBytes) {
       throw const SmtpProtocolException(
-          'Normalized SMTP message exceeds limit');
+        'Normalized SMTP message exceeds limit',
+      );
     }
     if (!hasTrailingNewline) output.add(const [0x0d, 0x0a]);
     output.add(const [0x2e, 0x0d, 0x0a]);
@@ -295,7 +293,7 @@ final class SmtpClient {
 
 final class _SocketSmtpWire implements SmtpWireConnection {
   _SocketSmtpWire(this._socket, this._timeout)
-      : _lines = _SmtpLineReader(_socket);
+    : _lines = _SmtpLineReader(_socket);
 
   Socket _socket;
   _SmtpLineReader _lines;
@@ -386,7 +384,7 @@ final class _SocketSmtpWire implements SmtpWireConnection {
 
 final class _SmtpLineReader {
   _SmtpLineReader(Stream<List<int>> stream)
-      : _iterator = StreamIterator<List<int>>(stream);
+    : _iterator = StreamIterator<List<int>>(stream);
 
   final StreamIterator<List<int>> _iterator;
   List<int> _chunk = const [];

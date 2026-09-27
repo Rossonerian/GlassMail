@@ -4,7 +4,7 @@
 /// separately from the Room v10 schema and DAO source.
 final class ImapMailbox {
   ImapMailbox({required this.name, required Set<String> attributes})
-      : attributes = Set.unmodifiable(attributes);
+    : attributes = Set.unmodifiable(attributes);
 
   final String name;
   final Set<String> attributes;
@@ -70,10 +70,10 @@ final class ImapRemoteDraft {
     required this.inReplyTo,
     required List<String> references,
     required this.updatedAtEpochMillis,
-  })  : to = List.unmodifiable(to),
-        cc = List.unmodifiable(cc),
-        bcc = List.unmodifiable(bcc),
-        references = List.unmodifiable(references);
+  }) : to = List.unmodifiable(to),
+       cc = List.unmodifiable(cc),
+       bcc = List.unmodifiable(bcc),
+       references = List.unmodifiable(references);
 
   final int uid;
   final int? uidValidity;
@@ -104,18 +104,18 @@ final class ImapRemoteDraft {
 
   @override
   int get hashCode => Object.hash(
-        uid,
-        uidValidity,
-        draftId,
-        Object.hashAll(to),
-        Object.hashAll(cc),
-        Object.hashAll(bcc),
-        subject,
-        body,
-        inReplyTo,
-        Object.hashAll(references),
-        updatedAtEpochMillis,
-      );
+    uid,
+    uidValidity,
+    draftId,
+    Object.hashAll(to),
+    Object.hashAll(cc),
+    Object.hashAll(bcc),
+    subject,
+    body,
+    inReplyTo,
+    Object.hashAll(references),
+    updatedAtEpochMillis,
+  );
 }
 
 final class ImapMessageMetadata {
@@ -134,8 +134,8 @@ final class ImapMessageMetadata {
     this.listId,
     this.listUnsubscribe,
     this.listUnsubscribePost,
-  })  : flags = Set.unmodifiable(flags),
-        labels = Set.unmodifiable(labels);
+  }) : flags = Set.unmodifiable(flags),
+       labels = Set.unmodifiable(labels);
 
   final int uid;
   final Set<String> flags;
@@ -172,21 +172,21 @@ final class ImapMessageMetadata {
 
   @override
   int get hashCode => Object.hash(
-        uid,
-        Object.hashAllUnordered(flags),
-        gmailMessageId,
-        gmailThreadId,
-        Object.hashAllUnordered(labels),
-        subject,
-        sender,
-        sentAtEpochMillis,
-        sizeBytes,
-        hasListUnsubscribe,
-        precedence,
-        listId,
-        listUnsubscribe,
-        listUnsubscribePost,
-      );
+    uid,
+    Object.hashAllUnordered(flags),
+    gmailMessageId,
+    gmailThreadId,
+    Object.hashAllUnordered(labels),
+    subject,
+    sender,
+    sentAtEpochMillis,
+    sizeBytes,
+    hasListUnsubscribe,
+    precedence,
+    listId,
+    listUnsubscribe,
+    listUnsubscribePost,
+  );
 }
 
 final class GmailInboxSnapshot {
@@ -196,9 +196,9 @@ final class GmailInboxSnapshot {
     required this.inbox,
     required List<ImapMessageMetadata> messages,
     this.requestedThroughUid = 0,
-  })  : capabilities = Set.unmodifiable(capabilities),
-        mailboxes = List.unmodifiable(mailboxes),
-        messages = List.unmodifiable(messages);
+  }) : capabilities = Set.unmodifiable(capabilities),
+       mailboxes = List.unmodifiable(mailboxes),
+       messages = List.unmodifiable(messages);
 
   final Set<String> capabilities;
   final List<ImapMailbox> mailboxes;
@@ -223,12 +223,12 @@ final class GmailInboxSnapshot {
 
   @override
   int get hashCode => Object.hash(
-        Object.hashAllUnordered(capabilities),
-        Object.hashAll(mailboxes),
-        inbox,
-        Object.hashAll(messages),
-        requestedThroughUid,
-      );
+    Object.hashAllUnordered(capabilities),
+    Object.hashAll(mailboxes),
+    inbox,
+    Object.hashAll(messages),
+    requestedThroughUid,
+  );
 }
 
 sealed class MailSyncResult {
