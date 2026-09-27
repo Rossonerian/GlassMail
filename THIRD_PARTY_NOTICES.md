@@ -17,6 +17,14 @@
 
 The JavaMail jars duplicate `META-INF/NOTICE.md`; the app packaging configuration excludes that duplicate metadata resource while retaining the runtime classes. Review the upstream license and notices before release.
 
+## Flutter host
+
+The parallel development host has its own locked package, native source, and build-tool inventory in [flutter_app/DEPENDENCY_LICENSES.md](flutter_app/DEPENDENCY_LICENSES.md). Keep the Flutter SDK, Gradle plugins, generated native host, and any later runtime packages/assets in that inventory. The workspace uses Drift/SQLite for a fresh v10 schema with FTS4; the development host opens this database and displays its schema version.
+
+The Flutter credential-store adapter uses `flutter_secure_storage` under BSD-3-Clause. Android app backup is disabled; account removal must call the adapter's per-account delete operation. See the migration matrix for the current key and backup policy.
+
+The Flutter development host additionally uses `flutter_contacts` (MIT), `home_widget` (BSD-3-Clause), and `cryptography` / `cryptography_flutter` (Apache-2.0) for its user-invoked contacts picker, aggregate unread widgets and password-protected local backup. See [DEPENDENCY_LICENSES.md](flutter_app/DEPENDENCY_LICENSES.md) for exact locked versions and all transitive/build-time licenses.
+
 ## Rendering Evaluation (Phase 0)
 
 Kyant0/AndroidLiquidGlass was evaluated against a custom native AGSL renderer on source quality, maintenance, Compose 1.7+ compatibility, GPU path, backdrop correctness, license, extensibility, and visual fidelity.

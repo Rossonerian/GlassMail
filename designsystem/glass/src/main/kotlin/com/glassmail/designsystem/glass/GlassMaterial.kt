@@ -94,7 +94,7 @@ fun resolveGlassQuality(requested: GlassQuality, sdkInt: Int = Build.VERSION.SDK
 val LocalGlassPreferences = staticCompositionLocalOf { GlassPreferences() }
 
 /**
- * 14-parameter physical glass material model.
+ * 16-field glass material model.
  */
 data class GlassMaterial(
     val blur: Dp = 18.dp,

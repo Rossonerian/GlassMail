@@ -38,7 +38,7 @@ Previously all screens were in an 840-line monolithic `GlassMailApp.kt`. The UI 
 ## Module Structure
 - `:app`: Application entry point, modular screens, Navigation graph, and application graph wiring.
 - `:designsystem`: Theme tokens (`GlassSpacing`, `GlassRadius`, `GlassIconSize`, `GlassElevation`, `GlassMotion`), `AmbientCanvas`, and `MorphingDock`.
-- `:designsystem:glass`: Zero-copy live `GlassProvider`, `GlassSurface`, 14-parameter `GlassMaterial`, AGSL shader, and quality tiers.
+- `:designsystem:glass`: Compose `GraphicsLayer` backdrop recording, `GlassSurface`, 16-field `GlassMaterial`, AGSL shader, and quality tiers.
 - `:domain:mail`: Core entities (`MailMessage`, `MailDraft`, `MailAccount`, `MailMutation`) and repository contracts.
 - `:data:mail`: `ImapMailRepository` implementation coordinating Room persistence and remote IMAP sync.
 - `:core:database`: Room database, entities, DAOs, and database migrations.

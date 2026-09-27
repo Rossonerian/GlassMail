@@ -24,6 +24,26 @@ Requirements: Android SDK 35 and JDK 17.
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`. To install on a connected device, run `./gradlew :app:installDebug`. Release builds use R8; distribution signing must be configured by the release owner and is intentionally not checked into this repository.
 
+## Flutter migration host
+
+The parallel Flutter host is in `flutter_app/`. It uses a separate `com.glassmail.dev.glassmail` development identity and starts with an empty local cache. It now includes account-aware inbox/search, reading and compose flows, local workflow tools, and an arm64 Android debug build. It does not import existing Room data or credentials; keep the Kotlin app as the functional reference. See the [Flutter port matrix](docs/flutter/PORT_MATRIX.md) for verified behavior and remaining platform/provider gaps.
+
+Use Flutter `3.47.5` / Dart `3.13.4` and JDK 17 for the pinned baseline:
+
+```bash
+cd flutter_app
+flutter pub get
+dart format --output=none --set-exit-if-changed .
+flutter analyze
+flutter test
+flutter test packages/core_model/test
+flutter test packages/domain_mail/test
+flutter build apk --debug --target-platform android-arm64
+flutter build appbundle --release
+```
+
+The iOS host is present but building it requires macOS and Xcode. See [the Flutter port matrix](docs/flutter/PORT_MATRIX.md) and [migration decisions](docs/flutter/DECISIONS.md) for current evidence and constraints. Android and iOS builds of this host do not establish mail feature parity.
+
 ## Gmail setup
 
 Connect a Gmail address with a Google App Password. App Passwords require two-step verification on the Google account. Credentials are not included in this repository or written to application logs. Use a dedicated test account during manual validation.

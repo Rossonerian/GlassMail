@@ -28,8 +28,8 @@ GlassMail implements a zero-copy live GPU backdrop sampling and AGSL refraction 
 
 ---
 
-## 14-Parameter Physical Glass Material Model
-The optical engine models light interaction through a 14-parameter physical glass material:
+## 16-Field Glass Material Model
+The current `GlassMaterial` data class contains 16 fields. The values and presets below describe the Kotlin source of truth; Flutter must port them from code rather than infer shader behavior from this summary:
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -61,7 +61,7 @@ On Android 13+ (API 33+ / TIRAMISU), `GlassSurface` compiles an AGSL `RuntimeSha
   - `Green: coord + normal * refraction`
   - `Blue: coord + normal * refraction * (1.0 - dispersion)`
 - **Specular Rim Highlights**: Blends upper-left directional key specular light and perimeter fresnel rim glow.
-- **Luminance Adaptation**: Calculates perceived luminance `dot(sampledColor.rgb, vec3(0.299, 0.587, 0.114))` and adjusts tint opacity to guarantee text contrast >= 4.5:1.
+- **Luminance Adaptation**: Calculates perceived luminance `dot(sampledColor.rgb, vec3(0.299, 0.587, 0.114))` and adjusts tint opacity. This calculation alone does not guarantee a particular text contrast across backdrops; contrast needs to be measured with the actual foreground colors and rendered states.
 
 ---
 

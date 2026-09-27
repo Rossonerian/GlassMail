@@ -1,0 +1,137 @@
+CREATE TABLE accounts (
+  accountId TEXT NOT NULL PRIMARY KEY,
+  email TEXT NOT NULL,
+  createdAtEpochMillis INTEGER NOT NULL,
+  syncState TEXT NOT NULL,
+  gmailExtensionsEnabled INTEGER NOT NULL,
+  lastSyncedAtEpochMillis INTEGER
+);
+CREATE UNIQUE INDEX index_accounts_email ON accounts (email);
+
+CREATE TABLE mailboxes (
+  mailboxId TEXT NOT NULL PRIMARY KEY,
+  accountId TEXT NOT NULL REFERENCES accounts(accountId) ON DELETE CASCADE,
+  remoteName TEXT NOT NULL,
+  uidValidity INTEGER NOT NULL,
+  uidNext INTEGER NOT NULL,
+  messageCount INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX index_mailboxes_accountId_remoteName ON mailboxes (accountId, remoteName);
+
+CREATE TABLE messages (
+  messageId TEXT NOT NULL PRIMARY KEY,
+  accountId TEXT NOT NULL REFERENCES accounts(accountId) ON DELETE CASCADE,
+  gmailMessageId TEXT,
+  gmailThreadId TEXT,
+  subject TEXT,
+  sender TEXT,
+  sentAtEpochMillis INTEGER,
+  sizeBytes INTEGER,
+  category TEXT NOT NULL DEFAULT 'PRIMARY',
+  preview TEXT,
+  body TEXT,
+  contentKind TEXT NOT NULL,
+  bodyDownloadState TEXT NOT NULL,
+  listUnsubscribe TEXT,
+  listUnsubscribePost TEXT
+);
+CREATE UNIQUE INDEX index_messages_accountId_gmailMessageId ON messages (accountId, gmailMessageId);
+CREATE INDEX index_messages_accountId_gmailThreadId ON messages (accountId, gmailThreadId);
+CREATE INDEX index_messages_accountId_category ON messages (accountId, category);
+
+CREATE TABLE mailbox_messages (
+  mailboxId TEXT NOT NULL REFERENCES mailboxes(mailboxId) ON DELETE CASCADE,
+  uid INTEGER NOT NULL,
+  messageId TEXT NOT NULL REFERENCES messages(messageId) ON DELETE CASCADE,
+  flags TEXT NOT NULL,
+  labels TEXT NOT NULL,
+  PRIMARY KEY (mailboxId, uid)
+);
+CREATE INDEX index_mailbox_messages_messageId ON mailbox_messages (messageId);
+CREATE UNIQUE INDEX index_mailbox_messages_mailboxId_uid ON mailbox_messages (mailboxId, uid);
+
+CREATE TABLE message_labels (
+  messageId TEXT NOT NULL REFERENCES messages(messageId) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  PRIMARY KEY (messageId, label)
+);
+CREATE INDEX index_message_labels_label ON message_labels (label);
+
+CREATE TABLE attachments (
+  attachmentId TEXT NOT NULL PRIMARY KEY,
+  messageId TEXT NOT NULL REFERENCES messages(messageId) ON DELETE CASCADE,
+  partId TEXT NOT NULL,
+  fileName TEXT,
+  mimeType TEXT,
+  sizeBytes INTEGER,
+  downloadState TEXT NOT NULL,
+  lastAccessedAtEpochMillis INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX index_attachments_messageId ON attachments (messageId);
+CREATE INDEX index_attachments_downloadState ON attachments (downloadState);
+
+CREATE TABLE cache_config (
+  accountId TEXT NOT NULL PRIMARY KEY,
+  offlineMessageCount INTEGER NOT NULL DEFAULT 200,
+  attachmentCacheLimitMb INTEGER NOT NULL DEFAULT 500,
+  autoEvictReadOlderThanDays INTEGER NOT NULL DEFAULT 60,
+  prefetchUnreadBodies INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE storage_quota (
+  accountId TEXT NOT NULL PRIMARY KEY,
+  usedKb INTEGER NOT NULL,
+  limitKb INTEGER NOT NULL,
+  checkedAtEpochMillis INTEGER NOT NULL
+);
+
+CREATE TABLE pending_mutations (
+  mutationId TEXT NOT NULL PRIMARY KEY,
+  accountId TEXT NOT NULL REFERENCES accounts(accountId) ON DELETE CASCADE,
+  mailboxId TEXT,
+  messageId TEXT NOT NULL REFERENCES messages(messageId) ON DELETE CASCADE,
+  targetUid INTEGER,
+  type TEXT NOT NULL,
+  payload TEXT,
+  state TEXT NOT NULL,
+  retryCount INTEGER NOT NULL,
+  createdAtEpochMillis INTEGER NOT NULL,
+  lastErrorCode TEXT,
+  previousFlags TEXT NOT NULL DEFAULT '',
+  previousLabels TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX index_pending_mutations_accountId_state ON pending_mutations (accountId, state);
+CREATE INDEX index_pending_mutations_messageId_state ON pending_mutations (messageId, state);
+CREATE INDEX index_pending_mutations_mailboxId ON pending_mutations (mailboxId);
+
+CREATE TABLE sync_checkpoints (
+  mailboxId TEXT NOT NULL PRIMARY KEY REFERENCES mailboxes(mailboxId) ON DELETE CASCADE,
+  accountId TEXT NOT NULL REFERENCES accounts(accountId) ON DELETE CASCADE,
+  uidValidity INTEGER NOT NULL,
+  highestKnownUid INTEGER NOT NULL,
+  syncGeneration INTEGER NOT NULL,
+  lastSuccessfulSyncEpochMillis INTEGER
+);
+CREATE INDEX index_sync_checkpoints_accountId ON sync_checkpoints (accountId);
+CREATE UNIQUE INDEX index_sync_checkpoints_mailboxId ON sync_checkpoints (mailboxId);
+
+CREATE TABLE drafts (
+  draftId TEXT NOT NULL PRIMARY KEY,
+  accountId TEXT NOT NULL REFERENCES accounts(accountId) ON DELETE CASCADE,
+  toAddresses TEXT NOT NULL,
+  ccAddresses TEXT NOT NULL,
+  bccAddresses TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  inReplyTo TEXT,
+  "references" TEXT NOT NULL,
+  status TEXT NOT NULL,
+  updatedAtEpochMillis INTEGER NOT NULL,
+  attachments TEXT NOT NULL
+);
+CREATE INDEX index_drafts_accountId_updatedAtEpochMillis ON drafts (accountId, updatedAtEpochMillis);
+
+CREATE TABLE notification_state (
+  accountId TEXT NOT NULL PRIMARY KEY,
+  baselineEstablished INTEGER NOT NULL
+);
