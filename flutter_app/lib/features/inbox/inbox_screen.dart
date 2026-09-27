@@ -395,7 +395,7 @@ class _MorphingMailDockState extends State<MorphingMailDock>
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _expandedContents(BuildContext context) => Row(
