@@ -36,6 +36,28 @@ class MailGlassAccessibility extends InheritedWidget {
       reduceTransparency != oldWidget.reduceTransparency;
 }
 
+/// Cache key for LiquidGlassSettings
+@immutable
+class _GlassSettingsKey {
+  const _GlassSettingsKey(this.material, this.tier, this.tint);
+  final GlassMaterial material;
+  final GlassMailTier tier;
+  final Color tint;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is _GlassSettingsKey &&
+          other.material == material &&
+          other.tier == tier &&
+          other.tint == tint);
+
+  @override
+  int get hashCode => Object.hash(material, tier, tint);
+}
+
+final _settingsCache = <_GlassSettingsKey, liquid.LiquidGlassSettings>{};
+
 /// GlassMail-owned boundary around the optional renderer and opaque fallback.
 class GlassMailGlass extends StatelessWidget {
   const GlassMailGlass({
@@ -45,6 +67,7 @@ class GlassMailGlass extends StatelessWidget {
     this.reduceTransparency = false,
     this.padding,
     this.alignment,
+    this.useOwnLayer = true,
     super.key,
   });
 
@@ -54,12 +77,20 @@ class GlassMailGlass extends StatelessWidget {
   final bool reduceTransparency;
   final EdgeInsetsGeometry? padding;
   final AlignmentGeometry? alignment;
+  final bool useOwnLayer;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final highContrast = MediaQuery.highContrastOf(context);
-    final activeTier = tier ?? MailGlassAccessibility.tierOf(context);
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+
+    // Auto-degrade tier on low-end/battery saver indicated by disabled animations.
+    var activeTier = tier ?? MailGlassAccessibility.tierOf(context);
+    if (disableAnimations && activeTier == GlassMailTier.full) {
+      activeTier = GlassMailTier.balanced;
+    }
+
     final useOpaqueFallback =
         activeTier == GlassMailTier.off ||
         reduceTransparency ||
@@ -92,30 +123,35 @@ class GlassMailGlass extends StatelessWidget {
       GlassMailTier.light => liquid.GlassQuality.minimal,
       GlassMailTier.off => liquid.GlassQuality.minimal,
     };
-    final settings = liquid.LiquidGlassSettings(
-      // Native Dp values map directly to Flutter logical pixels.
-      blur: activeTier == GlassMailTier.light
-          ? math.min(material.blur, 12)
-          : material.blur,
-      glassColor: tint.withValues(alpha: material.opacity),
-      thickness: material.refractionHeight + material.refraction * 12,
-      refractiveIndex: 1 + material.refraction * .2,
-      chromaticAberration: material.dispersion * 4,
-      lightAngle: material.specularAngle,
-      lightIntensity: material.specularIntensity,
-      ambientStrength: material.luminanceAdaptation,
-      ambientRim: material.rimLight,
-      saturation: material.saturation,
-      glowIntensity: material.interactionStrength,
-      specularSharpness: material.highlightFalloff >= 6
-          ? liquid.GlassSpecularSharpness.sharp
-          : material.highlightFalloff <= 3
-          ? liquid.GlassSpecularSharpness.soft
-          : liquid.GlassSpecularSharpness.medium,
-      shadow: _shadows(material, colors),
-      // Package API has no direct inner-shadow, so it is retained in the
-      // contract and handled by future app-owned decoration where required.
-      bodyMode: liquid.GlassBodyMode.clear,
+
+    final key = _GlassSettingsKey(material, activeTier, tint);
+    final settings = _settingsCache.putIfAbsent(
+      key,
+      () => liquid.LiquidGlassSettings(
+        // Native Dp values map directly to Flutter logical pixels.
+        blur: activeTier == GlassMailTier.light
+            ? math.min(material.blur, 12)
+            : material.blur,
+        glassColor: tint.withValues(alpha: material.opacity),
+        thickness: material.refractionHeight + material.refraction * 12,
+        refractiveIndex: 1 + material.refraction * .2,
+        chromaticAberration: material.dispersion * 4,
+        lightAngle: material.specularAngle,
+        lightIntensity: material.specularIntensity,
+        ambientStrength: material.luminanceAdaptation,
+        ambientRim: material.rimLight,
+        saturation: material.saturation,
+        glowIntensity: material.interactionStrength,
+        specularSharpness: material.highlightFalloff >= 6
+            ? liquid.GlassSpecularSharpness.sharp
+            : material.highlightFalloff <= 3
+            ? liquid.GlassSpecularSharpness.soft
+            : liquid.GlassSpecularSharpness.medium,
+        shadow: _shadows(material, colors),
+        // Package API has no direct inner-shadow, so it is retained in the
+        // contract and handled by future app-owned decoration where required.
+        bodyMode: liquid.GlassBodyMode.clear,
+      ),
     );
 
     return liquid.GlassContainer(
@@ -123,7 +159,7 @@ class GlassMailGlass extends StatelessWidget {
         borderRadius: material.cornerRadius,
       ),
       settings: settings,
-      useOwnLayer: true,
+      useOwnLayer: useOwnLayer,
       quality: quality,
       clipBehavior: Clip.antiAlias,
       child: content,

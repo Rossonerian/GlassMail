@@ -67,6 +67,10 @@ class _InboxScreenState extends State<InboxScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final visible = _messages
+        .where((message) => !_unreadOnly || message.unread)
+        .toList(growable: false);
+
     return GlassScaffold(
       backgroundColor: colors.surface,
       topEdgeFade: false,
@@ -166,9 +170,7 @@ class _InboxScreenState extends State<InboxScreen> {
                 ),
               ),
               SliverList.separated(
-                itemCount: _messages
-                    .where((message) => !_unreadOnly || message.unread)
-                    .length,
+                itemCount: visible.length,
                 separatorBuilder: (context, index) => Padding(
                   padding: const EdgeInsets.only(left: 92),
                   child: Divider(
@@ -177,9 +179,6 @@ class _InboxScreenState extends State<InboxScreen> {
                   ),
                 ),
                 itemBuilder: (context, index) {
-                  final visible = _messages
-                      .where((message) => !_unreadOnly || message.unread)
-                      .toList();
                   final message = visible[index];
                   return _MailRow(
                     message: message,

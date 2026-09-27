@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:html/dom.dart' as html_dom;
 import 'package:html/parser.dart' as html;
 
-typedef _HostLookup = Future<List<InternetAddress>> Function(String host);
+typedef HostLookup = Future<List<InternetAddress>> Function(String host);
 typedef LinkPreviewHtmlFetcher = Future<LinkPreviewHttpResponse> Function(
   Uri uri,
   InternetAddress pinnedAddress,
@@ -57,7 +57,7 @@ final class LinkPreviewException implements Exception {
 /// never executed or fetched.
 final class MailLinkPreviewService {
   MailLinkPreviewService({
-    _HostLookup? lookup,
+    HostLookup? lookup,
     LinkPreviewHtmlFetcher? htmlFetcher,
   }) : _lookup = lookup ?? ((host) => InternetAddress.lookup(host)),
        _htmlFetcher = htmlFetcher ?? _fetchHtml;
@@ -67,7 +67,7 @@ final class MailLinkPreviewService {
   static const _maxDnsAnswers = 16;
   static const _operationTimeout = Duration(seconds: 8);
 
-  final _HostLookup _lookup;
+  final HostLookup _lookup;
   final LinkPreviewHtmlFetcher _htmlFetcher;
 
   /// Normalizes the one URL shape the preview transport accepts.
@@ -112,9 +112,12 @@ final class MailLinkPreviewService {
         'The destination did not return a previewable page.',
       );
     }
-    final contentType = response.contentType?.split(';').first.trim().toLowerCase();
-    if (contentType != 'text/html' &&
-        contentType != 'application/xhtml+xml') {
+    final contentType = response.contentType
+        ?.split(';')
+        .first
+        .trim()
+        .toLowerCase();
+    if (contentType != 'text/html' && contentType != 'application/xhtml+xml') {
       throw const LinkPreviewException(
         'The destination did not return an HTML page.',
       );
@@ -123,8 +126,11 @@ final class MailLinkPreviewService {
       throw const LinkPreviewException('The preview page is too large.');
     }
 
-    final document = html.parse(utf8.decode(response.body, allowMalformed: true));
-    final title = _firstMetadataValue(document, const [
+    final document = html.parse(
+      utf8.decode(response.body, allowMalformed: true),
+    );
+    final title =
+        _firstMetadataValue(document, const [
           'meta[property="og:title"]',
           'meta[name="twitter:title"]',
         ]) ??
@@ -212,7 +218,9 @@ final class MailLinkPreviewService {
             bytes[10] == 0xff && bytes[11] == 0xff);
     final isGlobalUnicast = (bytes[0] & 0xe0) == 0x20;
     final isDocumentation =
-        (bytes[0] == 0x20 && bytes[1] == 0x01 && bytes[2] == 0x0d &&
+        (bytes[0] == 0x20 &&
+            bytes[1] == 0x01 &&
+            bytes[2] == 0x0d &&
             bytes[3] == 0xb8) ||
         (bytes[0] == 0x3f && (bytes[1] & 0xf0) == 0xf0);
     final isTransitionOrTranslation =

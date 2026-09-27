@@ -1237,7 +1237,9 @@ class _ReaderRouteState extends State<_ReaderRoute> {
       if (!mounted) return;
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
-        SnackBar(content: Text('Could not preview this link: ${error.message}')),
+        SnackBar(
+          content: Text('Could not preview this link: ${error.message}'),
+        ),
       );
     } on Object {
       if (!mounted) return;
@@ -1407,7 +1409,9 @@ class _ReaderRouteState extends State<_ReaderRoute> {
                   account: widget.account,
                   sharingAttachments: _sharingAttachments,
                   onShareAttachment: _shareAttachment,
-                  onLoadBody: _loading ? null : () => _loadBody(message.messageId),
+                  onLoadBody: _loading
+                      ? null
+                      : () => _loadBody(message.messageId),
                   loading: _loading,
                   onOpenLink: _confirmAndOpenLink,
                   onPreviewLink: _confirmAndPreviewLink,
@@ -1460,9 +1464,13 @@ class _MessageCardState extends State<_MessageCard> {
 
   @override
   Widget build(BuildContext context) {
-    final senderProfile = widget.workflowStore.senderProfile(widget.message.sender) ?? widget.message.sender;
-    final snippet = widget.message.preview.replaceAll(RegExp(r'\s+'), ' ').trim();
-    
+    final senderProfile =
+        widget.workflowStore.senderProfile(widget.message.sender) ??
+        widget.message.sender;
+    final snippet = widget.message.preview
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
@@ -1471,7 +1479,8 @@ class _MessageCardState extends State<_MessageCard> {
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           initiallyExpanded: widget.initiallyExpanded,
-          onExpansionChanged: (expanded) => setState(() => _expanded = expanded),
+          onExpansionChanged: (expanded) =>
+              setState(() => _expanded = expanded),
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           title: Row(
@@ -1480,7 +1489,9 @@ class _MessageCardState extends State<_MessageCard> {
                 child: Text(
                   senderProfile,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: widget.message.unread ? FontWeight.bold : FontWeight.w500,
+                    fontWeight: widget.message.unread
+                        ? FontWeight.bold
+                        : FontWeight.w500,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1493,11 +1504,9 @@ class _MessageCardState extends State<_MessageCard> {
               ),
             ],
           ),
-          subtitle: _expanded ? null : Text(
-            snippet,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          subtitle: _expanded
+              ? null
+              : Text(snippet, maxLines: 1, overflow: TextOverflow.ellipsis),
           children: [
             if (widget.message.html)
               const Padding(
@@ -1508,7 +1517,9 @@ class _MessageCardState extends State<_MessageCard> {
               ),
             _SafeMessageBody(
               text: widget.message.html
-                  ? mailHtmlToPlainText(widget.message.body ?? widget.message.preview)
+                  ? mailHtmlToPlainText(
+                      widget.message.body ?? widget.message.preview,
+                    )
                   : widget.message.body ?? widget.message.preview,
               onOpen: widget.onOpenLink,
               onPreview: widget.onPreviewLink,
@@ -1530,13 +1541,22 @@ class _MessageCardState extends State<_MessageCard> {
                   title: Text(attachment.fileName ?? 'Attachment'),
                   subtitle: Text(_attachmentDetails(attachment)),
                   trailing: IconButton(
-                    tooltip: widget.sharingAttachments.contains(attachment.attachmentId)
+                    tooltip:
+                        widget.sharingAttachments.contains(
+                          attachment.attachmentId,
+                        )
                         ? 'Preparing attachment'
                         : 'Download and share ${attachment.fileName ?? 'attachment'}',
-                    onPressed: widget.sharingAttachments.contains(attachment.attachmentId)
+                    onPressed:
+                        widget.sharingAttachments.contains(
+                          attachment.attachmentId,
+                        )
                         ? null
                         : () => widget.onShareAttachment(attachment),
-                    icon: widget.sharingAttachments.contains(attachment.attachmentId)
+                    icon:
+                        widget.sharingAttachments.contains(
+                          attachment.attachmentId,
+                        )
                         ? const SizedBox.square(
                             dimension: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
@@ -1757,7 +1777,10 @@ class _ComposeRouteState extends State<_ComposeRoute> {
     }
     if (sender == null) return;
     setState(() => _sending = true);
-    final result = await sender.send(widget.account, _outgoingMail(recipients, cc, bcc));
+    final result = await sender.send(
+      widget.account,
+      _outgoingMail(recipients, cc, bcc),
+    );
     if (!mounted) return;
     setState(() => _sending = false);
     final text = switch (result) {
@@ -1773,7 +1796,11 @@ class _ComposeRouteState extends State<_ComposeRoute> {
     }
   }
 
-  OutgoingMail _outgoingMail(List<String> recipients, List<String> cc, List<String> bcc) => OutgoingMail(
+  OutgoingMail _outgoingMail(
+    List<String> recipients,
+    List<String> cc,
+    List<String> bcc,
+  ) => OutgoingMail(
     operationId: _operationId,
     accountId: widget.account.accountId,
     from: widget.account.email,
@@ -2257,10 +2284,22 @@ class _SettingsRoute extends StatelessWidget {
             decoration: const InputDecoration(labelText: 'Glass quality'),
             isExpanded: true,
             items: const [
-              DropdownMenuItem(value: GlassMailTier.full, child: Text('Full (Premium)')),
-              DropdownMenuItem(value: GlassMailTier.balanced, child: Text('Balanced (Standard)')),
-              DropdownMenuItem(value: GlassMailTier.light, child: Text('Light (Minimal)')),
-              DropdownMenuItem(value: GlassMailTier.off, child: Text('Off (Opaque)')),
+              DropdownMenuItem(
+                value: GlassMailTier.full,
+                child: Text('Full (Premium)'),
+              ),
+              DropdownMenuItem(
+                value: GlassMailTier.balanced,
+                child: Text('Balanced (Standard)'),
+              ),
+              DropdownMenuItem(
+                value: GlassMailTier.light,
+                child: Text('Light (Minimal)'),
+              ),
+              DropdownMenuItem(
+                value: GlassMailTier.off,
+                child: Text('Off (Opaque)'),
+              ),
             ],
             onChanged: (value) {
               if (value != null) preferences.update(glassTier: value);
