@@ -111,7 +111,6 @@ import com.glassmail.designsystem.AmbientCanvas
 import com.glassmail.designsystem.GlassMailPalette
 import com.glassmail.designsystem.GlassMailTheme
 import com.glassmail.designsystem.MorphingDock
-import com.glassmail.domain.mail.MailAccount
 import com.glassmail.domain.mail.MailListItem
 import com.glassmail.domain.mail.MailMutation
 import com.glassmail.domain.mail.MailRepository
