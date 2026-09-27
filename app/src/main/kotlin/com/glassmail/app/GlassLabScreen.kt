@@ -75,7 +75,6 @@ import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
 import com.glassmail.designsystem.glass.GlassTier
-import com.glassmail.designsystem.glass.LocalGlassPreferences
 
 enum class LabPreset(val title: String, val material: GlassMaterial) {
     Capsule("Capsule", GlassPresets.Toolbar),
