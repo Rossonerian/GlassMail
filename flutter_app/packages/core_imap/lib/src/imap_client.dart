@@ -110,13 +110,13 @@ final class ImapClient {
             return null;
           }
           return ImapMailboxRecord(
-            attributes: values[1].listValue
+            attributes: values[1]
+                .listValue
                 .map((value) => value.atomValue)
                 .whereType<String>()
                 .toSet(),
             delimiter: values[2].atomValue,
-            name:
-                values[3].atomValue ??
+            name: values[3].atomValue ??
                 utf8.decode(values[3].literalValue ?? const []),
           );
         })
@@ -212,8 +212,7 @@ final class ImapClient {
       throw ArgumentError.value(limit, 'limit', 'Must be in 1..500');
     }
     final mailboxes = await listMailboxes();
-    final mailbox =
-        mailboxes
+    final mailbox = mailboxes
             .where(
               (entry) => entry.attributes.any(
                 (attribute) => attribute.toLowerCase() == r'\drafts',
@@ -281,8 +280,7 @@ final class ImapClient {
           body: parsed.plainText ?? parsed.htmlText ?? '',
           inReplyTo: header['in-reply-to'],
           references: _parseReferences(header['references']),
-          updatedAtEpochMillis:
-              _parseImapDate(internalDate) ??
+          updatedAtEpochMillis: _parseImapDate(internalDate) ??
               DateTime.tryParse(header['date'] ?? '')?.millisecondsSinceEpoch ??
               0,
         ),
@@ -310,9 +308,7 @@ final class ImapClient {
     final before = await _draftUids(draftId);
     await append(draftsMailbox, rawMessage, flag: r'\Draft');
     final after = await _draftUids(draftId);
-    final newUid = after
-        .difference(before)
-        .fold<int?>(
+    final newUid = after.difference(before).fold<int?>(
           null,
           (best, uid) => best == null || uid > best ? uid : best,
         );
@@ -689,9 +685,9 @@ final class ImapClient {
   static List<String> _parseReferences(String? value) => value == null
       ? const []
       : RegExp(r'<[^<>]+>')
-            .allMatches(value)
-            .map((match) => match.group(0)!)
-            .toList(growable: false);
+          .allMatches(value)
+          .map((match) => match.group(0)!)
+          .toList(growable: false);
 
   static int? _parseImapDate(String? value) {
     if (value == null) return null;
