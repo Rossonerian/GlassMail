@@ -37,8 +37,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +64,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.glassmail.designsystem.GlassRadius
 import com.glassmail.designsystem.GlassSpacing
@@ -70,6 +75,7 @@ import com.glassmail.designsystem.glass.GlassPresets
 import com.glassmail.designsystem.glass.GlassQuality
 import com.glassmail.designsystem.glass.GlassSurface
 import com.glassmail.designsystem.glass.GlassTier
+import com.glassmail.designsystem.glass.LocalGlassPreferences
 
 enum class LabPreset(val title: String, val material: GlassMaterial) {
     Capsule("Capsule", GlassPresets.Toolbar),

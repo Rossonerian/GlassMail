@@ -7,6 +7,3 @@
 ## 2026-09-27 - android-actions/setup-android deprecation
 **Learning:** The GitHub action `android-actions/setup-android@v3` causes failures (`Failed to find package 'tools'` exit code 1) because the legacy tools package has been removed from recent Android SDKs.
 **Action:** Remove `android-actions/setup-android@v3` from workflows entirely. GitHub's `ubuntu-latest` environment already comes pre-installed with the necessary Android SDK.
-## 2024-10-27 - Dart 3.11.0 SDK constraint failures
-**Learning:** Bumping `flutter pub get` SDK constraints dynamically (e.g. downgrading `^3.13.4` to `3.11.0`) can cause cascading package constraint failures for packages like `flutter_riverpod` or `flutter_contacts`.
-**Action:** Do not manually edit pubspec constraint boundaries to solve SDK mismatch errors in test environments; create a mock benchmark script if functional verification is needed but standard tests are blocked by SDK version issues.

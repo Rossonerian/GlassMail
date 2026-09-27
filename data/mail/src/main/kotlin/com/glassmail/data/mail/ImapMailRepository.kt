@@ -129,15 +129,11 @@ class ImapMailRepository(
         val attachments = database.mailDao().cachedAttachments(accountId)
         var bytes = attachments.sumOf { it.sizeBytes ?: 0L }
         val limitBytes = settings.attachmentCacheLimitMb * 1024L * 1024L
-        val evictIds = mutableListOf<String>()
         attachments.forEach { attachment ->
             if (bytes <= limitBytes) return@forEach
             attachmentPath(attachment)?.delete()
-            evictIds.add(attachment.attachmentId)
+            database.mailDao().setAttachmentState(attachment.attachmentId, com.glassmail.core.database.DownloadState.NOT_FETCHED)
             bytes -= attachment.sizeBytes ?: 0L
-        }
-        if (evictIds.isNotEmpty()) {
-            database.mailDao().setAttachmentStates(evictIds, com.glassmail.core.database.DownloadState.NOT_FETCHED)
         }
     }
 
@@ -271,50 +267,44 @@ class ImapMailRepository(
             synchronizeLocked(accountId)
         }
 
-    private suspend fun applyMutationInternal(mutation: MailMutation) {
-        val previousMembership = database.mailDao().membershipsForMessage(mutation.messageId)
-            .firstOrNull { mutation.mailboxId == null || it.mailboxId == mutation.mailboxId }
-        val targetUid = previousMembership?.uid
-        when (mutation) {
-            is MailMutation.MarkRead -> updateFlags(mutation.messageId, mutation.mailboxId) { it.withFlag("\\Seen", mutation.read) }
-            is MailMutation.Star -> updateFlags(mutation.messageId, mutation.mailboxId) { it.withFlag("\\Flagged", mutation.starred) }
-            is MailMutation.Archive -> database.mailDao().removeMailboxMembership(mutation.mailboxId, mutation.messageId)
-            is MailMutation.Delete -> {
-                val mId = mutation.mailboxId
-                if (mId != null) {
-                    database.mailDao().removeMailboxMembership(mId, mutation.messageId)
-                } else {
-                    database.mailDao().membershipsForMessage(mutation.messageId).forEach {
-                        database.mailDao().removeMailboxMembership(it.mailboxId, mutation.messageId)
+    override suspend fun applyMutation(mutation: MailMutation) {
+        database.withTransaction {
+            val previousMembership = database.mailDao().membershipsForMessage(mutation.messageId)
+                .firstOrNull { mutation.mailboxId == null || it.mailboxId == mutation.mailboxId }
+            val targetUid = previousMembership?.uid
+            when (mutation) {
+                is MailMutation.MarkRead -> updateFlags(mutation.messageId, mutation.mailboxId) { it.withFlag("\\Seen", mutation.read) }
+                is MailMutation.Star -> updateFlags(mutation.messageId, mutation.mailboxId) { it.withFlag("\\Flagged", mutation.starred) }
+                is MailMutation.Archive -> database.mailDao().removeMailboxMembership(mutation.mailboxId, mutation.messageId)
+                is MailMutation.Delete -> {
+                    val mId = mutation.mailboxId
+                    if (mId != null) {
+                        database.mailDao().removeMailboxMembership(mId, mutation.messageId)
+                    } else {
+                        database.mailDao().membershipsForMessage(mutation.messageId).forEach {
+                            database.mailDao().removeMailboxMembership(it.mailboxId, mutation.messageId)
+                        }
                     }
                 }
+                is MailMutation.Label -> if (mutation.add) database.mailDao().upsertLabels(listOf(MessageLabelEntity(mutation.messageId, mutation.label)))
+                else database.mailDao().removeLabel(mutation.messageId, mutation.label)
             }
-            is MailMutation.Label -> if (mutation.add) database.mailDao().upsertLabels(listOf(MessageLabelEntity(mutation.messageId, mutation.label)))
-            else database.mailDao().removeLabel(mutation.messageId, mutation.label)
+            database.pendingMutationDao().insert(
+                PendingMutationEntity(
+                    mutationId = UUID.randomUUID().toString(),
+                    accountId = mutation.accountId,
+                    mailboxId = mutation.mailboxId,
+                    messageId = mutation.messageId,
+                    targetUid = targetUid,
+                    type = mutation.type(),
+                    payload = mutation.payload(),
+                    state = MutationState.PENDING,
+                    createdAtEpochMillis = clock(),
+                    previousFlags = previousMembership?.flags.orEmpty(),
+                    previousLabels = previousMembership?.labels.orEmpty(),
+                ),
+            )
         }
-        database.pendingMutationDao().insert(
-            PendingMutationEntity(
-                mutationId = UUID.randomUUID().toString(),
-                accountId = mutation.accountId,
-                mailboxId = mutation.mailboxId,
-                messageId = mutation.messageId,
-                targetUid = targetUid,
-                type = mutation.type(),
-                payload = mutation.payload(),
-                state = MutationState.PENDING,
-                createdAtEpochMillis = clock(),
-                previousFlags = previousMembership?.flags.orEmpty(),
-                previousLabels = previousMembership?.labels.orEmpty(),
-            ),
-        )
-    }
-
-    override suspend fun applyMutation(mutation: MailMutation) {
-        database.withTransaction { applyMutationInternal(mutation) }
-    }
-
-    override suspend fun applyMutations(mutations: List<MailMutation>) {
-        database.withTransaction { mutations.forEach { applyMutationInternal(it) } }
     }
 
     override suspend fun undoPendingArchive(messageId: String): Boolean = database.withTransaction {

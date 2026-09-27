@@ -1,21 +1,20 @@
+cat << 'INNER_EOF' > app/src/main/kotlin/com/glassmail/app/MailRow.kt
 package com.glassmail.app
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.glassmail.domain.mail.MailListItem
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AttachFile
@@ -30,7 +29,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,85 +41,116 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.glassmail.designsystem.GlassRadius
 import com.glassmail.designsystem.GlassSpacing
-import com.glassmail.designsystem.glass.GlassPresets
-import com.glassmail.designsystem.glass.GlassSurface
-import com.glassmail.designsystem.glass.GlassTier
 import java.time.Instant
 import java.time.ZoneId
 
-/**
- * Minimalist, high-contrast liquid glass email list row.
- * Uses the LIGHT rendering tier for bounded per-surface blur cost during scrolling
- * when rendering 15+ cards on-screen simultaneously.
- */
 @Composable
 fun MailRow(
-    row: MailListItem,
-    open: (String) -> Unit,
+    row: InboxRow,
     vm: AppViewModel,
-    modifier: Modifier = Modifier,
+    preferences: AppearancePreferences,
+    onNavigate: (String) -> Unit,
 ) {
-    var menuOpen by remember(row.messageId) { mutableStateOf(false) }
-    val appearance by vm.appearance.collectAsStateWithLifecycle()
-    val timestamp = remember(row.sentAtEpochMillis) { timeLabel(row.sentAtEpochMillis) }
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { dismissValue ->
+            when (dismissValue) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    vm.mutation(row, preferences.swipeRightAction.asMutationType())
+                    true
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    vm.mutation(row, preferences.swipeLeftAction.asMutationType())
+                    true
+                }
+                SwipeToDismissBoxValue.Settled -> false
+            }
+        },
+    )
 
-    val displayName = remember(row.sender) { parseSenderDisplayName(row.sender) }
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val color by animateColorAsState(
+                when (dismissState.targetValue) {
+                    SwipeToDismissBoxValue.Settled -> MaterialTheme.colorScheme.surfaceVariant
+                    SwipeToDismissBoxValue.StartToEnd -> when (preferences.swipeRightAction) {
+                        SwipeAction.MARK_READ -> MaterialTheme.colorScheme.primaryContainer
+                        SwipeAction.ARCHIVE -> Color(0xFF4CAF50)
+                        SwipeAction.DELETE -> MaterialTheme.colorScheme.errorContainer
+                        SwipeAction.STAR -> Color(0xFFFFF8E1)
+                    }
+                    SwipeToDismissBoxValue.EndToStart -> when (preferences.swipeLeftAction) {
+                        SwipeAction.MARK_READ -> MaterialTheme.colorScheme.primaryContainer
+                        SwipeAction.ARCHIVE -> Color(0xFF4CAF50)
+                        SwipeAction.DELETE -> MaterialTheme.colorScheme.errorContainer
+                        SwipeAction.STAR -> Color(0xFFFFF8E1)
+                    }
+                },
+                label = "swipeColor",
+            )
+            val iconScale by animateFloatAsState(
+                if (dismissState.targetValue == SwipeToDismissBoxValue.Settled) 0.8f else 1.2f,
+                label = "swipeIconScale",
+            )
 
-    GlassSurface(
-        material = GlassPresets.Card,
-        modifier = modifier.fillMaxWidth(),
-        tierOverride = GlassTier.LIGHT,
-        backdropSampling = false,
+            Box(
+                Modifier.fillMaxSize().background(color).padding(horizontal = 24.dp),
+                contentAlignment = when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                    SwipeToDismissBoxValue.Settled -> Alignment.Center
+                },
+            ) {
+                if (direction != SwipeToDismissBoxValue.Settled) {
+                    val action = if (direction == SwipeToDismissBoxValue.StartToEnd) preferences.swipeRightAction else preferences.swipeLeftAction
+                    val icon = when (action) {
+                        SwipeAction.MARK_READ -> if (row.unread) Icons.Outlined.MarkEmailRead else Icons.Outlined.MarkEmailUnread
+                        SwipeAction.ARCHIVE -> Icons.Outlined.Archive
+                        SwipeAction.DELETE -> Icons.Outlined.DeleteOutline
+                        SwipeAction.STAR -> if (row.starred) Icons.Outlined.StarBorder else Icons.Outlined.Star
+                    }
+                    val iconTint = when (action) {
+                        SwipeAction.MARK_READ -> MaterialTheme.colorScheme.onPrimaryContainer
+                        SwipeAction.ARCHIVE -> Color.White
+                        SwipeAction.DELETE -> MaterialTheme.colorScheme.onErrorContainer
+                        SwipeAction.STAR -> Color(0xFFF57F17)
+                    }
+                    Icon(
+                        icon,
+                        contentDescription = action.name,
+                        modifier = Modifier.scale(iconScale),
+                        tint = iconTint,
+                    )
+                }
+            }
+        },
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 80.dp)
-                .pointerInput(row.messageId, appearance.shortSwipeLeft, appearance.longSwipeLeft, appearance.shortSwipeRight, appearance.longSwipeRight) {
-                    var horizontalDistance = 0f
-                    val shortThreshold = 64.dp.toPx()
-                    val longThreshold = 144.dp.toPx()
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { change, dragAmount ->
-                            horizontalDistance += dragAmount
-                            change.consume()
-                        },
-                        onDragEnd = {
-                            val distance = horizontalDistance
-                            horizontalDistance = 0f
-                            val action = when {
-                                distance <= -longThreshold -> appearance.longSwipeLeft
-                                distance <= -shortThreshold -> appearance.shortSwipeLeft
-                                distance >= longThreshold -> appearance.longSwipeRight
-                                distance >= shortThreshold -> appearance.shortSwipeRight
-                                else -> null
-                            }
-                            action?.let { vm.mutation(row, it.asMutationType()) }
-                        },
-                        onDragCancel = { horizontalDistance = 0f },
-                    )
-                }
-                .clickable(
-                    onClickLabel = "Open message",
-                    onClick = { open(row.messageId) },
-                )
-                .padding(horizontal = GlassSpacing.base, vertical = GlassSpacing.md),
-            horizontalArrangement = Arrangement.spacedBy(GlassSpacing.md),
+                .background(MaterialTheme.colorScheme.surface)
+                .clickable { onNavigate("reader/${row.id}") }
+                .padding(horizontal = GlassSpacing.m, vertical = GlassSpacing.s),
+            horizontalArrangement = Arrangement.spacedBy(GlassSpacing.m),
             verticalAlignment = Alignment.Top,
         ) {
-            // Unread subtle sage indicator dot
+            var menuOpen by remember { mutableStateOf(false) }
+            val displayName = parseSenderDisplayName(row.sender ?: "Unknown")
+            val timestamp = timeLabel(row.sentAtEpochMillis)
+
+            // Unread indicator
             Box(
                 modifier = Modifier
-                    .padding(top = 6.dp)
-                    .size(8.dp)
+                    .padding(top = 8.dp)
+                    .size(10.dp)
                     .clip(CircleShape)
                     .background(
                         if (row.unread) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -292,6 +325,11 @@ private fun SwipeAction.asMutationType(): String = when (this) {
     SwipeAction.STAR -> "star"
 }
 
+// ⚡ Bolt: Extracted DateTimeFormatter instances to static properties to prevent
+// object allocation and pattern compilation overhead during list recomposition
+private val sameYearFormatter = java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US)
+private val olderFormatter = java.time.format.DateTimeFormatter.ofPattern("MM/dd/yy", java.util.Locale.US)
+
 fun timeLabel(epochMillis: Long?): String = epochMillis?.let {
     val zonedDateTime = Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault())
     val today = java.time.LocalDate.now(ZoneId.systemDefault())
@@ -299,11 +337,9 @@ fun timeLabel(epochMillis: Long?): String = epochMillis?.let {
     if (messageDate == today) {
         zonedDateTime.toLocalTime().toString().take(5)
     } else if (messageDate.year == today.year) {
-        val formatter = java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US)
-        zonedDateTime.format(formatter)
+        zonedDateTime.format(sameYearFormatter)
     } else {
-        val formatter = java.time.format.DateTimeFormatter.ofPattern("MM/dd/yy", java.util.Locale.US)
-        zonedDateTime.format(formatter)
+        zonedDateTime.format(olderFormatter)
     }
 } ?: "—"
 
@@ -316,3 +352,4 @@ fun parseSenderDisplayName(sender: String): String {
     }
     return sender
 }
+INNER_EOF

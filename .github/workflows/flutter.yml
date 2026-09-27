@@ -18,9 +18,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 11479570
       - uses: flutter-actions/setup-flutter@v4.2
         with:
-          version: '3.47.5'
+          version: 'any'
           channel: stable
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed .
@@ -65,7 +68,7 @@ jobs:
           java-version: '17'
       - uses: flutter-actions/setup-flutter@v4.2
         with:
-          version: '3.47.5'
+          version: 'any'
           channel: stable
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed .
