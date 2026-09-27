@@ -2,10 +2,29 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glassmail_core_imap/glassmail_core_imap.dart';
 
 void main() {
+  group('SMTP network errors', () {
+    test('readReply times out if the server delays responses', () async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final clientFut = SmtpClient.connect(
+        host: InternetAddress.loopbackIPv4.address,
+        port: server.port,
+        timeout: const Duration(milliseconds: 10),
+      );
+
+      final socket = await server.first;
+
+      await expectLater(clientFut, throwsA(isA<TimeoutException>()));
+      await socket.close();
+      await server.close();
+    });
+  });
+
   group('SMTP STARTTLS submission', () {
     test('requires STARTTLS before auth and rebuilds EHLO capabilities',
         () async {
