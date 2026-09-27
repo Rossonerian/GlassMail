@@ -184,15 +184,34 @@ final class PendingMutationQueue {
     final account = await _database.accountById(accountId);
     if (account == null) return;
     final mutations = await _database.activeMutationsForAccount(accountId);
+    if (mutations.isEmpty) return;
+
+    final messageIdsMissingUid = mutations
+        .where((mutation) => mutation.targetUid == null)
+        .map((m) => m.messageId)
+        .toSet();
+
+    final membershipsByMessageId = <String, List<dynamic>>{};
+    if (messageIdsMissingUid.isNotEmpty) {
+      final allMemberships =
+          await _database.membershipsForMessages(messageIdsMissingUid);
+      for (final m in allMemberships) {
+        membershipsByMessageId.putIfAbsent(m.messageId, () => []).add(m);
+      }
+    }
+
     await _credentialStore.withCredential(accountId, (credential) async {
       for (final mutation in mutations) {
-        final uid = mutation.targetUid ??
-            (await _database.membershipsForMessage(mutation.messageId))
-                .where((row) =>
-                    mutation.mailboxId == null ||
-                    row.mailboxId == mutation.mailboxId)
-                .firstOrNull
-                ?.uid;
+        int? uid = mutation.targetUid;
+        if (uid == null) {
+          final memberships = membershipsByMessageId[mutation.messageId] ?? [];
+          uid = memberships
+              .where((row) =>
+                  mutation.mailboxId == null ||
+                  row.mailboxId == mutation.mailboxId)
+              .firstOrNull
+              ?.uid;
+        }
         if (uid == null) {
           await _markPermanent(mutation, 'MISSING_UID');
           continue;
