@@ -28,6 +28,10 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  apple_liquid_glass:
+    git:
+      url: https://github.com/whynotmake-it/flutter_liquid_glass.git
+      path: packages/apple_liquid_glass
   flutter:
     sdk: flutter
   html: ^0.15.7
@@ -39,7 +43,6 @@ dependencies:
   glassmail_domain_mail: ^0.1.0
   flutter_local_notifications: 22.3.1
   workmanager: 0.10.10
-  liquid_glass_widgets: 1.7.2
   flutter_riverpod: ^3.4.3
   file_selector: ^1.1.0
   path_provider: ^2.1.6
@@ -120,3 +123,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+dependency_overrides:
+  liquid_glass_renderer:
+    git:
+      url: https://github.com/whynotmake-it/flutter_liquid_glass.git
+      path: packages/liquid_glass_renderer

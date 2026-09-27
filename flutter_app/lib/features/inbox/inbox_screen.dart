@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import '../../design/glass_mail_glass.dart';
 import '../../design/glass_material.dart';
@@ -71,14 +70,12 @@ class _InboxScreenState extends State<InboxScreen> {
         .where((message) => !_unreadOnly || message.unread)
         .toList(growable: false);
 
-    return GlassScaffold(
+    return Scaffold(
       backgroundColor: colors.surface,
-      topEdgeFade: false,
-      bottomEdgeFade: false,
-      appBarHeight: 96,
-      bottomBarHeight: mailDockContentHeight(context) + 22,
+      extendBodyBehindAppBar: true,
+      extendBody: true,
       appBar: const _InboxCapsule(),
-      bottomBar: MorphingMailDock(collapsed: _dockCollapsed),
+      bottomNavigationBar: MorphingMailDock(collapsed: _dockCollapsed),
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
@@ -336,12 +333,14 @@ class _MorphingMailDockState extends State<MorphingMailDock>
   @override
   Widget build(BuildContext context) {
     final dockHeight = mailDockContentHeight(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 6, 24, 12),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: LayoutBuilder(
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 6, 24, 12),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: LayoutBuilder(
             builder: (context, constraints) {
               final progress = Curves.easeOutCubic.transform(_controller.value);
               final width = lerpDouble(constraints.maxWidth, 156, progress)!;

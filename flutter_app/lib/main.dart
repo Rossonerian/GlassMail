@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:glassmail_core_database/glassmail_core_database.dart';
 import 'package:glassmail_domain_mail/glassmail_domain_mail.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -26,7 +25,6 @@ final mailRepositoryProvider = Provider<MailRepository?>((ref) => null);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await LiquidGlassWidgets.initialize();
   await _initializeAppShortcuts();
   await Workmanager().initialize(glassMailBackgroundDispatcher);
   final notifications = MailNotifications();
@@ -60,14 +58,11 @@ Future<void> main() async {
     onInterrupted: workflowStore.removeScheduledSend,
   );
   runApp(
-    LiquidGlassWidgets.wrap(
-      child: GlassMailFlutterApp(
-        repository: repository,
-        preferences: preferences,
-        workflowStore: workflowStore,
-        delayedSendCoordinator: delayedSendCoordinator,
-      ),
-      brightnessResolver: Theme.maybeBrightnessOf,
+    GlassMailFlutterApp(
+      repository: repository,
+      preferences: preferences,
+      workflowStore: workflowStore,
+      delayedSendCoordinator: delayedSendCoordinator,
     ),
   );
 }
