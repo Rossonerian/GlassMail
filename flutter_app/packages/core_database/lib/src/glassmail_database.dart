@@ -430,6 +430,12 @@ class GlassMailDatabase extends _$GlassMailDatabase {
             ..where((row) => row.attachmentId.equals(attachmentId)))
           .write(AttachmentsCompanion(downloadState: Value(state)));
 
+  Future<int> setAttachmentDownloadStates(
+          Iterable<String> attachmentIds, String state) =>
+      (update(attachments)
+            ..where((row) => row.attachmentId.isIn(attachmentIds)))
+          .write(AttachmentsCompanion(downloadState: Value(state)));
+
   Future<int> markAttachmentAccessed(String attachmentId, int timestamp) =>
       (update(attachments)
             ..where((row) => row.attachmentId.equals(attachmentId)))
