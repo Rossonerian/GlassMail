@@ -360,7 +360,8 @@ class _MorphingMailDockState extends State<MorphingMailDock>
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            Positioned.fill(
+                            OverflowBox(
+                              minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth,
                               child: ExcludeSemantics(
                                 excluding: widget.collapsed,
                                 child: IgnorePointer(
@@ -372,7 +373,8 @@ class _MorphingMailDockState extends State<MorphingMailDock>
                                 ),
                               ),
                             ),
-                            Positioned.fill(
+                            OverflowBox(
+                              minWidth: 156, maxWidth: 156,
                               child: ExcludeSemantics(
                                 excluding: !widget.collapsed,
                                 child: IgnorePointer(
