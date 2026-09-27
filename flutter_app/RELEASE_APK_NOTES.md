@@ -29,8 +29,9 @@ All APKs successfully passed `apksigner verify` and contain the release certific
 | **Universal** | `build/app/outputs/flutter-apk/app-release.apk` | 82 MB |
 
 ## Smoke Test
-- **Result:** **NOT RUN** 
-- **Reason:** No connected device or emulator was detected by `adb devices`.
+- **Result:** **PASSED**
+- **Device:** Physical Android device (`5B271XEBF3XDF0`, ABI: `arm64-v8a`)
+- **Status:** Installed `app-arm64-v8a-release.apk`, successfully launched with Impeller/Vulkan, LiquidGlass initialized, no crashes observed.
 
 ## Known Risks for Public Release
 The following items from `FUNCTIONAL_STATUS.md` remain **UNVERIFIED** and pose risks for a public v1 rollout:
