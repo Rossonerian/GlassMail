@@ -230,7 +230,8 @@ void main() {
       expect(await reconnected.capability(), {'IMAP4REV1'});
     });
 
-    test('throws ImapProtocolException on BAD response to CAPABILITY', () async {
+    test('throws ImapProtocolException on BAD response to CAPABILITY',
+        () async {
       final client = ImapClient(
         _FakeWire([
           ImapResponseParser.parse('G0001 BAD unsupported command', const []),
