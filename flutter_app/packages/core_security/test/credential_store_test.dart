@@ -13,51 +13,87 @@ void main() {
     store = FlutterCredentialStore(backend: backend);
   });
 
-  test('stores namespaced opaque account keys and clears input bytes',
-      () async {
-    final password = Uint8List.fromList(utf8.encode('temporary-secret'));
+  test(
+    'stores namespaced opaque account keys and clears input bytes',
+    () async {
+      final password = Uint8List.fromList(utf8.encode('temporary-secret'));
 
-    await store.store('account/one@example.test', password);
+      await store.store('account/one@example.test', password);
+
+      expect(password, everyElement(0));
+      expect(
+        backend.values.keys.single,
+        startsWith(FlutterCredentialStore.keyPrefix),
+      );
+      expect(backend.values.values.single, 'temporary-secret');
+      expect(backend.values.keys.single, isNot(contains('example.test')));
+    },
+  );
+
+  test(
+    'credential callback is awaited and its mutable bytes are cleared',
+    () async {
+      await store.store('account-one', Uint8List.fromList([0xc3, 0xa9]));
+      Uint8List? received;
+
+      final result = await store.withCredential<String>('account-one', (
+        bytes,
+      ) async {
+        received = bytes;
+        await Future<void>.delayed(Duration.zero);
+        return utf8.decode(bytes);
+      });
+
+      expect(result, 'é');
+      expect(received, everyElement(0));
+      expect(await store.withCredential('missing', (_) => 'unused'), isNull);
+    },
+  );
+
+  test(
+    'removal deletes only that account and invalid account ids are rejected',
+    () async {
+      await store.store('one', Uint8List.fromList([49]));
+      await store.store('two', Uint8List.fromList([50]));
+
+      await store.delete('one');
+
+      expect(await store.withCredential('one', (_) => 'found'), isNull);
+      expect(
+        await store.withCredential('two', (bytes) => utf8.decode(bytes)),
+        '2',
+      );
+      expect(
+        () => store.store('  ', Uint8List.fromList([49])),
+        throwsArgumentError,
+      );
+    },
+  );
+  test('input bytes are cleared even if storage backend throws', () async {
+    final throwingBackend = _ExceptionThrowingBackend();
+    final throwingStore = FlutterCredentialStore(backend: throwingBackend);
+    final password = Uint8List.fromList(utf8.encode('secret-to-clear'));
+
+    await expectLater(
+      () => throwingStore.store('error-account', password),
+      throwsException,
+    );
 
     expect(password, everyElement(0));
-    expect(backend.values.keys.single,
-        startsWith(FlutterCredentialStore.keyPrefix));
-    expect(backend.values.values.single, 'temporary-secret');
-    expect(backend.values.keys.single, isNot(contains('example.test')));
   });
+}
 
-  test('credential callback is awaited and its mutable bytes are cleared',
-      () async {
-    await store.store('account-one', Uint8List.fromList([0xc3, 0xa9]));
-    Uint8List? received;
+final class _ExceptionThrowingBackend implements CredentialStorageBackend {
+  @override
+  Future<void> write(String key, String value) async {
+    throw Exception('Storage error');
+  }
 
-    final result =
-        await store.withCredential<String>('account-one', (bytes) async {
-      received = bytes;
-      await Future<void>.delayed(Duration.zero);
-      return utf8.decode(bytes);
-    });
+  @override
+  Future<String?> read(String key) async => null;
 
-    expect(result, 'é');
-    expect(received, everyElement(0));
-    expect(await store.withCredential('missing', (_) => 'unused'), isNull);
-  });
-
-  test('removal deletes only that account and invalid account ids are rejected',
-      () async {
-    await store.store('one', Uint8List.fromList([49]));
-    await store.store('two', Uint8List.fromList([50]));
-
-    await store.delete('one');
-
-    expect(await store.withCredential('one', (_) => 'found'), isNull);
-    expect(
-        await store.withCredential('two', (bytes) => utf8.decode(bytes)), '2');
-    expect(
-      () => store.store('  ', Uint8List.fromList([49])),
-      throwsArgumentError,
-    );
-  });
+  @override
+  Future<void> delete(String key) async {}
 }
 
 final class _MemoryCredentialBackend implements CredentialStorageBackend {
