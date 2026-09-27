@@ -94,6 +94,49 @@ void main() {
       await client.close();
     });
 
+    test('rejects on MAIL FROM and RCPT TO failures', () async {
+      final rejectedSenderWire = _FakeSmtpWire([
+        ..._startTlsReplies(),
+        SmtpReply(code: 235, lines: ['authenticated']),
+        SmtpReply(code: 550, lines: ['sender rejected']),
+      ]);
+      final clientSender = await SmtpClient.negotiateStartTls(
+        rejectedSenderWire,
+        host: 'smtp.test',
+      );
+      await expectLater(
+        clientSender.sendRaw(
+          email: 'sender@example.com',
+          credentialUtf8: Uint8List.fromList(utf8.encode('secret')),
+          recipients: ['to@example.com'],
+          rawMessage:
+              Uint8List.fromList(utf8.encode('Subject: test\r\n\r\nbody')),
+        ),
+        throwsA(isA<SmtpRejectedException>()),
+      );
+
+      final rejectedRecipientWire = _FakeSmtpWire([
+        ..._startTlsReplies(),
+        SmtpReply(code: 235, lines: ['authenticated']),
+        SmtpReply(code: 250, lines: ['sender accepted']),
+        SmtpReply(code: 550, lines: ['recipient rejected']),
+      ]);
+      final clientRecipient = await SmtpClient.negotiateStartTls(
+        rejectedRecipientWire,
+        host: 'smtp.test',
+      );
+      await expectLater(
+        clientRecipient.sendRaw(
+          email: 'sender@example.com',
+          credentialUtf8: Uint8List.fromList(utf8.encode('secret')),
+          recipients: ['to@example.com'],
+          rawMessage:
+              Uint8List.fromList(utf8.encode('Subject: test\r\n\r\nbody')),
+        ),
+        throwsA(isA<SmtpRejectedException>()),
+      );
+    });
+
     test('distinguishes rejected DATA from uncertain delivery', () async {
       final rejectedWire = _FakeSmtpWire([
         ..._startTlsReplies(),
