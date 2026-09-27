@@ -831,15 +831,17 @@ final class LocalFirstMailRepository
       (total, attachment) => total + max(0, attachment.sizeBytes ?? 0),
     );
     final limitBytes = settings.attachmentCacheLimitMb * 1024 * 1024;
+    final evictedIds = <String>[];
     for (final attachment in attachments) {
       if (cachedBytes <= limitBytes) break;
       final file = _attachmentFile(root, accountId, attachment.attachmentId);
       if (await file.exists()) await file.delete();
-      await _database.setAttachmentDownloadState(
-        attachment.attachmentId,
-        'NOT_FETCHED',
-      );
+      evictedIds.add(attachment.attachmentId);
       cachedBytes -= max(0, attachment.sizeBytes ?? 0);
+    }
+
+    if (evictedIds.isNotEmpty) {
+      await _database.setAttachmentDownloadStates(evictedIds, 'NOT_FETCHED');
     }
   }
 
