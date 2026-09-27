@@ -35,11 +35,11 @@ void main() {
     expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
 
     final inboxList = find.byKey(const PageStorageKey('inbox-preview-list'));
-    await tester.drag(inboxList, const Offset(0, -180));
+    await tester.dragFrom(const Offset(200, 200), const Offset(0, -180));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('mail-dock-compact')), findsOneWidget);
 
-    await tester.drag(inboxList, const Offset(0, 90));
+    await tester.dragFrom(const Offset(200, 200), const Offset(0, 90));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
 
