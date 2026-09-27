@@ -131,7 +131,8 @@ JVBERi0xLjQ=
       );
     });
 
-    test('parses message with no Content-Type header (defaults to text/plain)', () {
+    test('parses message with no Content-Type header (defaults to text/plain)',
+        () {
       final plain = MimeDecoder.parseRfc822(
         Uint8List.fromList(
           utf8.encode(
