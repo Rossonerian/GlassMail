@@ -21,7 +21,7 @@ jobs:
       - uses: android-actions/setup-android@v3
       - uses: flutter-actions/setup-flutter@v4.2
         with:
-          version: '3.13.4'
+          version: '3.47.5'
           channel: stable
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed .
@@ -66,7 +66,7 @@ jobs:
           java-version: '17'
       - uses: flutter-actions/setup-flutter@v4.2
         with:
-          version: '3.13.4'
+          version: '3.47.5'
           channel: stable
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed .
