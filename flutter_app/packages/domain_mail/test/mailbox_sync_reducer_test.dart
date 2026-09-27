@@ -34,7 +34,7 @@ void main() {
       ServerMailboxBatch(
         uidValidity: 11,
         messages: [
-          ServerMessage(uid: 4, canonicalId: 'gmail:4', flags: const {})
+          ServerMessage(uid: 4, canonicalId: 'gmail:4', flags: const {}),
         ],
       ),
     );
@@ -42,31 +42,37 @@ void main() {
     expect(result.messages[4]!.flags, contains(r'\Seen'));
   });
 
-  test('UIDVALIDITY reset drops stale UID mappings and retains canonical flags',
-      () {
-    final initial = MailboxLocalState(
-      uidValidity: 11,
-      highestKnownUid: 80,
-      messages: {
-        80: LocalMessage(canonicalId: 'gmail:preserve', flags: {r'\Seen'}),
-      },
-    );
+  test(
+    'UIDVALIDITY reset drops stale UID mappings and retains canonical flags',
+    () {
+      final initial = MailboxLocalState(
+        uidValidity: 11,
+        highestKnownUid: 80,
+        messages: {
+          80: LocalMessage(canonicalId: 'gmail:preserve', flags: {r'\Seen'}),
+        },
+      );
 
-    final result = MailboxSyncReducer.apply(
-      initial,
-      ServerMailboxBatch(
-        uidValidity: 22,
-        messages: [
-          ServerMessage(uid: 1, canonicalId: 'gmail:preserve', flags: const {}),
-        ],
-      ),
-    );
+      final result = MailboxSyncReducer.apply(
+        initial,
+        ServerMailboxBatch(
+          uidValidity: 22,
+          messages: [
+            ServerMessage(
+              uid: 1,
+              canonicalId: 'gmail:preserve',
+              flags: const {},
+            ),
+          ],
+        ),
+      );
 
-    expect(result.uidValidity, 22);
-    expect(result.messages, isNot(contains(80)));
-    expect(result.messages[1]!.flags, contains(r'\Seen'));
-    expect(result.highestKnownUid, 1);
-  });
+      expect(result.uidValidity, 22);
+      expect(result.messages, isNot(contains(80)));
+      expect(result.messages[1]!.flags, contains(r'\Seen'));
+      expect(result.highestKnownUid, 1);
+    },
+  );
 
   test('large mailbox batch keeps each server UID mapping', () {
     final result = MailboxSyncReducer.apply(
@@ -82,8 +88,10 @@ void main() {
 
     expect(result.messages, hasLength(10000));
     expect(result.highestKnownUid, 10000);
-    expect(result.messages.values.map((item) => item.canonicalId).toSet(),
-        hasLength(10000));
+    expect(
+      result.messages.values.map((item) => item.canonicalId).toSet(),
+      hasLength(10000),
+    );
   });
 
   test('reducer input and output values compare structurally', () {

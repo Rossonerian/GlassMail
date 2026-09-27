@@ -67,70 +67,66 @@ void main() {
     );
   });
 
-  test('Kotlin data class values compare by content, including collections',
-      () {
-    final first = GmailInboxSnapshot(
-      capabilities: {'IMAP4rev1', 'X-GM-EXT-1'},
-      mailboxes: [
-        ImapMailbox(name: 'INBOX', attributes: {'\\HasNoChildren'})
-      ],
-      inbox: inbox,
-      messages: [
-        ImapMessageMetadata(
-          uid: 17,
-          flags: {'\\Seen', '\\Flagged'},
-          gmailMessageId: '21',
-          gmailThreadId: '22',
-          labels: {'INBOX', 'STARRED'},
-          subject: 'Subject',
-          sender: 'sender@example.com',
-          sentAtEpochMillis: null,
-          sizeBytes: null,
+  test(
+    'Kotlin data class values compare by content, including collections',
+    () {
+      final first = GmailInboxSnapshot(
+        capabilities: {'IMAP4rev1', 'X-GM-EXT-1'},
+        mailboxes: [
+          ImapMailbox(name: 'INBOX', attributes: {'\\HasNoChildren'}),
+        ],
+        inbox: inbox,
+        messages: [
+          ImapMessageMetadata(
+            uid: 17,
+            flags: {'\\Seen', '\\Flagged'},
+            gmailMessageId: '21',
+            gmailThreadId: '22',
+            labels: {'INBOX', 'STARRED'},
+            subject: 'Subject',
+            sender: 'sender@example.com',
+            sentAtEpochMillis: null,
+            sizeBytes: null,
+          ),
+        ],
+        requestedThroughUid: 400,
+      );
+      final sameValue = GmailInboxSnapshot(
+        capabilities: {'X-GM-EXT-1', 'IMAP4rev1'},
+        mailboxes: [
+          ImapMailbox(name: 'INBOX', attributes: {'\\HasNoChildren'}),
+        ],
+        inbox: const ImapSelectedMailbox(
+          uidValidity: 7,
+          uidNext: 401,
+          messageCount: 250,
         ),
-      ],
-      requestedThroughUid: 400,
-    );
-    final sameValue = GmailInboxSnapshot(
-      capabilities: {'X-GM-EXT-1', 'IMAP4rev1'},
-      mailboxes: [
-        ImapMailbox(name: 'INBOX', attributes: {'\\HasNoChildren'})
-      ],
-      inbox: const ImapSelectedMailbox(
-        uidValidity: 7,
-        uidNext: 401,
-        messageCount: 250,
-      ),
-      messages: [
-        ImapMessageMetadata(
-          uid: 17,
-          flags: {'\\Flagged', '\\Seen'},
-          gmailMessageId: '21',
-          gmailThreadId: '22',
-          labels: {'STARRED', 'INBOX'},
-          subject: 'Subject',
-          sender: 'sender@example.com',
-          sentAtEpochMillis: null,
-          sizeBytes: null,
-        ),
-      ],
-      requestedThroughUid: 400,
-    );
+        messages: [
+          ImapMessageMetadata(
+            uid: 17,
+            flags: {'\\Flagged', '\\Seen'},
+            gmailMessageId: '21',
+            gmailThreadId: '22',
+            labels: {'STARRED', 'INBOX'},
+            subject: 'Subject',
+            sender: 'sender@example.com',
+            sentAtEpochMillis: null,
+            sizeBytes: null,
+          ),
+        ],
+        requestedThroughUid: 400,
+      );
 
-    expect(first, sameValue);
-    expect(first.hashCode, sameValue.hashCode);
-    expect(
-      const MailSyncSuccess(
-        messageCount: 1,
-        gmailExtensionsEnabled: true,
-      ),
-      const MailSyncSuccess(
-        messageCount: 1,
-        gmailExtensionsEnabled: true,
-      ),
-    );
-    expect(
-      const MailSyncFailure(MailSyncError.network),
-      const MailSyncFailure(MailSyncError.network),
-    );
-  });
+      expect(first, sameValue);
+      expect(first.hashCode, sameValue.hashCode);
+      expect(
+        const MailSyncSuccess(messageCount: 1, gmailExtensionsEnabled: true),
+        const MailSyncSuccess(messageCount: 1, gmailExtensionsEnabled: true),
+      );
+      expect(
+        const MailSyncFailure(MailSyncError.network),
+        const MailSyncFailure(MailSyncError.network),
+      );
+    },
+  );
 }

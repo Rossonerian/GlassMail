@@ -19,13 +19,16 @@ void main() {
 
     expect(result, isA<MailOperationFailure<int>>());
     expect(
-        (result as MailOperationFailure<int>).error, isA<UnsupportedError>());
+      (result as MailOperationFailure<int>).error,
+      isA<UnsupportedError>(),
+    );
   });
 
   test('normalizes address separators and deduplicates case-insensitively', () {
     expect(
       normalizeAddresses(
-          'Alice@example.com; bob@example.com\nALICE@example.com'),
+        'Alice@example.com; bob@example.com\nALICE@example.com',
+      ),
       ['Alice@example.com', 'bob@example.com'],
     );
   });
@@ -37,96 +40,101 @@ void main() {
     expect(sanitizeAttachmentName('///'), 'attachment');
   });
 
-  test('reply helpers exclude the owner and preserve first recipient spelling',
-      () {
-    final message = ReceivedMailHeaders(
-      replyTo: ['Reply@example.com'],
-      to: ['me@example.com', 'reply@EXAMPLE.com'],
-      cc: ['other@example.com'],
-      messageId: '<latest>',
-      references: ['<first>'],
-    );
+  test(
+    'reply helpers exclude the owner and preserve first recipient spelling',
+    () {
+      final message = ReceivedMailHeaders(
+        replyTo: ['Reply@example.com'],
+        to: ['me@example.com', 'reply@EXAMPLE.com'],
+        cc: ['other@example.com'],
+        messageId: '<latest>',
+        references: ['<first>'],
+      );
 
-    expect(
-      replyAllRecipients(message, 'ME@example.com'),
-      ['Reply@example.com', 'other@example.com'],
-    );
-    expect(referencesForReply(message.messageId, message.references),
-        ['<first>', '<latest>']);
-    expect(replySubject(' Re: hello'), ' Re: hello');
-    expect(forwardSubject('hello'), 'Fwd: hello');
-  });
+      expect(replyAllRecipients(message, 'ME@example.com'), [
+        'Reply@example.com',
+        'other@example.com',
+      ]);
+      expect(referencesForReply(message.messageId, message.references), [
+        '<first>',
+        '<latest>',
+      ]);
+      expect(replySubject(' Re: hello'), ' Re: hello');
+      expect(forwardSubject('hello'), 'Fwd: hello');
+    },
+  );
 
-  test('message size accounts for UTF-8 body and base64 attachment expansion',
-      () {
-    final mail = OutgoingMail(
-      operationId: 'op',
-      accountId: 'account',
-      from: 'me@example.com',
-      to: const ['you@example.com'],
-      subject: 'Subject',
-      body: 'é',
-      attachments: [
-        OutgoingAttachment(
-          fileName: 'photo.jpg',
-          mimeType: 'image/jpeg',
-          sizeBytes: 3,
-          openStream: () => const Stream.empty(),
-        ),
-      ],
-    );
-
-    expect(estimatedOutgoingMessageBytes(mail), 2 + 4 + 1024 + 16384);
-  });
-
-  test('domain data values compare by content with immutable collection fields',
-      () {
-    final draft = MailDraft(
-      draftId: 'draft',
-      accountId: 'account',
-      to: ['one@example.test', 'two@example.test'],
-      references: ['<first>', '<second>'],
-      attachments: const [
-        DraftAttachment(
-          uri: 'file:///tmp/report.pdf',
-          fileName: 'report.pdf',
-          mimeType: 'application/pdf',
-          sizeBytes: 42,
-        ),
-      ],
-    );
-    final equivalentDraft = MailDraft(
-      draftId: 'draft',
-      accountId: 'account',
-      to: ['one@example.test', 'two@example.test'],
-      references: ['<first>', '<second>'],
-      attachments: const [
-        DraftAttachment(
-          uri: 'file:///tmp/report.pdf',
-          fileName: 'report.pdf',
-          mimeType: 'application/pdf',
-          sizeBytes: 42,
-        ),
-      ],
-    );
-
-    expect(draft, equivalentDraft);
-    expect(draft.hashCode, equivalentDraft.hashCode);
-    expect(
-      const MarkReadMutation(
+  test(
+    'message size accounts for UTF-8 body and base64 attachment expansion',
+    () {
+      final mail = OutgoingMail(
+        operationId: 'op',
         accountId: 'account',
-        messageId: 'message',
-        read: true,
-      ),
-      const MarkReadMutation(
+        from: 'me@example.com',
+        to: const ['you@example.com'],
+        subject: 'Subject',
+        body: 'é',
+        attachments: [
+          OutgoingAttachment(
+            fileName: 'photo.jpg',
+            mimeType: 'image/jpeg',
+            sizeBytes: 3,
+            openStream: () => const Stream.empty(),
+          ),
+        ],
+      );
+
+      expect(estimatedOutgoingMessageBytes(mail), 2 + 4 + 1024 + 16384);
+    },
+  );
+
+  test(
+    'domain data values compare by content with immutable collection fields',
+    () {
+      final draft = MailDraft(
+        draftId: 'draft',
         accountId: 'account',
-        messageId: 'message',
-        read: true,
-      ),
-    );
-    expect(
-      () => draft.to.add('later@example.test'),
-      throwsUnsupportedError,
-    );
-  });
+        to: ['one@example.test', 'two@example.test'],
+        references: ['<first>', '<second>'],
+        attachments: const [
+          DraftAttachment(
+            uri: 'file:///tmp/report.pdf',
+            fileName: 'report.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 42,
+          ),
+        ],
+      );
+      final equivalentDraft = MailDraft(
+        draftId: 'draft',
+        accountId: 'account',
+        to: ['one@example.test', 'two@example.test'],
+        references: ['<first>', '<second>'],
+        attachments: const [
+          DraftAttachment(
+            uri: 'file:///tmp/report.pdf',
+            fileName: 'report.pdf',
+            mimeType: 'application/pdf',
+            sizeBytes: 42,
+          ),
+        ],
+      );
+
+      expect(draft, equivalentDraft);
+      expect(draft.hashCode, equivalentDraft.hashCode);
+      expect(
+        const MarkReadMutation(
+          accountId: 'account',
+          messageId: 'message',
+          read: true,
+        ),
+        const MarkReadMutation(
+          accountId: 'account',
+          messageId: 'message',
+          read: true,
+        ),
+      );
+      expect(() => draft.to.add('later@example.test'), throwsUnsupportedError);
+    },
+  );
 }

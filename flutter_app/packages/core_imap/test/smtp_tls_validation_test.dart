@@ -23,20 +23,18 @@ void main() {
     await socket.flush();
     expect(await lines.readLine(), 'EHLO glassmail.local');
     socket.add(
-        utf8.encode('250-test\r\n250-STARTTLS\r\n250 AUTH PLAIN LOGIN\r\n'));
+      utf8.encode('250-test\r\n250-STARTTLS\r\n250 AUTH PLAIN LOGIN\r\n'),
+    );
     await socket.flush();
     expect(await lines.readLine(), 'STARTTLS');
     socket.add(utf8.encode('220 begin TLS\r\n'));
     await socket.flush();
     await lines.cancel();
 
-    final serverHandshake =
-        SecureSocket.secure(socket, context: context).then<void>(
-      (secure) async {
-        await secure.drain<void>();
-      },
-      onError: (Object _) {},
-    );
+    final serverHandshake = SecureSocket.secure(socket, context: context)
+        .then<void>((secure) async {
+          await secure.drain<void>();
+        }, onError: (Object _) {});
     await expectLater(client, throwsA(isA<SmtpTransportException>()));
     await serverHandshake.timeout(const Duration(seconds: 5));
     await socket.close();
@@ -46,7 +44,7 @@ void main() {
 
 final class _SocketLineReader {
   _SocketLineReader(Stream<List<int>> stream)
-      : _iterator = StreamIterator<List<int>>(stream);
+    : _iterator = StreamIterator<List<int>>(stream);
 
   final StreamIterator<List<int>> _iterator;
   List<int> _chunk = const [];

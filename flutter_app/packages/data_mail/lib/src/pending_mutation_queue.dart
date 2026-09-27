@@ -17,7 +17,7 @@ typedef MutationImapConnector = Future<ImapClient> Function();
 
 final class ImapPendingMutationTransport implements PendingMutationTransport {
   ImapPendingMutationTransport({MutationImapConnector? connect})
-      : _connect = connect ?? ImapClient.connect;
+    : _connect = connect ?? ImapClient.connect;
 
   final MutationImapConnector _connect;
 
@@ -57,11 +57,11 @@ final class PendingMutationQueue {
     required PendingMutationTransport transport,
     int Function()? clock,
     String Function()? mutationIdFactory,
-  })  : _database = database,
-        _credentialStore = credentialStore,
-        _transport = transport,
-        _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch),
-        _mutationIdFactory = mutationIdFactory ?? _newMutationId;
+  }) : _database = database,
+       _credentialStore = credentialStore,
+       _transport = transport,
+       _clock = clock ?? (() => DateTime.now().millisecondsSinceEpoch),
+       _mutationIdFactory = mutationIdFactory ?? _newMutationId;
 
   final GlassMailDatabase _database;
   final CredentialStore _credentialStore;
@@ -71,20 +71,26 @@ final class PendingMutationQueue {
 
   Future<void> applyLocal(MailMutation mutation) async {
     await _database.transaction(() async {
-      final message = await (_database.select(_database.messages)
-            ..where((row) =>
-                row.messageId.equals(mutation.messageId) &
-                row.accountId.equals(mutation.accountId)))
-          .getSingleOrNull();
+      final message =
+          await (_database.select(_database.messages)..where(
+                (row) =>
+                    row.messageId.equals(mutation.messageId) &
+                    row.accountId.equals(mutation.accountId),
+              ))
+              .getSingleOrNull();
       if (message == null) {
         throw StateError('Message does not belong to account');
       }
 
-      final allMemberships =
-          await _database.membershipsForMessage(mutation.messageId);
+      final allMemberships = await _database.membershipsForMessage(
+        mutation.messageId,
+      );
       final targeted = allMemberships
-          .where((row) =>
-              mutation.mailboxId == null || row.mailboxId == mutation.mailboxId)
+          .where(
+            (row) =>
+                mutation.mailboxId == null ||
+                row.mailboxId == mutation.mailboxId,
+          )
           .toList(growable: false);
       final previous = targeted.firstOrNull;
       final type = _typeFor(mutation);
@@ -94,17 +100,9 @@ final class PendingMutationQueue {
 
       switch (mutation) {
         case MarkReadMutation(:final read):
-          await _writeMembershipFlags(
-            targeted,
-            r'\Seen',
-            read,
-          );
+          await _writeMembershipFlags(targeted, r'\Seen', read);
         case StarMutation(:final starred):
-          await _writeMembershipFlags(
-            targeted,
-            r'\Flagged',
-            starred,
-          );
+          await _writeMembershipFlags(targeted, r'\Flagged', starred);
         case ArchiveMutation():
           await _removeMemberships(targeted);
         case DeleteMutation():
@@ -134,28 +132,31 @@ final class PendingMutationQueue {
               ),
             ]);
           } else {
-            await (_database.delete(_database.messageLabels)
-                  ..where((row) =>
+            await (_database.delete(_database.messageLabels)..where(
+                  (row) =>
                       row.messageId.equals(mutation.messageId) &
-                      row.label.equals(label)))
+                      row.label.equals(label),
+                ))
                 .go();
           }
       }
 
-      await _database.insertPendingMutation(PendingMutationsCompanion.insert(
-        mutationId: _mutationIdFactory(),
-        accountId: mutation.accountId,
-        mailboxId: Value(mutation.mailboxId),
-        messageId: mutation.messageId,
-        targetUid: Value(previous?.uid),
-        type: type,
-        payload: Value(mutation is LabelMutation ? mutation.label : null),
-        state: 'PENDING',
-        retryCount: 0,
-        createdAtEpochMillis: _clock(),
-        previousFlags: Value(previous?.flags ?? ''),
-        previousLabels: Value(previous?.labels ?? ''),
-      ));
+      await _database.insertPendingMutation(
+        PendingMutationsCompanion.insert(
+          mutationId: _mutationIdFactory(),
+          accountId: mutation.accountId,
+          mailboxId: Value(mutation.mailboxId),
+          messageId: mutation.messageId,
+          targetUid: Value(previous?.uid),
+          type: type,
+          payload: Value(mutation is LabelMutation ? mutation.label : null),
+          state: 'PENDING',
+          retryCount: 0,
+          createdAtEpochMillis: _clock(),
+          previousFlags: Value(previous?.flags ?? ''),
+          previousLabels: Value(previous?.labels ?? ''),
+        ),
+      );
     });
   }
 
@@ -186,11 +187,14 @@ final class PendingMutationQueue {
     final mutations = await _database.activeMutationsForAccount(accountId);
     await _credentialStore.withCredential(accountId, (credential) async {
       for (final mutation in mutations) {
-        final uid = mutation.targetUid ??
+        final uid =
+            mutation.targetUid ??
             (await _database.membershipsForMessage(mutation.messageId))
-                .where((row) =>
-                    mutation.mailboxId == null ||
-                    row.mailboxId == mutation.mailboxId)
+                .where(
+                  (row) =>
+                      mutation.mailboxId == null ||
+                      row.mailboxId == mutation.mailboxId,
+                )
                 .firstOrNull
                 ?.uid;
         if (uid == null) {
@@ -251,21 +255,23 @@ final class PendingMutationQueue {
     bool enabled,
   ) async {
     if (memberships.isEmpty) return;
-    await _database.saveMailboxMessages(memberships.map((membership) {
-      final flags = _decodeFlags(membership.flags);
-      if (enabled) {
-        flags.add(flag);
-      } else {
-        flags.remove(flag);
-      }
-      return MailboxMessagesCompanion.insert(
-        mailboxId: membership.mailboxId,
-        uid: membership.uid,
-        messageId: membership.messageId,
-        flags: (flags.toList()..sort()).join(' '),
-        labels: membership.labels,
-      );
-    }));
+    await _database.saveMailboxMessages(
+      memberships.map((membership) {
+        final flags = _decodeFlags(membership.flags);
+        if (enabled) {
+          flags.add(flag);
+        } else {
+          flags.remove(flag);
+        }
+        return MailboxMessagesCompanion.insert(
+          mailboxId: membership.mailboxId,
+          uid: membership.uid,
+          messageId: membership.messageId,
+          flags: (flags.toList()..sort()).join(' '),
+          labels: membership.labels,
+        );
+      }),
+    );
   }
 
   Future<void> _removeMemberships(List<MailboxMessage> memberships) async {
@@ -278,15 +284,15 @@ final class PendingMutationQueue {
   }
 
   static String _typeFor(MailMutation mutation) => switch (mutation) {
-        MarkReadMutation(read: true) => 'MARK_READ',
-        MarkReadMutation(read: false) => 'MARK_UNREAD',
-        StarMutation(starred: true) => 'STAR',
-        StarMutation(starred: false) => 'UNSTAR',
-        ArchiveMutation() => 'ARCHIVE',
-        DeleteMutation() => 'DELETE',
-        LabelMutation(add: true) => 'ADD_LABEL',
-        LabelMutation(add: false) => 'REMOVE_LABEL',
-      };
+    MarkReadMutation(read: true) => 'MARK_READ',
+    MarkReadMutation(read: false) => 'MARK_UNREAD',
+    StarMutation(starred: true) => 'STAR',
+    StarMutation(starred: false) => 'UNSTAR',
+    ArchiveMutation() => 'ARCHIVE',
+    DeleteMutation() => 'DELETE',
+    LabelMutation(add: true) => 'ADD_LABEL',
+    LabelMutation(add: false) => 'REMOVE_LABEL',
+  };
 
   static Set<String> _decodeFlags(String value) =>
       value.split(' ').where((item) => item.isNotEmpty).toSet();
@@ -300,7 +306,8 @@ final class PendingMutationQueue {
 
 String _newMutationId() {
   final random = Random.secure();
-  return List<int>.generate(16, (_) => random.nextInt(256))
-      .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
-      .join();
+  return List<int>.generate(
+    16,
+    (_) => random.nextInt(256),
+  ).map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
 }

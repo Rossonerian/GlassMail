@@ -18,224 +18,265 @@ void main() {
   setUp(() async {
     database = GlassMailDatabase.forTesting(NativeDatabase.memory());
     await database.customSelect('SELECT 1').getSingle();
-    await database.saveAccount(AccountsCompanion.insert(
-      accountId: 'account-1',
-      email: 'owner@example.test',
-      createdAtEpochMillis: 1,
-      syncState: 'READY',
-      gmailExtensionsEnabled: 0,
-    ));
+    await database.saveAccount(
+      AccountsCompanion.insert(
+        accountId: 'account-1',
+        email: 'owner@example.test',
+        createdAtEpochMillis: 1,
+        syncState: 'READY',
+        gmailExtensionsEnabled: 0,
+      ),
+    );
     credentials = _MemoryCredentialStore()
       ..values['account-1'] = Uint8List.fromList(utf8.encode('app-password'));
   });
 
   tearDown(() => database.close());
 
-  test('UID pages checkpoint progress and notify only after the first baseline',
-      () async {
-    final source = _QueuePageSource([
-      _snapshot(
-        uidNext: 401,
-        requestedThroughUid: 200,
-        messages: [
-          _message(uid: 7, gmailId: 'first'),
-          _message(uid: 198, gmailId: 'second'),
-        ],
-      ),
-      _snapshot(
-        uidNext: 401,
-        requestedThroughUid: 400,
-        messages: [_message(uid: 201, gmailId: 'later')],
-      ),
-    ]);
-    final notifications = <List<MailListItem>>[];
-    final flushedAfterCheckpoints = <int?>[];
-    final repository = MailboxSyncCoordinator(
-      database: database,
-      credentialStore: credentials,
-      source: source,
-      clock: () => 500,
-      onNewMessages: notifications.add,
-      flushPendingMutations: (accountId) async {
-        flushedAfterCheckpoints.add(
-            (await database.checkpoint('$accountId:INBOX'))?.highestKnownUid);
-      },
-    );
+  test(
+    'UID pages checkpoint progress and notify only after the first baseline',
+    () async {
+      final source = _QueuePageSource([
+        _snapshot(
+          uidNext: 401,
+          requestedThroughUid: 200,
+          messages: [
+            _message(uid: 7, gmailId: 'first'),
+            _message(uid: 198, gmailId: 'second'),
+          ],
+        ),
+        _snapshot(
+          uidNext: 401,
+          requestedThroughUid: 400,
+          messages: [_message(uid: 201, gmailId: 'later')],
+        ),
+      ]);
+      final notifications = <List<MailListItem>>[];
+      final flushedAfterCheckpoints = <int?>[];
+      final repository = MailboxSyncCoordinator(
+        database: database,
+        credentialStore: credentials,
+        source: source,
+        clock: () => 500,
+        onNewMessages: notifications.add,
+        flushPendingMutations: (accountId) async {
+          flushedAfterCheckpoints.add(
+            (await database.checkpoint('$accountId:INBOX'))?.highestKnownUid,
+          );
+        },
+      );
 
-    final first = await repository.synchronize('account-1');
-    expect(first,
-        isA<MailSyncSuccess>().having((r) => r.hasMore, 'hasMore', true));
-    expect(await database.messageIds(['gmail:account-1:first']), [
-      'gmail:account-1:first',
-    ]);
-    expect(
-        (await database.checkpoint('account-1:INBOX'))?.highestKnownUid, 200);
+      final first = await repository.synchronize('account-1');
+      expect(
+        first,
+        isA<MailSyncSuccess>().having((r) => r.hasMore, 'hasMore', true),
+      );
+      expect(await database.messageIds(['gmail:account-1:first']), [
+        'gmail:account-1:first',
+      ]);
+      expect(
+        (await database.checkpoint('account-1:INBOX'))?.highestKnownUid,
+        200,
+      );
 
-    final second = await repository.synchronize('account-1');
-    expect(second,
-        isA<MailSyncSuccess>().having((r) => r.hasMore, 'hasMore', false));
-    expect(
-        (await database.checkpoint('account-1:INBOX'))?.highestKnownUid, 400);
-    expect(source.requests.map((request) => request.afterUid), [0, 200]);
-    expect(source.requests.map((request) => request.expectedUidValidity),
-        [null, 45]);
-    expect(source.requests.map((request) => request.limit), [200, 200]);
-    expect(notifications, hasLength(1));
-    expect(notifications.single.single.messageId, 'gmail:account-1:later');
-    expect(flushedAfterCheckpoints, [200, 400]);
-  });
-
-  test('empty sparse UID ranges advance the checkpoint in bounded pages',
-      () async {
-    final repository = MailboxSyncCoordinator(
-      database: database,
-      credentialStore: credentials,
-      source: _QueuePageSource([
-        _snapshot(uidNext: 601, requestedThroughUid: 200),
-        _snapshot(uidNext: 601, requestedThroughUid: 400),
-        _snapshot(uidNext: 601, requestedThroughUid: 600),
-      ]),
-    );
-
-    for (var page = 0; page < 3; page++) {
-      expect(await repository.synchronize('account-1'), isA<MailSyncSuccess>());
-    }
-
-    expect(
-        (await database.checkpoint('account-1:INBOX'))?.highestKnownUid, 600);
-  });
-
-  test('a UIDVALIDITY reset refetches from the new namespace and replaces UIDs',
-      () async {
-    final source = _QueuePageSource([
-      _snapshot(
-        uidValidity: 45,
-        uidNext: 41,
-        requestedThroughUid: 40,
-        messages: [
-          _message(uid: 9, gmailId: 'stable'),
-          _message(uid: 30),
-        ],
-      ),
-      _snapshot(
-        uidValidity: 92,
-        uidNext: 4,
-        requestedThroughUid: 3,
-        messages: [
-          _message(uid: 1, gmailId: 'stable'),
-          _message(uid: 3, gmailId: 'new'),
-        ],
-      ),
-    ]);
-    final repository = MailboxSyncCoordinator(
-      database: database,
-      credentialStore: credentials,
-      source: source,
-      clock: () => 700,
-    );
-
-    await repository.synchronize('account-1');
-    await repository.synchronize('account-1');
-
-    final checkpoint = await database.checkpoint('account-1:INBOX');
-    expect(checkpoint?.uidValidity, 92);
-    expect(checkpoint?.highestKnownUid, 3);
-    expect(checkpoint?.syncGeneration, 1);
-    final memberships = await database.select(database.mailboxMessages).get();
-    expect(memberships.map((row) => row.messageId).toSet(), {
-      'gmail:account-1:stable',
-      'gmail:account-1:new',
-    });
-    expect(source.requests[1].afterUid, 40);
-    expect(source.requests[1].expectedUidValidity, 45);
-  });
-
-  test('per-account sync calls serialize and the next call reads the new UID',
-      () async {
-    final gate = Completer<void>();
-    final source = _QueuePageSource([
-      _snapshot(
-          uidNext: 3,
-          requestedThroughUid: 1,
-          messages: [_message(uid: 1, gmailId: 'one')]),
-      _snapshot(
-          uidNext: 3,
-          requestedThroughUid: 2,
-          messages: [_message(uid: 2, gmailId: 'two')]),
-    ], firstPageGate: gate);
-    final repository = MailboxSyncCoordinator(
-      database: database,
-      credentialStore: credentials,
-      source: source,
-    );
-
-    final first = repository.synchronize('account-1');
-    await Future<void>.delayed(Duration.zero);
-    final second = repository.synchronize('account-1');
-    await Future<void>.delayed(Duration.zero);
-    expect(source.requests, hasLength(1));
-    expect(source.maxActive, 1);
-
-    gate.complete();
-    final results = await Future.wait([first, second]);
-    expect(results, everyElement(isA<MailSyncSuccess>()));
-    expect(source.requests.map((request) => request.afterUid), [0, 1]);
-    expect(source.maxActive, 1);
-    expect((await database.checkpoint('account-1:INBOX'))?.highestKnownUid, 2);
-  });
+      final second = await repository.synchronize('account-1');
+      expect(
+        second,
+        isA<MailSyncSuccess>().having((r) => r.hasMore, 'hasMore', false),
+      );
+      expect(
+        (await database.checkpoint('account-1:INBOX'))?.highestKnownUid,
+        400,
+      );
+      expect(source.requests.map((request) => request.afterUid), [0, 200]);
+      expect(source.requests.map((request) => request.expectedUidValidity), [
+        null,
+        45,
+      ]);
+      expect(source.requests.map((request) => request.limit), [200, 200]);
+      expect(notifications, hasLength(1));
+      expect(notifications.single.single.messageId, 'gmail:account-1:later');
+      expect(flushedAfterCheckpoints, [200, 400]);
+    },
+  );
 
   test(
-      'pending local flags win during commit and archive remains hidden until undo',
-      () async {
-    final source = _QueuePageSource([
-      _snapshot(
+    'empty sparse UID ranges advance the checkpoint in bounded pages',
+    () async {
+      final repository = MailboxSyncCoordinator(
+        database: database,
+        credentialStore: credentials,
+        source: _QueuePageSource([
+          _snapshot(uidNext: 601, requestedThroughUid: 200),
+          _snapshot(uidNext: 601, requestedThroughUid: 400),
+          _snapshot(uidNext: 601, requestedThroughUid: 600),
+        ]),
+      );
+
+      for (var page = 0; page < 3; page++) {
+        expect(
+          await repository.synchronize('account-1'),
+          isA<MailSyncSuccess>(),
+        );
+      }
+
+      expect(
+        (await database.checkpoint('account-1:INBOX'))?.highestKnownUid,
+        600,
+      );
+    },
+  );
+
+  test(
+    'a UIDVALIDITY reset refetches from the new namespace and replaces UIDs',
+    () async {
+      final source = _QueuePageSource([
+        _snapshot(
+          uidValidity: 45,
+          uidNext: 41,
+          requestedThroughUid: 40,
+          messages: [
+            _message(uid: 9, gmailId: 'stable'),
+            _message(uid: 30),
+          ],
+        ),
+        _snapshot(
+          uidValidity: 92,
+          uidNext: 4,
+          requestedThroughUid: 3,
+          messages: [
+            _message(uid: 1, gmailId: 'stable'),
+            _message(uid: 3, gmailId: 'new'),
+          ],
+        ),
+      ]);
+      final repository = MailboxSyncCoordinator(
+        database: database,
+        credentialStore: credentials,
+        source: source,
+        clock: () => 700,
+      );
+
+      await repository.synchronize('account-1');
+      await repository.synchronize('account-1');
+
+      final checkpoint = await database.checkpoint('account-1:INBOX');
+      expect(checkpoint?.uidValidity, 92);
+      expect(checkpoint?.highestKnownUid, 3);
+      expect(checkpoint?.syncGeneration, 1);
+      final memberships = await database.select(database.mailboxMessages).get();
+      expect(memberships.map((row) => row.messageId).toSet(), {
+        'gmail:account-1:stable',
+        'gmail:account-1:new',
+      });
+      expect(source.requests[1].afterUid, 40);
+      expect(source.requests[1].expectedUidValidity, 45);
+    },
+  );
+
+  test(
+    'per-account sync calls serialize and the next call reads the new UID',
+    () async {
+      final gate = Completer<void>();
+      final source = _QueuePageSource([
+        _snapshot(
+          uidNext: 3,
+          requestedThroughUid: 1,
+          messages: [_message(uid: 1, gmailId: 'one')],
+        ),
+        _snapshot(
+          uidNext: 3,
+          requestedThroughUid: 2,
+          messages: [_message(uid: 2, gmailId: 'two')],
+        ),
+      ], firstPageGate: gate);
+      final repository = MailboxSyncCoordinator(
+        database: database,
+        credentialStore: credentials,
+        source: source,
+      );
+
+      final first = repository.synchronize('account-1');
+      await Future<void>.delayed(Duration.zero);
+      final second = repository.synchronize('account-1');
+      await Future<void>.delayed(Duration.zero);
+      expect(source.requests, hasLength(1));
+      expect(source.maxActive, 1);
+
+      gate.complete();
+      final results = await Future.wait([first, second]);
+      expect(results, everyElement(isA<MailSyncSuccess>()));
+      expect(source.requests.map((request) => request.afterUid), [0, 1]);
+      expect(source.maxActive, 1);
+      expect(
+        (await database.checkpoint('account-1:INBOX'))?.highestKnownUid,
+        2,
+      );
+    },
+  );
+
+  test(
+    'pending local flags win during commit and archive remains hidden until undo',
+    () async {
+      final source = _QueuePageSource([
+        _snapshot(
           uidNext: 6,
           requestedThroughUid: 5,
-          messages: [_message(uid: 5, gmailId: 'queued')]),
-    ]);
-    final repository = MailboxSyncCoordinator(
-      database: database,
-      credentialStore: credentials,
-      source: source,
-      clock: () => 900,
-    );
-    await repository.synchronize('account-1');
+          messages: [_message(uid: 5, gmailId: 'queued')],
+        ),
+      ]);
+      final repository = MailboxSyncCoordinator(
+        database: database,
+        credentialStore: credentials,
+        source: source,
+        clock: () => 900,
+      );
+      await repository.synchronize('account-1');
 
-    final queue = PendingMutationQueue(
-      database: database,
-      credentialStore: credentials,
-      transport: _NoopMutationTransport(),
-      clock: () => 901,
-      mutationIdFactory: () => mutationIds.removeAt(0),
-    );
-    await queue.applyLocal(const MarkReadMutation(
-      accountId: 'account-1',
-      messageId: 'gmail:account-1:queued',
-      mailboxId: 'account-1:INBOX',
-      read: true,
-    ));
+      final queue = PendingMutationQueue(
+        database: database,
+        credentialStore: credentials,
+        transport: _NoopMutationTransport(),
+        clock: () => 901,
+        mutationIdFactory: () => mutationIds.removeAt(0),
+      );
+      await queue.applyLocal(
+        const MarkReadMutation(
+          accountId: 'account-1',
+          messageId: 'gmail:account-1:queued',
+          mailboxId: 'account-1:INBOX',
+          read: true,
+        ),
+      );
 
-    await _commitOneStaleMembership(database);
-    var membership =
-        await database.membershipsForMessage('gmail:account-1:queued');
-    expect(membership.single.flags, contains(r'\Seen'));
+      await _commitOneStaleMembership(database);
+      var membership = await database.membershipsForMessage(
+        'gmail:account-1:queued',
+      );
+      expect(membership.single.flags, contains(r'\Seen'));
 
-    await queue.applyLocal(const ArchiveMutation(
-      accountId: 'account-1',
-      messageId: 'gmail:account-1:queued',
-      mailboxId: 'account-1:INBOX',
-    ));
-    await _commitOneStaleMembership(database);
-    expect(await database.membershipsForMessage('gmail:account-1:queued'),
-        isEmpty);
+      await queue.applyLocal(
+        const ArchiveMutation(
+          accountId: 'account-1',
+          messageId: 'gmail:account-1:queued',
+          mailboxId: 'account-1:INBOX',
+        ),
+      );
+      await _commitOneStaleMembership(database);
+      expect(
+        await database.membershipsForMessage('gmail:account-1:queued'),
+        isEmpty,
+      );
 
-    expect(await queue.undoPendingArchive('gmail:account-1:queued'), isTrue);
-    membership = await database.membershipsForMessage('gmail:account-1:queued');
-    expect(membership.single.flags, contains(r'\Seen'));
-  });
+      expect(await queue.undoPendingArchive('gmail:account-1:queued'), isTrue);
+      membership = await database.membershipsForMessage(
+        'gmail:account-1:queued',
+      );
+      expect(membership.single.flags, contains(r'\Seen'));
+    },
+  );
 
-  test('metadata mapper decodes envelope, Gmail labels and selected headers',
-      () {
+  test('metadata mapper decodes envelope, Gmail labels and selected headers', () {
     final response = ImapUntagged([
       const ImapAtom('7'),
       const ImapAtom('FETCH'),
@@ -266,9 +307,13 @@ void main() {
         const ImapAtom('X-GM-LABELS'),
         ImapValueList([const ImapAtom(r'\Inbox'), const ImapQuoted('Work')]),
         const ImapAtom(
-            'BODY[HEADER.FIELDS (LIST-UNSUBSCRIBE LIST-UNSUBSCRIBE-POST PRECEDENCE LIST-ID)]'),
-        ImapLiteral(utf8.encode(
-            'List-Unsubscribe: <mailto:leave@example.test>\r\nPrecedence: bulk\r\n')),
+          'BODY[HEADER.FIELDS (LIST-UNSUBSCRIBE LIST-UNSUBSCRIBE-POST PRECEDENCE LIST-ID)]',
+        ),
+        ImapLiteral(
+          utf8.encode(
+            'List-Unsubscribe: <mailto:leave@example.test>\r\nPrecedence: bulk\r\n',
+          ),
+        ),
       ]),
     ]);
 
@@ -281,177 +326,210 @@ void main() {
     expect(message.labels, {r'\Inbox', 'Work'});
     expect(message.hasListUnsubscribe, isTrue);
     expect(message.precedence, 'bulk');
-    expect(message.sentAtEpochMillis,
-        DateTime.utc(1996, 7, 17, 9, 44, 25).millisecondsSinceEpoch);
-  });
-
-  test('the IMAP page source restarts at UID 1 after UIDVALIDITY changes',
-      () async {
-    final wire = _TranscriptImapWire();
-    final source = ImapInboxPageSource(
-      connect: () async => ImapClient(wire),
-    );
-
-    final page = await source.fetchPage(
-      email: 'owner@example.test',
-      credentialUtf8: Uint8List.fromList(utf8.encode('temporary-secret')),
-      afterUid: 90,
-      expectedUidValidity: 45,
-    );
-
-    expect(page.inbox.uidValidity, 92);
-    expect(page.requestedThroughUid, 3);
-    expect(wire.commands.where((command) => command.contains(' UID FETCH')),
-        hasLength(1));
-    expect(wire.commands.last, contains(' UID FETCH 1:3 '));
-    expect(wire.closed, isTrue);
-  });
-
-  test('the IMAP Trash source selects only the special-use Trash mailbox',
-      () async {
-    final wire = _TranscriptImapWire(includeTrash: true);
-    final source = ImapTrashMailboxPageSource(
-      connect: () async => ImapClient(wire),
-    );
-
-    final page = await source.fetchLatest(
-      email: 'owner@example.test',
-      credentialUtf8: Uint8List.fromList(utf8.encode('temporary-secret')),
-      limit: 2,
-    );
-
-    expect(page?.remoteName, '[Gmail]/Trash');
-    expect(page?.uidValidity, 92);
-    expect(page?.messages, isEmpty);
-    expect(wire.commands, contains('G0005 SELECT "[Gmail]/Trash"'));
     expect(
-      wire.commands.any((command) => command.contains('UID FETCH 2:3')),
-      isTrue,
+      message.sentAtEpochMillis,
+      DateTime.utc(1996, 7, 17, 9, 44, 25).millisecondsSinceEpoch,
     );
-    expect(wire.closed, isTrue);
-  });
-
-  test('mutation transport errors retry network but make rejection permanent',
-      () async {
-    final coordinator = MailboxSyncCoordinator(
-      database: database,
-      credentialStore: credentials,
-      source: _QueuePageSource([
-        _snapshot(
-          uidNext: 6,
-          requestedThroughUid: 5,
-          messages: [_message(uid: 5, gmailId: 'retry')],
-        ),
-      ]),
-    );
-    await coordinator.synchronize('account-1');
-    final transport = _FailingMutationTransport()
-      ..error = const ImapTransportException('offline');
-    final queue = PendingMutationQueue(
-      database: database,
-      credentialStore: credentials,
-      transport: transport,
-      mutationIdFactory: () => 'retry-op',
-      clock: () => 1000,
-    );
-    await queue.applyLocal(const MarkReadMutation(
-      accountId: 'account-1',
-      messageId: 'gmail:account-1:retry',
-      read: true,
-    ));
-
-    await queue.flush('account-1');
-    var pending =
-        (await database.activeMutationsForAccount('account-1')).single;
-    expect(pending.state, 'PENDING');
-    expect(pending.retryCount, 1);
-    expect(pending.lastErrorCode, 'NETWORK');
-
-    transport.error = const ImapProtocolException('server rejected mutation');
-    await queue.flush('account-1');
-    pending = (await database.select(database.pendingMutations).get()).single;
-    expect(pending.state, 'FAILED_PERMANENT');
-    expect(pending.retryCount, 1);
-    expect(pending.lastErrorCode, 'SERVER_REJECTED');
-  });
-
-  test('message composition hides Bcc and uses a deterministic Message-ID',
-      () async {
-    final raw = await RawMailComposer.compose(
-      _outgoingMail('compose-op'),
-      sentAtEpochMillis: 0,
-    );
-    final text = utf8.decode(raw);
-    expect(text, contains('Message-ID: <compose-op@glassmail.local>'));
-    expect(text, contains('To: recipient@example.test'));
-    expect(text, isNot(contains('Bcc:')));
-    expect(text, isNot(contains('hidden@example.test')));
-    expect(text, contains('filename="report.pdf"'));
-    expect(text, contains('AQID'));
-    expect(text, contains('=?UTF-8?B?'));
-  });
-
-  test('uncertain SMTP outcomes are durable and never submitted twice',
-      () async {
-    final transport = _RecordingMailTransport()
-      ..error = const SmtpUncertainDeliveryException('final reply lost');
-    final queue = OutgoingMailQueue(
-      database: database,
-      credentialStore: credentials,
-      transport: transport,
-      clock: () => 2000,
-    );
-    final draft = _draft('uncertain-op');
-    await queue.queue(draft);
-
-    final first =
-        await queue.send(_account, draft, _outgoingMail(draft.draftId));
-    expect(first, const MailSendFailed(SendMailError.uncertain));
-    expect(
-        (await database.watchDraft(draft.draftId).first)?.status, 'UNCERTAIN');
-    expect(transport.messages, hasLength(1));
-
-    final second =
-        await queue.send(_account, draft, _outgoingMail(draft.draftId));
-    expect(second, const MailSendFailed(SendMailError.uncertain));
-    expect(transport.messages, hasLength(1));
   });
 
   test(
-      'safe network retry reuses the Message-ID and Sent APPEND failure does not resend',
-      () async {
-    final transport = _RecordingMailTransport()
-      ..error = const SmtpTransportException('disconnected before DATA');
-    final sentCopy = _FailingSentCopyAppender();
-    final queue = OutgoingMailQueue(
-      database: database,
-      credentialStore: credentials,
-      transport: transport,
-      sentCopyAppender: sentCopy,
-      clock: () => 3000,
-    );
-    final draft = _draft('retry-op');
-    await queue.queue(draft);
+    'the IMAP page source restarts at UID 1 after UIDVALIDITY changes',
+    () async {
+      final wire = _TranscriptImapWire();
+      final source = ImapInboxPageSource(connect: () async => ImapClient(wire));
 
-    expect(
-      await queue.send(_account, draft, _outgoingMail(draft.draftId)),
-      const MailSendFailed(SendMailError.network),
-    );
-    expect((await database.watchDraft(draft.draftId).first)?.status, 'QUEUED');
-    transport.error = null;
-    expect(await queue.send(_account, draft, _outgoingMail(draft.draftId)),
-        isA<MailSent>());
-    expect((await database.watchDraft(draft.draftId).first)?.status, 'SENT');
-    expect(sentCopy.calls, 1);
-    expect(transport.messages, hasLength(2));
-    expect(transport.messages[0].toList(), transport.messages[1].toList());
-    expect(utf8.decode(transport.messages[1]),
-        contains('Message-ID: <retry-op@glassmail.local>'));
+      final page = await source.fetchPage(
+        email: 'owner@example.test',
+        credentialUtf8: Uint8List.fromList(utf8.encode('temporary-secret')),
+        afterUid: 90,
+        expectedUidValidity: 45,
+      );
 
-    expect(await queue.send(_account, draft, _outgoingMail(draft.draftId)),
-        isA<MailSent>());
-    expect(transport.messages, hasLength(2));
-  });
+      expect(page.inbox.uidValidity, 92);
+      expect(page.requestedThroughUid, 3);
+      expect(
+        wire.commands.where((command) => command.contains(' UID FETCH')),
+        hasLength(1),
+      );
+      expect(wire.commands.last, contains(' UID FETCH 1:3 '));
+      expect(wire.closed, isTrue);
+    },
+  );
+
+  test(
+    'the IMAP Trash source selects only the special-use Trash mailbox',
+    () async {
+      final wire = _TranscriptImapWire(includeTrash: true);
+      final source = ImapTrashMailboxPageSource(
+        connect: () async => ImapClient(wire),
+      );
+
+      final page = await source.fetchLatest(
+        email: 'owner@example.test',
+        credentialUtf8: Uint8List.fromList(utf8.encode('temporary-secret')),
+        limit: 2,
+      );
+
+      expect(page?.remoteName, '[Gmail]/Trash');
+      expect(page?.uidValidity, 92);
+      expect(page?.messages, isEmpty);
+      expect(wire.commands, contains('G0005 SELECT "[Gmail]/Trash"'));
+      expect(
+        wire.commands.any((command) => command.contains('UID FETCH 2:3')),
+        isTrue,
+      );
+      expect(wire.closed, isTrue);
+    },
+  );
+
+  test(
+    'mutation transport errors retry network but make rejection permanent',
+    () async {
+      final coordinator = MailboxSyncCoordinator(
+        database: database,
+        credentialStore: credentials,
+        source: _QueuePageSource([
+          _snapshot(
+            uidNext: 6,
+            requestedThroughUid: 5,
+            messages: [_message(uid: 5, gmailId: 'retry')],
+          ),
+        ]),
+      );
+      await coordinator.synchronize('account-1');
+      final transport = _FailingMutationTransport()
+        ..error = const ImapTransportException('offline');
+      final queue = PendingMutationQueue(
+        database: database,
+        credentialStore: credentials,
+        transport: transport,
+        mutationIdFactory: () => 'retry-op',
+        clock: () => 1000,
+      );
+      await queue.applyLocal(
+        const MarkReadMutation(
+          accountId: 'account-1',
+          messageId: 'gmail:account-1:retry',
+          read: true,
+        ),
+      );
+
+      await queue.flush('account-1');
+      var pending = (await database.activeMutationsForAccount(
+        'account-1',
+      )).single;
+      expect(pending.state, 'PENDING');
+      expect(pending.retryCount, 1);
+      expect(pending.lastErrorCode, 'NETWORK');
+
+      transport.error = const ImapProtocolException('server rejected mutation');
+      await queue.flush('account-1');
+      pending = (await database.select(database.pendingMutations).get()).single;
+      expect(pending.state, 'FAILED_PERMANENT');
+      expect(pending.retryCount, 1);
+      expect(pending.lastErrorCode, 'SERVER_REJECTED');
+    },
+  );
+
+  test(
+    'message composition hides Bcc and uses a deterministic Message-ID',
+    () async {
+      final raw = await RawMailComposer.compose(
+        _outgoingMail('compose-op'),
+        sentAtEpochMillis: 0,
+      );
+      final text = utf8.decode(raw);
+      expect(text, contains('Message-ID: <compose-op@glassmail.local>'));
+      expect(text, contains('To: recipient@example.test'));
+      expect(text, isNot(contains('Bcc:')));
+      expect(text, isNot(contains('hidden@example.test')));
+      expect(text, contains('filename="report.pdf"'));
+      expect(text, contains('AQID'));
+      expect(text, contains('=?UTF-8?B?'));
+    },
+  );
+
+  test(
+    'uncertain SMTP outcomes are durable and never submitted twice',
+    () async {
+      final transport = _RecordingMailTransport()
+        ..error = const SmtpUncertainDeliveryException('final reply lost');
+      final queue = OutgoingMailQueue(
+        database: database,
+        credentialStore: credentials,
+        transport: transport,
+        clock: () => 2000,
+      );
+      final draft = _draft('uncertain-op');
+      await queue.queue(draft);
+
+      final first = await queue.send(
+        _account,
+        draft,
+        _outgoingMail(draft.draftId),
+      );
+      expect(first, const MailSendFailed(SendMailError.uncertain));
+      expect(
+        (await database.watchDraft(draft.draftId).first)?.status,
+        'UNCERTAIN',
+      );
+      expect(transport.messages, hasLength(1));
+
+      final second = await queue.send(
+        _account,
+        draft,
+        _outgoingMail(draft.draftId),
+      );
+      expect(second, const MailSendFailed(SendMailError.uncertain));
+      expect(transport.messages, hasLength(1));
+    },
+  );
+
+  test(
+    'safe network retry reuses the Message-ID and Sent APPEND failure does not resend',
+    () async {
+      final transport = _RecordingMailTransport()
+        ..error = const SmtpTransportException('disconnected before DATA');
+      final sentCopy = _FailingSentCopyAppender();
+      final queue = OutgoingMailQueue(
+        database: database,
+        credentialStore: credentials,
+        transport: transport,
+        sentCopyAppender: sentCopy,
+        clock: () => 3000,
+      );
+      final draft = _draft('retry-op');
+      await queue.queue(draft);
+
+      expect(
+        await queue.send(_account, draft, _outgoingMail(draft.draftId)),
+        const MailSendFailed(SendMailError.network),
+      );
+      expect(
+        (await database.watchDraft(draft.draftId).first)?.status,
+        'QUEUED',
+      );
+      transport.error = null;
+      expect(
+        await queue.send(_account, draft, _outgoingMail(draft.draftId)),
+        isA<MailSent>(),
+      );
+      expect((await database.watchDraft(draft.draftId).first)?.status, 'SENT');
+      expect(sentCopy.calls, 1);
+      expect(transport.messages, hasLength(2));
+      expect(transport.messages[0].toList(), transport.messages[1].toList());
+      expect(
+        utf8.decode(transport.messages[1]),
+        contains('Message-ID: <retry-op@glassmail.local>'),
+      );
+
+      expect(
+        await queue.send(_account, draft, _outgoingMail(draft.draftId)),
+        isA<MailSent>(),
+      );
+      expect(transport.messages, hasLength(2));
+    },
+  );
 }
 
 GmailInboxSnapshot _snapshot({
@@ -460,37 +538,35 @@ GmailInboxSnapshot _snapshot({
   int messageCount = 0,
   required int requestedThroughUid,
   List<ImapMessageMetadata> messages = const [],
-}) =>
-    GmailInboxSnapshot(
-      capabilities: const {'IMAP4REV1', 'X-GM-EXT-1'},
-      mailboxes: [
-        ImapMailbox(name: 'INBOX', attributes: {r'\Inbox'}),
-      ],
-      inbox: ImapSelectedMailbox(
-        uidValidity: uidValidity,
-        uidNext: uidNext,
-        messageCount: messageCount,
-      ),
-      messages: messages,
-      requestedThroughUid: requestedThroughUid,
-    );
+}) => GmailInboxSnapshot(
+  capabilities: const {'IMAP4REV1', 'X-GM-EXT-1'},
+  mailboxes: [
+    ImapMailbox(name: 'INBOX', attributes: {r'\Inbox'}),
+  ],
+  inbox: ImapSelectedMailbox(
+    uidValidity: uidValidity,
+    uidNext: uidNext,
+    messageCount: messageCount,
+  ),
+  messages: messages,
+  requestedThroughUid: requestedThroughUid,
+);
 
 ImapMessageMetadata _message({
   required int uid,
   String? gmailId,
   Set<String> flags = const {},
-}) =>
-    ImapMessageMetadata(
-      uid: uid,
-      flags: flags,
-      gmailMessageId: gmailId,
-      gmailThreadId: null,
-      labels: const {r'\Inbox'},
-      subject: 'Subject $uid',
-      sender: 'sender@example.test',
-      sentAtEpochMillis: 1000 + uid,
-      sizeBytes: 128,
-    );
+}) => ImapMessageMetadata(
+  uid: uid,
+  flags: flags,
+  gmailMessageId: gmailId,
+  gmailThreadId: null,
+  labels: const {r'\Inbox'},
+  subject: 'Subject $uid',
+  sender: 'sender@example.test',
+  sentAtEpochMillis: 1000 + uid,
+  sizeBytes: 128,
+);
 
 Future<void> _commitOneStaleMembership(GlassMailDatabase database) =>
     database.commitMailboxSnapshot(
@@ -667,8 +743,10 @@ final class _TranscriptImapWire implements ImapWireConnection {
           ImapUntagged([const ImapAtom('2'), const ImapAtom('EXISTS')]),
           ImapUntagged([
             const ImapAtom('OK'),
-            ImapValueList(
-                [const ImapAtom('UIDVALIDITY'), const ImapAtom('92')]),
+            ImapValueList([
+              const ImapAtom('UIDVALIDITY'),
+              const ImapAtom('92'),
+            ]),
           ]),
           ImapUntagged([
             const ImapAtom('OK'),
@@ -723,22 +801,22 @@ MailDraft _draft(String id, {DraftStatus status = DraftStatus.draft}) =>
     );
 
 OutgoingMail _outgoingMail(String id) => OutgoingMail(
-      operationId: id,
-      accountId: 'account-1',
-      from: 'owner@example.test',
-      to: const ['recipient@example.test'],
-      bcc: const ['hidden@example.test'],
-      subject: 'Hello ✉',
-      body: 'A private message',
-      attachments: [
-        OutgoingAttachment(
-          fileName: '../report.pdf',
-          mimeType: 'application/pdf',
-          sizeBytes: 3,
-          openStream: () => Stream.value([1, 2, 3]),
-        ),
-      ],
-    );
+  operationId: id,
+  accountId: 'account-1',
+  from: 'owner@example.test',
+  to: const ['recipient@example.test'],
+  bcc: const ['hidden@example.test'],
+  subject: 'Hello ✉',
+  body: 'A private message',
+  attachments: [
+    OutgoingAttachment(
+      fileName: '../report.pdf',
+      mimeType: 'application/pdf',
+      sizeBytes: 3,
+      openStream: () => Stream.value([1, 2, 3]),
+    ),
+  ],
+);
 
 final class _RecordingMailTransport implements RawMailTransport {
   Object? error;

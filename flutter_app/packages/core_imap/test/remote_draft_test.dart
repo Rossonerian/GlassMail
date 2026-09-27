@@ -5,55 +5,61 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:glassmail_core_imap/glassmail_core_imap.dart';
 
 void main() {
-  test('imports remote drafts with stable IDs and UIDVALIDITY namespace',
-      () async {
-    final raw = utf8.encode(
-      'Message-ID: <draft-4@glassmail.local>\r\n'
-      'To: Ada <ada@example.test>\r\n'
-      'Bcc: hidden@example.test\r\n'
-      'Subject: =?UTF-8?Q?Caf=C3=A9_notes?=\r\n'
-      'In-Reply-To: <root@example.test>\r\n'
-      'References: <root@example.test> <thread@example.test>\r\n'
-      'Content-Type: text/plain; charset=utf-8\r\n\r\n'
-      'Saved remotely',
-    );
-    final wire = _FakeWire([
-      ImapResponseParser.parse(
-        r'* LIST (\HasNoChildren \Drafts) "/" "Drafts"',
-        const [],
-      ),
-      ImapResponseParser.parse('G0001 OK listed', const []),
-      ImapResponseParser.parse('* 1 EXISTS', const []),
-      ImapResponseParser.parse('* OK [UIDVALIDITY 91] valid', const []),
-      ImapResponseParser.parse('* OK [UIDNEXT 5] next', const []),
-      ImapResponseParser.parse('G0002 OK selected', const []),
-      ImapResponseParser.parse('* SEARCH 4', const []),
-      ImapResponseParser.parse('G0003 OK searched', const []),
-      ImapResponseParser.parse(
-        '* 1 FETCH (UID 4 INTERNALDATE "26-Sep-2026 12:00:00 +0000" '
-        'BODY[] \u0000L0\u0000)',
-        [Uint8List.fromList(raw)],
-      ),
-      ImapResponseParser.parse('G0004 OK fetched', const []),
-    ]);
-    final client = ImapClient(wire);
+  test(
+    'imports remote drafts with stable IDs and UIDVALIDITY namespace',
+    () async {
+      final raw = utf8.encode(
+        'Message-ID: <draft-4@glassmail.local>\r\n'
+        'To: Ada <ada@example.test>\r\n'
+        'Bcc: hidden@example.test\r\n'
+        'Subject: =?UTF-8?Q?Caf=C3=A9_notes?=\r\n'
+        'In-Reply-To: <root@example.test>\r\n'
+        'References: <root@example.test> <thread@example.test>\r\n'
+        'Content-Type: text/plain; charset=utf-8\r\n\r\n'
+        'Saved remotely',
+      );
+      final wire = _FakeWire([
+        ImapResponseParser.parse(
+          r'* LIST (\HasNoChildren \Drafts) "/" "Drafts"',
+          const [],
+        ),
+        ImapResponseParser.parse('G0001 OK listed', const []),
+        ImapResponseParser.parse('* 1 EXISTS', const []),
+        ImapResponseParser.parse('* OK [UIDVALIDITY 91] valid', const []),
+        ImapResponseParser.parse('* OK [UIDNEXT 5] next', const []),
+        ImapResponseParser.parse('G0002 OK selected', const []),
+        ImapResponseParser.parse('* SEARCH 4', const []),
+        ImapResponseParser.parse('G0003 OK searched', const []),
+        ImapResponseParser.parse(
+          '* 1 FETCH (UID 4 INTERNALDATE "26-Sep-2026 12:00:00 +0000" '
+          'BODY[] \u0000L0\u0000)',
+          [Uint8List.fromList(raw)],
+        ),
+        ImapResponseParser.parse('G0004 OK fetched', const []),
+      ]);
+      final client = ImapClient(wire);
 
-    final drafts = await client.fetchRemoteDrafts();
+      final drafts = await client.fetchRemoteDrafts();
 
-    expect(drafts, hasLength(1));
-    expect(drafts.single.uid, 4);
-    expect(drafts.single.uidValidity, 91);
-    expect(drafts.single.draftId, 'draft-4');
-    expect(drafts.single.to, ['ada@example.test']);
-    expect(drafts.single.bcc, ['hidden@example.test']);
-    expect(drafts.single.subject, 'Café notes');
-    expect(drafts.single.body, 'Saved remotely');
-    expect(drafts.single.inReplyTo, '<root@example.test>');
-    expect(drafts.single.references,
-        ['<root@example.test>', '<thread@example.test>']);
-    expect(drafts.single.updatedAtEpochMillis,
-        DateTime.utc(2026, 9, 26, 12).millisecondsSinceEpoch);
-  });
+      expect(drafts, hasLength(1));
+      expect(drafts.single.uid, 4);
+      expect(drafts.single.uidValidity, 91);
+      expect(drafts.single.draftId, 'draft-4');
+      expect(drafts.single.to, ['ada@example.test']);
+      expect(drafts.single.bcc, ['hidden@example.test']);
+      expect(drafts.single.subject, 'Café notes');
+      expect(drafts.single.body, 'Saved remotely');
+      expect(drafts.single.inReplyTo, '<root@example.test>');
+      expect(drafts.single.references, [
+        '<root@example.test>',
+        '<thread@example.test>',
+      ]);
+      expect(
+        drafts.single.updatedAtEpochMillis,
+        DateTime.utc(2026, 9, 26, 12).millisecondsSinceEpoch,
+      );
+    },
+  );
 
   test('replaces only older copies after a successful draft APPEND', () async {
     final wire = _FakeWire([
@@ -71,18 +77,16 @@ void main() {
     final client = ImapClient(wire);
     final bytes = Uint8List.fromList(utf8.encode('draft bytes'));
 
-    await client.replaceRemoteDraft(
-      'draft-4',
-      bytes,
-      draftsMailbox: 'Drafts',
-    );
+    await client.replaceRemoteDraft('draft-4', bytes, draftsMailbox: 'Drafts');
 
     expect(wire.literals.single, bytes);
     expect(wire.commands.last, 'G0006 UID EXPUNGE 4');
     expect(
-        wire.commands.any((command) =>
-            command == 'G0005 UID STORE 4 +FLAGS.SILENT (\\Deleted)'),
-        isTrue);
+      wire.commands.any(
+        (command) => command == 'G0005 UID STORE 4 +FLAGS.SILENT (\\Deleted)',
+      ),
+      isTrue,
+    );
   });
 
   test('refuses draft deletion if UIDPLUS is unavailable', () async {
@@ -93,7 +97,9 @@ void main() {
     final client = ImapClient(wire);
 
     await expectLater(
-        client.deleteDraftUid(7), throwsA(isA<ImapProtocolException>()));
+      client.deleteDraftUid(7),
+      throwsA(isA<ImapProtocolException>()),
+    );
     expect(wire.commands, ['G0001 CAPABILITY']);
   });
 }

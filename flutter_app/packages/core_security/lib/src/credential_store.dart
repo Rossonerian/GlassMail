@@ -33,7 +33,7 @@ abstract interface class CredentialStorageBackend {
 /// promise secure zeroization of those immutable String copies.
 final class FlutterCredentialStore implements CredentialStore {
   FlutterCredentialStore({CredentialStorageBackend? backend})
-      : _backend = backend ?? const _FlutterSecureStorageBackend();
+    : _backend = backend ?? const _FlutterSecureStorageBackend();
 
   static const keyPrefix = 'credential.v1.';
 

@@ -13,8 +13,7 @@ abstract interface class MailRepository {
   Stream<List<MailListItem>> observeInboxCategory(
     String accountId,
     String category,
-  ) =>
-      observeInbox(accountId);
+  ) => observeInbox(accountId);
   Stream<Map<String, int>> observeCategoryUnreadCounts(String accountId) =>
       Stream.value(const {});
   Stream<List<MailListItem>> search(String accountId, String query);
@@ -27,27 +26,23 @@ abstract interface class MailRepository {
   Stream<List<MailMessage>> observeThreadInMailbox(
     String messageId,
     String mailboxId,
-  ) =>
-      observeThread(messageId);
+  ) => observeThread(messageId);
 
   Stream<List<MailListItem>> observeUnifiedInbox(
     List<String> accountIds,
     String category,
-  ) =>
-      _combineLists(
-        accountIds.map((id) => observeInboxCategory(id, category)).toList(),
-      );
+  ) => _combineLists(
+    accountIds.map((id) => observeInboxCategory(id, category)).toList(),
+  );
 
   Stream<Map<String, int>> observeUnifiedCategoryUnreadCounts(
     List<String> accountIds,
-  ) =>
-      _combineMaps(accountIds.map(observeCategoryUnreadCounts).toList());
+  ) => _combineMaps(accountIds.map(observeCategoryUnreadCounts).toList());
 
   Stream<List<MailListItem>> searchUnified(
     List<String> accountIds,
     String query,
-  ) =>
-      _combineLists(accountIds.map((id) => search(id, query)).toList());
+  ) => _combineLists(accountIds.map((id) => search(id, query)).toList());
 
   Future<void> saveCacheSettings(
     String accountId,
@@ -57,9 +52,7 @@ abstract interface class MailRepository {
   Future<MailOperationResult<StorageQuota>> refreshStorageQuota(
     String accountId,
   ) async =>
-      MailOperationFailure(
-        UnsupportedError('Storage quota is unavailable'),
-      );
+      MailOperationFailure(UnsupportedError('Storage quota is unavailable'));
   Future<void> createAccount(
     String accountId,
     String email, {
@@ -67,7 +60,9 @@ abstract interface class MailRepository {
     String syncState = 'READY',
   });
   Future<void> updateCredential(
-      String accountId, List<int> credentialUtf8) async {
+    String accountId,
+    List<int> credentialUtf8,
+  ) async {
     credentialUtf8.fillRange(0, credentialUtf8.length, 0);
     throw UnsupportedError('Account credential updates are unavailable');
   }
@@ -176,8 +171,8 @@ final class MailListItem with MailValueEquality {
     this.messageCount = 1,
     this.participantCount = 1,
     List<String>? threadMessageIds,
-  })  : labels = List.unmodifiable(labels),
-        threadMessageIds = List.unmodifiable(threadMessageIds ?? [messageId]);
+  }) : labels = List.unmodifiable(labels),
+       threadMessageIds = List.unmodifiable(threadMessageIds ?? [messageId]);
 
   final String messageId;
   final String? threadId;
@@ -196,21 +191,21 @@ final class MailListItem with MailValueEquality {
 
   @override
   List<Object?> get equalityProps => [
-        messageId,
-        threadId,
-        sender,
-        subject,
-        preview,
-        sentAtEpochMillis,
-        unread,
-        starred,
-        labels,
-        hasAttachment,
-        category,
-        messageCount,
-        participantCount,
-        threadMessageIds,
-      ];
+    messageId,
+    threadId,
+    sender,
+    subject,
+    preview,
+    sentAtEpochMillis,
+    unread,
+    starred,
+    labels,
+    hasAttachment,
+    category,
+    messageCount,
+    participantCount,
+    threadMessageIds,
+  ];
 }
 
 final class MailAttachment with MailValueEquality {
@@ -230,12 +225,12 @@ final class MailAttachment with MailValueEquality {
 
   @override
   List<Object?> get equalityProps => [
-        attachmentId,
-        fileName,
-        mimeType,
-        sizeBytes,
-        downloadState,
-      ];
+    attachmentId,
+    fileName,
+    mimeType,
+    sizeBytes,
+    downloadState,
+  ];
 }
 
 final class MailMessage with MailValueEquality {
@@ -254,8 +249,8 @@ final class MailMessage with MailValueEquality {
     List<MailAttachment> attachments = const [],
     this.listUnsubscribe,
     this.listUnsubscribePost,
-  })  : labels = List.unmodifiable(labels),
-        attachments = List.unmodifiable(attachments);
+  }) : labels = List.unmodifiable(labels),
+       attachments = List.unmodifiable(attachments);
 
   final String messageId;
   final String? threadId;
@@ -274,21 +269,21 @@ final class MailMessage with MailValueEquality {
 
   @override
   List<Object?> get equalityProps => [
-        messageId,
-        threadId,
-        sender,
-        subject,
-        preview,
-        body,
-        html,
-        sentAtEpochMillis,
-        unread,
-        starred,
-        labels,
-        attachments,
-        listUnsubscribe,
-        listUnsubscribePost,
-      ];
+    messageId,
+    threadId,
+    sender,
+    subject,
+    preview,
+    body,
+    html,
+    sentAtEpochMillis,
+    unread,
+    starred,
+    labels,
+    attachments,
+    listUnsubscribe,
+    listUnsubscribePost,
+  ];
 }
 
 sealed class MailMutation with MailValueEquality {
@@ -382,13 +377,13 @@ final class AccountSyncSummary with MailValueEquality {
 
   @override
   List<Object?> get equalityProps => [
-        accountId,
-        email,
-        syncState,
-        messageCount,
-        gmailExtensionsEnabled,
-        lastSyncedAtEpochMillis,
-      ];
+    accountId,
+    email,
+    syncState,
+    messageCount,
+    gmailExtensionsEnabled,
+    lastSyncedAtEpochMillis,
+  ];
 }
 
 final class MailCacheSettings with MailValueEquality {
@@ -406,11 +401,11 @@ final class MailCacheSettings with MailValueEquality {
 
   @override
   List<Object?> get equalityProps => [
-        offlineMessageCount,
-        attachmentCacheLimitMb,
-        autoEvictReadOlderThanDays,
-        prefetchUnreadBodies,
-      ];
+    offlineMessageCount,
+    attachmentCacheLimitMb,
+    autoEvictReadOlderThanDays,
+    prefetchUnreadBodies,
+  ];
 }
 
 final class StorageQuota with MailValueEquality {
