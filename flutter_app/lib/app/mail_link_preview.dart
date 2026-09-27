@@ -7,11 +7,10 @@ import 'package:html/dom.dart' as html_dom;
 import 'package:html/parser.dart' as html;
 
 typedef HostLookup = Future<List<InternetAddress>> Function(String host);
-typedef LinkPreviewHtmlFetcher =
-    Future<LinkPreviewHttpResponse> Function(
-      Uri uri,
-      InternetAddress pinnedAddress,
-    );
+typedef LinkPreviewHtmlFetcher = Future<LinkPreviewHttpResponse> Function(
+  Uri uri,
+  InternetAddress pinnedAddress,
+);
 
 /// Bounded metadata from one user-requested HTTPS page.
 final class MailLinkPreview {
