@@ -26,7 +26,14 @@ Initial inventory recorded 2026-09-26 and updated 2026-09-27 from `pubspec.lock`
 | `cryptography` | 2.9.0 | Apache-2.0 | Authenticated encrypted backup format and key derivation |
 | `cryptography_flutter` | 2.3.4 | Apache-2.0 | Native crypto implementation used by encrypted backups |
 | `workmanager` | 0.10.10 | MIT | Flutter API for Android WorkManager and iOS background refresh |
-| `liquid_glass_widgets` | 1.7.2 | MIT | GlassMail-owned renderer adapter for clipped navigation chrome; package's in-tree engine attribution and MIT notices are included in Flutter's generated license bundle |
+| `liquid_glass_renderer` | 0.2.0-dev.4 (Git commit `ad3bcff22549f17f67bf87a01f80ed1f06cf9a0e`) | MIT | GlassMail-owned optical renderer adapter for clipped navigation chrome and Glass Lab |
+| `liquid_glass_widgets` | 1.6.2 | MIT | Karmi's public `GlassTabBar.minimizable` navigation component, including its drag-to-select glass indicator and spring/glow interaction |
+| `html` | 0.15.7 | MIT | Parses bounded, user-requested link-preview HTML as inert metadata only |
+| `csslib` | 1.0.2 | BSD-3-Clause | Transitive parser dependency of `html`; no stylesheet loading or rendering |
+| `equatable` | 2.1.0 | MIT | Transitive renderer dependency |
+| `flutter_shaders` | 0.1.3 | BSD-3-Clause | Transitive renderer dependency |
+| `logging` | 1.3.0 | BSD-3-Clause | Transitive renderer dependency |
+| `motor` | 1.1.0 | MIT | Transitive renderer dependency |
 | `workmanager_android` | 0.10.9 | MIT | Native Android WorkManager implementation |
 | `workmanager_apple` | 0.9.11 | MIT | Native iOS BGTaskScheduler/background refresh implementation |
 | `workmanager_platform_interface` | 0.10.5 | MIT | WorkManager method-channel API contract |
@@ -44,7 +51,7 @@ Initial inventory recorded 2026-09-26 and updated 2026-09-27 from `pubspec.lock`
 
 `core_database` contains the v10 schema and DAO operations and is opened by the Flutter development host. `core_security` uses `flutter_secure_storage` 11.2.0. `core_imap` is app-owned Dart code; `enough_mail` 2.1.7 was evaluated but is not a runtime dependency. `drift_flutter` currently resolves the legacy `sqlite3_flutter_libs` and `sqlcipher_flutter_libs` compatibility packages; the active SQLite implementation is supplied by the `sqlite3` v3 build hook and the workspace's custom-source configuration. Desktop/web federated plugin packages are lockfile-resolved but are not release targets.
 
-`liquid_glass_widgets` 1.7.2 declares Flutter `>=3.41.0` / Dart `>=3.5.0`, supports Android and iOS, has no non-SDK runtime dependencies, and is MIT licensed. Its engine attribution identifies the in-tree rendering base as derived from `liquid_glass_renderer` v0.2.0-dev.4 by Tim Lehmann (MIT). GlassMail maps `FULL` to the package's `premium`, `BALANCED` to `standard`, and `LIGHT` to `minimal`; `OFF` and explicit reduce-transparency/high-contrast requests use GlassMail's opaque fallback. This is an app-owned adapter; it does not claim parity with Compose's `GraphicsLayer.record` sampling.
+The renderer is pinned to Git commit `ad3bcff22549f17f67bf87a01f80ed1f06cf9a0e` (`liquid_glass_renderer` 0.2.0-dev.4), which declares Flutter `>=3.32.4` and Android/iOS/macOS support. GlassMail maps its own optical presets into the renderer's bounded settings and keeps an opaque fallback for reduced-transparency/accessibility modes. This is an app-owned adapter; it does not claim parity with Compose's `GraphicsLayer.record` sampling.
 
 ## Vendored native source
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:glassmail_core_database/glassmail_core_database.dart';
 import 'package:glassmail_domain_mail/glassmail_domain_mail.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as karmi_glass;
 import 'package:quick_actions/quick_actions.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -25,6 +26,7 @@ final mailRepositoryProvider = Provider<MailRepository?>((ref) => null);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await karmi_glass.LiquidGlassWidgets.initialize();
   await _initializeAppShortcuts();
   await Workmanager().initialize(glassMailBackgroundDispatcher);
   final notifications = MailNotifications();
@@ -115,39 +117,51 @@ class GlassMailFlutterApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final appPreferences = preferences ?? _memoryPreferences;
     final workflows = workflowStore ?? _memoryWorkflowStore;
-    return ProviderScope(
-      overrides: repository == null
-          ? const []
-          : [mailRepositoryProvider.overrideWith((ref) => repository!)],
-      child: AnimatedBuilder(
-        animation: appPreferences,
-        builder: (context, _) => MaterialApp(
-          title: 'GlassMail',
-          theme: glassMailTheme(Brightness.light),
-          darkTheme: glassMailTheme(Brightness.dark),
-          themeMode: appPreferences.themeMode,
-          restorationScopeId: 'glassmail',
-          builder: (context, child) {
-            final mediaQuery = MediaQuery.of(context);
-            return MailGlassAccessibility(
-              glassTier: appPreferences.glassTier,
-              reduceTransparency: appPreferences.reduceTransparency,
-              child: MediaQuery(
-                data: mediaQuery.copyWith(
-                  disableAnimations:
+    return karmi_glass.LiquidGlassWidgets.wrap(
+      adaptiveQuality: true,
+      brightnessResolver: Theme.maybeBrightnessOf,
+      child: ProviderScope(
+        overrides: repository == null
+            ? const []
+            : [mailRepositoryProvider.overrideWith((ref) => repository!)],
+        child: AnimatedBuilder(
+          animation: appPreferences,
+          builder: (context, _) => MaterialApp(
+            title: 'GlassMail',
+            theme: glassMailTheme(Brightness.light),
+            darkTheme: glassMailTheme(Brightness.dark),
+            themeMode: appPreferences.themeMode,
+            restorationScopeId: 'glassmail',
+            builder: (context, child) {
+              final mediaQuery = MediaQuery.of(context);
+              final reduceTransparency =
+                  appPreferences.reduceTransparency || mediaQuery.highContrast;
+              return MailGlassAccessibility(
+                glassTier: appPreferences.glassTier,
+                reduceTransparency: reduceTransparency,
+                child: karmi_glass.GlassAccessibilityScope(
+                  reduceTransparency: reduceTransparency,
+                  reduceMotion:
                       mediaQuery.disableAnimations ||
                       appPreferences.reduceMotion,
+                  child: MediaQuery(
+                    data: mediaQuery.copyWith(
+                      disableAnimations:
+                          mediaQuery.disableAnimations ||
+                          appPreferences.reduceMotion,
+                    ),
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
-                child: child ?? const SizedBox.shrink(),
-              ),
-            );
-          },
-          home: _AppEntry(
-            preferences: appPreferences,
-            workflowStore: workflows,
-            delayedSendCoordinator: delayedSendCoordinator,
+              );
+            },
+            home: _AppEntry(
+              preferences: appPreferences,
+              workflowStore: workflows,
+              delayedSendCoordinator: delayedSendCoordinator,
+            ),
+            debugShowCheckedModeBanner: false,
           ),
-          debugShowCheckedModeBanner: false,
         ),
       ),
     );

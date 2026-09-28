@@ -79,9 +79,26 @@ primary account; use a dedicated disposable Gmail account with an app password.
     shortcut smoke is covered by a Flutter widget test; native device behavior
     is still a manual check.
 19. Open a message containing ordinary HTTP(S) links, a `javascript:` URL,
-    user-info URL and punctuation. Confirm only valid HTTP(S) links are shown,
-    external launch waits for confirmation, and GlassMail fetches no preview,
-    HTML, or remote resource.
+    user-info URL and punctuation. Confirm only valid HTTP(S) links are shown
+    and external launch waits for confirmation. For a public HTTPS preview,
+    inspect the consent dialog's full URL and IP/token disclosure, cancel once,
+    then explicitly fetch a non-sensitive page. Confirm only bounded metadata
+    appears, redirects and page resources are not fetched, and opening the
+    browser requires a second confirmation. Never preview sign-in or
+    password-reset links.
+20. Verify the navbar with scrolling content underneath it: scroll down/up,
+    fling quickly, select each destination, and repeat hold/move/release at
+    least 20 times. Confirm the dock stays painted, shrinks/expands smoothly,
+    responds across the material and springs back after release. Repeat with
+    reduced motion, reduced transparency, high contrast, large text and
+    TalkBack. Capture real device metrics with
+    `adb shell dumpsys gfxinfo com.glassmail.dev.glassmail` and
+    `adb shell dumpsys meminfo com.glassmail.dev.glassmail`; do not infer FPS
+    from widget tests.
+    In a debug build, open Glass Lab → Navbar calibration to compare the
+    production material against its mixed, light and dark sample rows. The
+    calibration rows are synthetic; a live mailbox is still needed to verify
+    the release navbar over real messages.
 
 ## iOS
 

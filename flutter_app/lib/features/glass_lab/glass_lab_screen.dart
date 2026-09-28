@@ -1,10 +1,12 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../design/glass_mail_glass.dart';
 import '../../design/glass_material.dart';
+import 'liquid_glass_nav_calibration_screen.dart';
 
 class GlassLabScreen extends StatefulWidget {
   const GlassLabScreen({super.key});
@@ -130,6 +132,22 @@ class _GlassLabScreenState extends State<GlassLabScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
         children: [
+          if (kDebugMode)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.tune_rounded),
+                title: const Text('Navbar material calibration'),
+                subtitle: const Text(
+                  'Tune the live dock over scrolling high-contrast mail rows',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const LiquidGlassNavCalibrationScreen(),
+                  ),
+                ),
+              ),
+            ),
           Text(
             'A small, bounded glass preview',
             style: Theme.of(context).textTheme.titleLarge

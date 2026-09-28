@@ -648,6 +648,14 @@ packages:
       url: "https://github.com/whynotmake-it/flutter_liquid_glass.git"
     source: git
     version: "0.2.0-dev.4"
+  liquid_glass_widgets:
+    dependency: "direct main"
+    description:
+      name: liquid_glass_widgets
+      sha256: "368ec302cd14dd9e7482ac66c7aa8f2b5b55ca7ca8dfc97d20b152d371528d89"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.6.2"
   listen:
     dependency: transitive
     description:

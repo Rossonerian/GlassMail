@@ -1,10 +1,8 @@
-import "package:liquid_glass_renderer/liquid_glass_renderer.dart";
-import 'dart:math' as math;
-import 'dart:ui' show lerpDouble;
-
 import 'package:flutter/material.dart';
 
 import '../../design/glass_mail_glass.dart';
+import '../../design/liquid_glass_nav_bar.dart';
+import '../../design/dock_visibility_controller.dart';
 import '../../design/glass_material.dart';
 import '../../design/glass_mail_theme.dart';
 import '../glass_lab/glass_lab_screen.dart';
@@ -18,50 +16,20 @@ class InboxScreen extends StatefulWidget {
 
 class _InboxScreenState extends State<InboxScreen> {
   bool _unreadOnly = false;
-  bool _dockCollapsed = false;
-  double _userDragTravel = 0;
-  int _userDragDirection = 0;
   final Set<int> _starred = {1, 5};
 
-  bool _handleInboxScroll(ScrollNotification notification) {
-    if (notification.depth != 0) return false;
+  late final DockVisibilityController _visibilityController;
 
-    if (notification is ScrollStartNotification) {
-      _userDragTravel = 0;
-      _userDragDirection = 0;
-      return false;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _visibilityController = DockVisibilityController();
+  }
 
-    if (notification is ScrollEndNotification) {
-      _userDragTravel = 0;
-      _userDragDirection = 0;
-      return false;
-    }
-
-    if (notification is ScrollUpdateNotification &&
-        notification.dragDetails != null) {
-      final delta = notification.scrollDelta ?? 0;
-      final direction = delta.compareTo(0);
-      if (direction == 0) return false;
-      if (_userDragDirection != direction) {
-        _userDragDirection = direction;
-        _userDragTravel = 0;
-      }
-      _userDragTravel += delta.abs();
-
-      final reachedTop = notification.metrics.pixels <= 0;
-      final shouldCollapse =
-          !_dockCollapsed && direction > 0 && _userDragTravel >= 72;
-      final shouldExpand =
-          _dockCollapsed &&
-          ((direction < 0 && _userDragTravel >= 48) || reachedTop);
-      if (shouldCollapse || shouldExpand) {
-        setState(() => _dockCollapsed = shouldCollapse);
-        _userDragTravel = 0;
-      }
-    }
-
-    return false;
+  @override
+  void dispose() {
+    _visibilityController.dispose();
+    super.dispose();
   }
 
   @override
@@ -76,7 +44,10 @@ class _InboxScreenState extends State<InboxScreen> {
       extendBodyBehindAppBar: true,
       extendBody: true,
       appBar: const _InboxCapsule(),
-      bottomNavigationBar: MorphingMailDock(collapsed: _dockCollapsed),
+      bottomNavigationBar: LiquidGlassNavBar(
+        selected: "Inbox",
+        visibilityController: _visibilityController,
+      ),
       body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
@@ -89,7 +60,7 @@ class _InboxScreenState extends State<InboxScreen> {
           ),
         ),
         child: NotificationListener<ScrollNotification>(
-          onNotification: _handleInboxScroll,
+          onNotification: _visibilityController.handleScrollNotification,
           child: CustomScrollView(
             key: const PageStorageKey('inbox-preview-list'),
             slivers: [
@@ -192,7 +163,12 @@ class _InboxScreenState extends State<InboxScreen> {
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 34),
+                  padding: EdgeInsets.fromLTRB(
+                    24,
+                    24,
+                    24,
+                    mailDockTotalHeight(context) + 24,
+                  ),
                   child: Center(
                     child: Text(
                       'Sample inbox · no mail account connected',
@@ -278,265 +254,6 @@ class _InboxCapsule extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 }
-
-class MorphingMailDock extends StatefulWidget {
-  const MorphingMailDock({
-    required this.collapsed,
-    super.key,
-    this.selected = 'Inbox',
-    this.onDestinationSelected,
-    this.onQuickSearch,
-  });
-
-  final bool collapsed;
-  final String selected;
-  final ValueChanged<String>? onDestinationSelected;
-  final VoidCallback? onQuickSearch;
-
-  @override
-  State<MorphingMailDock> createState() => _MorphingMailDockState();
-}
-
-class _MorphingMailDockState extends State<MorphingMailDock>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 260),
-      value: widget.collapsed ? 1 : 0,
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant MorphingMailDock oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.collapsed != widget.collapsed) {
-      _controller.animateTo(
-        widget.collapsed ? 1 : 0,
-        duration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : const Duration(milliseconds: 260),
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dockHeight = mailDockContentHeight(context);
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 6, 24, 12),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final progress = Curves.easeOutCubic.transform(
-                  _controller.value,
-                );
-                final width = lerpDouble(constraints.maxWidth, 156, progress)!;
-                return Center(
-                  child: SizedBox(
-                    key: ValueKey(
-                      widget.collapsed
-                          ? 'mail-dock-compact'
-                          : 'mail-dock-expanded',
-                    ),
-                    width: width,
-                    child: GlassMailGlass(
-                      material: GlassPresets.bottomBar,
-                      child: SizedBox(
-                        height: dockHeight,
-                        child: ClipRect(
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              OverflowBox(
-                                minWidth: constraints.maxWidth,
-                                maxWidth: constraints.maxWidth,
-                                child: ExcludeSemantics(
-                                  excluding: widget.collapsed,
-                                  child: IgnorePointer(
-                                    ignoring: widget.collapsed,
-                                    child: Opacity(
-                                      opacity: 1 - progress,
-                                      child: _expandedContents(context),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              OverflowBox(
-                                minWidth: 156,
-                                maxWidth: 156,
-                                child: ExcludeSemantics(
-                                  excluding: !widget.collapsed,
-                                  child: IgnorePointer(
-                                    ignoring: !widget.collapsed,
-                                    child: Opacity(
-                                      opacity: progress,
-                                      child: _compactContents(context),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _expandedContents(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    children: [
-      _DockItem(
-        icon: Icons.inbox_rounded,
-        label: 'Inbox',
-        selected: widget.selected == 'Inbox',
-        onTap: () => _selectDestination(context, 'Inbox'),
-      ),
-      _DockItem(
-        icon: Icons.search_rounded,
-        label: 'Search',
-        selected: widget.selected == 'Search',
-        onTap: () => _selectDestination(context, 'Search'),
-      ),
-      _DockItem(
-        icon: Icons.send_outlined,
-        label: 'Sent',
-        selected: widget.selected == 'Sent',
-        onTap: () => _selectDestination(context, 'Sent'),
-      ),
-      _DockItem(
-        icon: Icons.settings_outlined,
-        label: 'Settings',
-        selected: widget.selected == 'Settings',
-        onTap: () => _selectDestination(context, 'Settings'),
-      ),
-    ],
-  );
-
-  Widget _compactContents(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      _DockItem(
-        icon: _iconForDestination(widget.selected),
-        label: widget.selected,
-        selected: true,
-        onTap: () => _selectDestination(context, widget.selected),
-      ),
-      IconButton(
-        tooltip: 'Quick search',
-        onPressed:
-            widget.onQuickSearch ?? () => _selectDestination(context, 'Search'),
-        icon: const Icon(Icons.search_rounded),
-      ),
-    ],
-  );
-
-  void _selectDestination(BuildContext context, String destination) {
-    final onSelect = widget.onDestinationSelected;
-    if (onSelect == null) {
-      _showPreviewNotice(context);
-    } else {
-      onSelect(destination);
-    }
-  }
-
-  IconData _iconForDestination(String destination) => switch (destination) {
-    'Search' => Icons.search_rounded,
-    'Sent' => Icons.send_outlined,
-    'Settings' => Icons.settings_outlined,
-    _ => Icons.inbox_rounded,
-  };
-}
-
-class _DockItem extends StatelessWidget {
-  const _DockItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.selected = false,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final dockHeight = mailDockContentHeight(context);
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      child: LiquidStretch(
-        child: GlassGlow(
-          glowColor: colors.primary.withValues(alpha: 0.15),
-          glowRadius: 1.0,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
-            child: SizedBox(
-              width: 68,
-              height: dockHeight - 4,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    icon,
-                    size: 20,
-                    color: selected ? colors.primary : colors.onSurfaceVariant,
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: selected
-                          ? colors.primary
-                          : colors.onSurfaceVariant,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-double mailDockContentHeight(BuildContext context) => math.max(
-  64,
-  math.min(120, 44 + MediaQuery.textScalerOf(context).scale(1) * 20),
-);
 
 class _FilterPill extends StatelessWidget {
   const _FilterPill({

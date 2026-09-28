@@ -112,7 +112,7 @@ class GlassMailGlass extends StatelessWidget {
 
     final tint = material.tint ?? colors.surface;
     final key = _GlassSettingsKey(material, activeTier, tint);
-    
+
     final settings = _settingsCache.putIfAbsent(
       key,
       () => LiquidGlassSettings(
@@ -120,21 +120,27 @@ class GlassMailGlass extends StatelessWidget {
             ? (material.blur > 12 ? 12.0 : material.blur)
             : material.blur,
         glassColor: tint.withValues(alpha: material.opacity),
-        thickness: activeTier == GlassMailTier.full 
+        thickness: activeTier == GlassMailTier.full
             ? material.refractionHeight + material.refraction * 12
-            : material.refractionHeight, 
-        refractiveIndex: activeTier == GlassMailTier.full 
+            : material.refractionHeight,
+        refractiveIndex: activeTier == GlassMailTier.full
             ? 1 + material.refraction * 0.2
             : 1 + material.refraction * 0.1, // Less refraction in balanced
-        chromaticAberration: activeTier == GlassMailTier.full ? material.dispersion * 4 : 0.0,
+        chromaticAberration: activeTier == GlassMailTier.full
+            ? material.dispersion * 4
+            : 0.0,
         lightAngle: material.specularAngle,
-        lightIntensity: activeTier == GlassMailTier.full ? material.specularIntensity : material.specularIntensity * 0.5,
+        lightIntensity: activeTier == GlassMailTier.full
+            ? material.specularIntensity
+            : material.specularIntensity * 0.5,
         ambientStrength: material.luminanceAdaptation,
         saturation: material.saturation,
       ),
     );
 
-    final shape = LiquidRoundedSuperellipse(borderRadius: material.cornerRadius);
+    final shape = LiquidRoundedSuperellipse(
+      borderRadius: material.cornerRadius,
+    );
     final shadows = _shadows(material, colors);
 
     if (activeTier == GlassMailTier.lite) {

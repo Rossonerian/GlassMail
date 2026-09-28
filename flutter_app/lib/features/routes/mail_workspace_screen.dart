@@ -18,10 +18,11 @@ import '../../app/mail_link_preview.dart';
 import '../../app/user_preferences.dart';
 import '../../app/workflow_store.dart';
 import '../../design/glass_mail_glass.dart';
+import '../../design/dock_visibility_controller.dart';
+import '../../design/liquid_glass_nav_bar.dart';
 import '../../platform/delayed_send_coordinator.dart';
 import '../../platform/mail_notifications.dart';
 import 'mail_html_text.dart';
-import '../inbox/inbox_screen.dart';
 import '../glass_lab/glass_lab_screen.dart';
 
 class MailWorkspaceScreen extends StatefulWidget {
@@ -50,8 +51,7 @@ class _MailWorkspaceScreenState extends State<MailWorkspaceScreen>
   final _unified = RestorableBool(false);
   final _category = RestorableString(MailCategory.primary);
   final _accountId = RestorableStringN(null);
-  double _dragTravel = 0;
-  int _dragDirection = 0;
+  final _dockVisibilityController = DockVisibilityController();
   String? _savedSearchQuery;
 
   @override
@@ -64,6 +64,7 @@ class _MailWorkspaceScreenState extends State<MailWorkspaceScreen>
     registerForRestoration(_unified, 'unified-inbox');
     registerForRestoration(_category, 'inbox-category');
     registerForRestoration(_accountId, 'selected-account');
+    if (_collapsed.value) _dockVisibilityController.setCollapsed();
     if (_selected.value < 0 || _selected.value >= _destinations.length) {
       _selected.value = 0;
     }
@@ -72,6 +73,7 @@ class _MailWorkspaceScreenState extends State<MailWorkspaceScreen>
   @override
   void initState() {
     super.initState();
+    _dockVisibilityController.addListener(_onDockVisibilityChanged);
     notificationRouteController.addListener(_onNotificationTap);
     appShortcutController.addListener(_onAppShortcut);
     if (notificationRouteController.value != null) {
@@ -86,6 +88,9 @@ class _MailWorkspaceScreenState extends State<MailWorkspaceScreen>
   void dispose() {
     notificationRouteController.removeListener(_onNotificationTap);
     appShortcutController.removeListener(_onAppShortcut);
+    _dockVisibilityController
+      ..removeListener(_onDockVisibilityChanged)
+      ..dispose();
     _selected.dispose();
     _collapsed.dispose();
     _unified.dispose();
@@ -146,32 +151,8 @@ class _MailWorkspaceScreenState extends State<MailWorkspaceScreen>
     }
   }
 
-  bool _onScroll(ScrollNotification event) {
-    if (event.depth != 0) return false;
-    if (event is ScrollStartNotification || event is ScrollEndNotification) {
-      _dragTravel = 0;
-      _dragDirection = 0;
-    } else if (event is ScrollUpdateNotification && event.dragDetails != null) {
-      final delta = event.scrollDelta ?? 0;
-      final direction = delta.compareTo(0);
-      if (direction != 0) {
-        if (_dragDirection != direction) {
-          _dragDirection = direction;
-          _dragTravel = 0;
-        }
-        _dragTravel += delta.abs();
-        final collapse =
-            !_collapsed.value && direction > 0 && _dragTravel >= 72;
-        final expand =
-            _collapsed.value &&
-            ((direction < 0 && _dragTravel >= 48) || event.metrics.pixels <= 0);
-        if (collapse || expand) {
-          setState(() => _collapsed.value = collapse);
-          _dragTravel = 0;
-        }
-      }
-    }
-    return false;
+  void _onDockVisibilityChanged() {
+    _collapsed.value = _dockVisibilityController.isCollapsed;
   }
 
   @override
@@ -188,8 +169,9 @@ class _MailWorkspaceScreenState extends State<MailWorkspaceScreen>
         });
       }
       return Scaffold(
+        extendBody: true,
         body: NotificationListener<ScrollNotification>(
-          onNotification: _onScroll,
+          onNotification: _dockVisibilityController.handleScrollNotification,
           child: IndexedStack(
             index: _selected.value,
             children: [
@@ -253,17 +235,27 @@ class _MailWorkspaceScreenState extends State<MailWorkspaceScreen>
             ],
           ),
         ),
-        bottomNavigationBar: SizedBox(
-          height: 24 + mailDockContentHeight(context),
-          child: MorphingMailDock(
-            collapsed: _collapsed.value,
-            selected: _destinations[_selected.value],
-            onDestinationSelected: (destination) {
-              final index = _destinations.indexOf(destination);
-              if (index >= 0) setState(() => _selected.value = index);
-            },
-            onQuickSearch: () => _select(1),
-          ),
+        bottomNavigationBar: LiquidGlassNavBar(
+          visibilityController: _dockVisibilityController,
+          selected: _selected.value == 3
+              ? 'More'
+              : _destinations[_selected.value],
+          onDestinationSelected: (destination) {
+            switch (destination) {
+              case 'Compose':
+                if (active == null) {
+                  _addAccount();
+                } else {
+                  _compose(active);
+                }
+              case 'More':
+                _select(3);
+              default:
+                final index = _destinations.indexOf(destination);
+                if (index >= 0) _select(index);
+            }
+          },
+          onQuickSearch: () => _select(1),
         ),
       );
     },
@@ -612,7 +604,12 @@ class _InboxRoute extends StatelessWidget {
                   )
                 : ListView.builder(
                     key: const PageStorageKey('live-inbox-list'),
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      8,
+                      16,
+                      mailDockTotalHeight(context) + 24,
+                    ),
                     itemCount: visible.length + (!snoozed && !trash ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (!snoozed && !trash && index == 0) {
@@ -861,6 +858,10 @@ class _SearchRouteState extends State<_SearchRoute> {
                       return const Center(child: Text('No matching messages'));
                     }
                     return ListView.builder(
+                      padding: EdgeInsets.only(
+                        top: 8,
+                        bottom: mailDockTotalHeight(context) + 24,
+                      ),
                       itemCount: results.length,
                       itemBuilder: (_, index) {
                         final item = results[index];
@@ -2118,6 +2119,9 @@ class _SentRoute extends StatelessWidget {
                     ),
                   )
                 : ListView.builder(
+                    padding: EdgeInsets.only(
+                      bottom: mailDockTotalHeight(context) + 24,
+                    ),
                     itemCount: remote.length + sentDrafts.length,
                     itemBuilder: (context, index) {
                       if (index < remote.length) {
@@ -2264,7 +2268,12 @@ class _SettingsRoute extends StatelessWidget {
     builder: (context, _) => _RouteScaffold(
       title: 'Settings',
       child: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          mailDockTotalHeight(context) + 24,
+        ),
         children: [
           Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
           DropdownButtonFormField<ThemeMode>(
@@ -3591,22 +3600,24 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 44, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(detail, textAlign: TextAlign.center),
-          if (action != null) ...[const SizedBox(height: 20), action!],
-        ],
+    child: SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 44, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(detail, textAlign: TextAlign.center),
+            if (action != null) ...[const SizedBox(height: 20), action!],
+          ],
+        ),
       ),
     ),
   );
@@ -3763,8 +3774,13 @@ class _SafeMessageBody extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             trailing: IconButton(
-              tooltip: 'Preview link',
-              onPressed: previewingLink == null ? () => onPreview(uri) : null,
+              tooltip: uri.scheme.toLowerCase() == 'https'
+                  ? 'Preview link'
+                  : 'Preview requires HTTPS',
+              onPressed:
+                  previewingLink == null && uri.scheme.toLowerCase() == 'https'
+                  ? () => onPreview(uri)
+                  : null,
               icon: previewingLink == uri
                   ? const SizedBox.square(
                       dimension: 20,

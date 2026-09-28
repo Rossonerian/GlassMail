@@ -30,11 +30,10 @@ void main() {
     expect(find.text('A little weekend plan?'), findsOneWidget);
     expect(find.byTooltip('Search mail'), findsOneWidget);
     expect(find.byTooltip('Glass Lab'), findsOneWidget);
-    expect(find.bySemanticsLabel('Inbox'), findsOneWidget);
-    expect(find.text('Settings'), findsOneWidget);
+    expect(find.bySemanticsLabel('Inbox').last, findsOneWidget);
+    expect(find.text('More'), findsOneWidget);
     expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
 
-    final inboxList = find.byKey(const PageStorageKey('inbox-preview-list'));
     await tester.dragFrom(const Offset(200, 200), const Offset(0, -180));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('mail-dock-compact')), findsOneWidget);
@@ -115,7 +114,7 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Settings'));
+    await tester.tap(find.text('More'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Saved drafts'));
     await tester.pumpAndSettle();
@@ -279,7 +278,7 @@ void main() {
       GlassMailFlutterApp(repository: repository, preferences: preferences),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Settings').last);
+    await tester.tap(find.text('More').last);
     await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButtonFormField<ThemeMode>));
     await tester.pumpAndSettle();
@@ -310,7 +309,7 @@ void main() {
 
     await tester.pumpWidget(GlassMailFlutterApp(repository: repository));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Settings').last);
+    await tester.tap(find.text('More').last);
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Account options').first);
     await tester.pumpAndSettle();
@@ -420,6 +419,14 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(find.text('Open external link?'), findsNothing);
+
+    await tester.tap(find.byTooltip('Preview link'));
+    await tester.pumpAndSettle();
+    expect(find.text('Fetch link preview?'), findsOneWidget);
+    expect(find.textContaining('site can see your IP address'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Fetching limited page metadata…'), findsNothing);
   });
 }
 

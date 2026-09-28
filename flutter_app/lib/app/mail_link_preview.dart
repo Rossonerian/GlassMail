@@ -73,11 +73,10 @@ final class MailLinkPreviewService {
   /// Normalizes the one URL shape the preview transport accepts.
   static Uri normalizeUri(Uri uri) {
     final host = uri.host.toLowerCase();
-    if (!uri.isAbsolute ||
-        uri.scheme.toLowerCase() != 'https' ||
+    if (uri.scheme.toLowerCase() != 'https' ||
         uri.userInfo.isNotEmpty ||
         host.isEmpty ||
-        uri.port != 443 ||
+        (uri.hasPort && uri.port != 443) ||
         uri.toString().length > maxUrlLength ||
         InternetAddress.tryParse(host) != null ||
         _isLocalHostName(host)) {
@@ -85,7 +84,7 @@ final class MailLinkPreviewService {
         'Only public HTTPS links on port 443 can be previewed.',
       );
     }
-    return uri.replace(scheme: 'https', host: host, fragment: '');
+    return uri.replace(scheme: 'https', host: host).removeFragment();
   }
 
   Future<MailLinkPreview> fetch(Uri uri) async {
@@ -275,11 +274,13 @@ final class MailLinkPreviewService {
         ..removeAll(HttpHeaders.refererHeader);
       final response = await request.close().timeout(_operationTimeout);
       final contentType = response.headers.contentType?.mimeType;
+      if (response.contentLength > maxHtmlBytes) {
+        throw const LinkPreviewException('The preview page is too large.');
+      }
       if (response.statusCode != HttpStatus.ok ||
           contentType == null ||
           (contentType != 'text/html' &&
-              contentType != 'application/xhtml+xml') ||
-          response.contentLength > maxHtmlBytes) {
+              contentType != 'application/xhtml+xml')) {
         return LinkPreviewHttpResponse(
           statusCode: response.statusCode,
           contentType: contentType,
