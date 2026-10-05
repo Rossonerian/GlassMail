@@ -734,13 +734,15 @@ internal fun com.glassmail.core.model.ImapMessageMetadata.resolveCategory(): Str
     }
 }
 
-private fun String.toFtsMatchExpression(): String? {
+internal fun String.toFtsMatchExpression(): String? {
     val tokens = Regex("[\\p{L}\\p{N}_]+")
         .findAll(lowercase())
-        .map { it.value }
+        // unicode61 treats underscores as separators; prefix every resulting word.
+        .flatMap { it.value.split('_').asSequence() }
+        .filter(String::isNotEmpty)
         .distinct()
         .toList()
-    return tokens.takeIf { it.isNotEmpty() }?.joinToString(" AND ") { "\"$it\"*" }
+    return tokens.takeIf { it.isNotEmpty() }?.joinToString(" AND ") { "\"$it*\"" }
 }
 
 private fun com.glassmail.core.database.MessageDetailRow.toMailMessage() = MailMessage(

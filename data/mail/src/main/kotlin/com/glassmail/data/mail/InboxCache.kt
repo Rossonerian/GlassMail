@@ -32,11 +32,13 @@ internal suspend fun reconcileCachedInbox(
         inTransaction {
             check(mailDao.mailboxUidValidity(inboxId) == uidValidity) { "Inbox namespace changed" }
             cached.forEach { captured ->
-                if (mutationDao.activeForMessage(captured.messageId).isNotEmpty()) return@forEach
                 // Local archive/delete may have removed this membership during FETCH.
                 val current = mailDao.membershipsForMessage(captured.messageId)
                     .firstOrNull { it.mailboxId == inboxId && it.uid == captured.uid } ?: return@forEach
                 val remote = server[current.uid]
+                // Dates are immutable metadata and can heal even while a local flag intent is pending.
+                remote?.sentAtEpochMillis?.let { mailDao.updateMissingSentAt(current.messageId, it) }
+                if (mutationDao.activeForMessage(captured.messageId).isNotEmpty()) return@forEach
                 if (remote == null) {
                     mailDao.removeMailboxMembership(inboxId, current.messageId)
                     // Keep canonical content, attachments, draft and mutation references.

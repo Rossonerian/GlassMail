@@ -12,10 +12,6 @@ import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.SocketTimeoutException
 import java.nio.charset.StandardCharsets
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-import java.time.OffsetDateTime
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLParameters
@@ -216,7 +212,7 @@ class GmailImapClient(
         }
     }
 
-    /** Flags only, in commands covering at most 500 UIDs; no envelopes or bodies. */
+    /** Flags, labels and fallback dates in commands covering at most 500 UIDs; no bodies. */
     suspend fun fetchFlagsAndLabels(
         email: String,
         password: CharArray,
@@ -233,7 +229,7 @@ class GmailImapClient(
             if (inbox.uidValidity != expectedUidValidity) {
                 throw ImapException.UidValidityChanged(expectedUidValidity, inbox.uidValidity)
             }
-            val fields = if ("X-GM-EXT-1" in capabilities) "FLAGS X-GM-LABELS" else "FLAGS"
+            val fields = if ("X-GM-EXT-1" in capabilities) "FLAGS X-GM-LABELS INTERNALDATE" else "FLAGS INTERNALDATE"
             buildList {
                 uidRanges.asSequence().flatMap { it.asSequence() }.chunked(500).forEach { uids ->
                     coroutineContext.ensureActive()
@@ -432,25 +428,7 @@ private class TlsImapConnection private constructor(private val socket: SSLSocke
         output.flush()
     }
 
-    private fun readLine(): String {
-        val bytes = ArrayList<Byte>(128)
-        while (true) {
-            val next = try {
-                input.read()
-            } catch (error: SocketTimeoutException) {
-                throw ImapException.Transport(error)
-            } catch (error: IOException) {
-                throw ImapException.Transport(error)
-            }
-            if (next == -1) throw ImapException.Protocol("IMAP server disconnected")
-            if (next == '\n'.code) {
-                if (bytes.lastOrNull() == '\r'.code.toByte()) bytes.removeAt(bytes.lastIndex)
-                return bytes.toByteArray().toString(StandardCharsets.UTF_8)
-            }
-            if (bytes.size >= MAX_LINE_BYTES) throw ImapException.Protocol("IMAP response line exceeds limit")
-            bytes += next.toByte()
-        }
-    }
+    private fun readLine(): String = readImapLine(input)
 
     private fun readExactly(length: Int): ByteArray {
         if (length !in 0..MAX_LITERAL_BYTES) throw ImapException.Protocol("IMAP literal exceeds limit")
@@ -476,7 +454,6 @@ private class TlsImapConnection private constructor(private val socket: SSLSocke
         // The closing brace is a regex metacharacter too. Android's ICU regex engine
         // rejects an unescaped one during class initialization.
         private val LITERAL_SUFFIX = Regex("\\{(\\d+)\\+?\\}$")
-        private const val MAX_LINE_BYTES = 64 * 1024
         private const val MAX_LITERAL_BYTES = 8 * 1024 * 1024
 
         fun open(host: String, port: Int, connectTimeoutMillis: Int, readTimeoutMillis: Int): TlsImapConnection = try {
@@ -857,7 +834,8 @@ internal object GmailFetchMapper {
             labels = fields.attribute("X-GM-LABELS")?.listValue().orEmpty().mapNotNull { it.atomValue() }.toSet(),
             subject = decodedSubject,
             sender = senderFormatted,
-            sentAtEpochMillis = envelope.getOrNull(0)?.atomValue()?.let(::parseImapDate),
+            sentAtEpochMillis = ImapDates.header(envelope.getOrNull(0)?.atomValue())
+                ?: ImapDates.internalDate(fields.attribute("INTERNALDATE")?.atomValue()),
             sizeBytes = fields.attribute("RFC822.SIZE")?.atomValue()?.toLongOrNull(),
             hasListUnsubscribe = !categoryHeaders["list-unsubscribe"].isNullOrBlank(),
             precedence = categoryHeaders["precedence"],
@@ -891,14 +869,7 @@ internal object GmailFetchMapper {
         flush()
     }
 
-    private fun parseImapDate(value: String): Long? = runCatching {
-        ZonedDateTime.parse(value, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
-    }.getOrNull()
 }
-
-// ⚡ Bolt: Extracted DateTimeFormatter instance to static property to prevent
-// object allocation and pattern compilation overhead during data parsing loop
-private val internalDateFormatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss Z", Locale.US)
 
 private fun parseRemoteDraft(uid: Long, internalDate: String?, raw: ByteArray): ImapRemoteDraft {
     val content = raw.toString(StandardCharsets.ISO_8859_1)
@@ -911,9 +882,7 @@ private fun parseRemoteDraft(uid: Long, internalDate: String?, raw: ByteArray): 
     fun addresses(name: String): List<String> = runCatching {
         InternetAddress.parse(headers[name].orEmpty()).mapNotNull { it.address?.trim()?.takeIf(String::isNotBlank) }
     }.getOrDefault(emptyList())
-    val updatedAt = internalDate?.let { value ->
-        runCatching { OffsetDateTime.parse(value, internalDateFormatter).toInstant().toEpochMilli() }.getOrNull()
-    } ?: 0L
+    val updatedAt = ImapDates.internalDate(internalDate) ?: ImapDates.header(headers["date"]) ?: 0L
     return ImapRemoteDraft(
         uid = uid,
         draftId = draftId,

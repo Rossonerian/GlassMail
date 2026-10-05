@@ -56,6 +56,7 @@ class InboxCacheTest {
             memberships.values.filter { it.mailboxId == firstArg<String>() && it.uid > after && it.uid <= through }.sortedBy { it.uid }.take(arg(3))
         }
         coEvery { mail.mailboxUidValidity(any()) } returns 11
+        coEvery { mail.updateMissingSentAt(any(), any()) } returns Unit
         coEvery { mail.lowestMailboxUid(any()) } coAnswers { memberships.values.filter { it.mailboxId == firstArg<String>() }.minOfOrNull { it.uid } }
         coEvery { mail.countMailboxMessages(any()) } coAnswers { memberships.values.count { it.mailboxId == firstArg<String>() } }
         coEvery { mail.membershipsForMessage(any()) } coAnswers { memberships.values.filter { it.messageId == firstArg<String>() } }
