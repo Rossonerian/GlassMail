@@ -15,6 +15,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.Transaction
 import androidx.room.Upsert
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -242,6 +243,24 @@ interface AccountDao {
     @Query("DELETE FROM accounts WHERE accountId = :accountId")
     suspend fun delete(accountId: String)
 
+    @Query("DELETE FROM cache_config WHERE accountId = :accountId")
+    suspend fun deleteCacheConfig(accountId: String)
+
+    @Query("DELETE FROM storage_quota WHERE accountId = :accountId")
+    suspend fun deleteStorageQuota(accountId: String)
+
+    @Query("DELETE FROM notification_state WHERE accountId = :accountId")
+    suspend fun deleteNotificationState(accountId: String)
+
+    @Transaction
+    suspend fun deleteWithAccountData(accountId: String) {
+        // These tables have no foreign keys; the remaining account data cascades.
+        deleteCacheConfig(accountId)
+        deleteStorageQuota(accountId)
+        deleteNotificationState(accountId)
+        delete(accountId)
+    }
+
     @Query("UPDATE accounts SET syncState = :state WHERE accountId = :accountId")
     suspend fun setSyncState(accountId: String, state: String)
 
@@ -341,13 +360,13 @@ interface MailDao {
     @Query("SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, mm.flags, mm.labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.messageId = :messageId LIMIT 1")
     fun observeMessage(messageId: String): Flow<MessageDetailRow?>
 
-    @Query("SELECT DISTINCT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, mm.flags, mm.labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE (m.messageId = :messageId OR (m.gmailThreadId IS NOT NULL AND m.gmailThreadId != '' AND m.gmailThreadId = (SELECT target.gmailThreadId FROM messages target WHERE target.messageId = :messageId AND target.gmailThreadId IS NOT NULL AND target.gmailThreadId != ''))) ORDER BY m.sentAtEpochMillis ASC")
+    @Query("SELECT DISTINCT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, mm.flags, mm.labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.accountId = (SELECT target.accountId FROM messages target WHERE target.messageId = :messageId) AND (m.messageId = :messageId OR (m.gmailThreadId IS NOT NULL AND m.gmailThreadId != '' AND m.gmailThreadId = (SELECT target.gmailThreadId FROM messages target WHERE target.messageId = :messageId AND target.gmailThreadId IS NOT NULL AND target.gmailThreadId != ''))) ORDER BY m.sentAtEpochMillis ASC")
     fun observeThread(messageId: String): Flow<List<MessageDetailRow>>
 
     @Query("SELECT * FROM attachments WHERE messageId = :messageId ORDER BY partId")
     fun observeAttachments(messageId: String): Flow<List<AttachmentEntity>>
 
-    @Query("WITH matched_threads AS (SELECT DISTINCT m.gmailThreadId FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid WHERE messages_fts MATCH :ftsQuery AND m.gmailThreadId IS NOT NULL), matched_messages AS (SELECT m.messageId FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid WHERE messages_fts MATCH :ftsQuery) SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.sentAtEpochMillis, mm.flags, mm.labels, EXISTS(SELECT 1 FROM attachments a WHERE a.messageId = m.messageId) AS hasAttachment, m.category FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE mm.mailboxId = :mailboxId AND (m.messageId IN matched_messages OR m.gmailThreadId IN matched_threads) ORDER BY m.sentAtEpochMillis DESC LIMIT 500")
+    @Query("WITH matched_threads AS (SELECT DISTINCT m.accountId, m.gmailThreadId FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid WHERE messages_fts MATCH :ftsQuery AND m.gmailThreadId IS NOT NULL), matched_messages AS (SELECT m.messageId FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid WHERE messages_fts MATCH :ftsQuery) SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.sentAtEpochMillis, mm.flags, mm.labels, EXISTS(SELECT 1 FROM attachments a WHERE a.messageId = m.messageId) AS hasAttachment, m.category FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE mm.mailboxId = :mailboxId AND (m.messageId IN matched_messages OR EXISTS (SELECT 1 FROM matched_threads matched WHERE matched.accountId = m.accountId AND matched.gmailThreadId = m.gmailThreadId)) ORDER BY m.sentAtEpochMillis DESC LIMIT 500")
     fun search(mailboxId: String, ftsQuery: String): Flow<List<MailboxMessageRow>>
 }
 
@@ -524,7 +543,7 @@ abstract class GlassMailDatabase : RoomDatabase() {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE messages ADD COLUMN category TEXT NOT NULL DEFAULT 'PRIMARY'")
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_messages_accountId_category ON messages(accountId, category)")
-                database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING FTS4(subject, sender, preview, body, content='messages', tokenize=unicode61)")
+                database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `messages_fts` USING FTS4(`subject` TEXT, `sender` TEXT, `preview` TEXT, `body` TEXT, tokenize=unicode61, content=`messages`)")
                 database.execSQL("INSERT INTO messages_fts(messages_fts) VALUES('rebuild')")
             }
         }

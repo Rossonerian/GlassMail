@@ -241,8 +241,7 @@ class ImapMailRepository(
     }
 
     override suspend fun removeAccount(accountId: String) {
-        database.accountDao().delete(accountId)
-        database.notificationStateDao().delete(accountId)
+        database.accountDao().deleteWithAccountData(accountId)
         credentialStore.delete(accountId)
     }
 
