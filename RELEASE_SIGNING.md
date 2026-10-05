@@ -61,9 +61,14 @@ base64 < /PRIVATE/PATH/glassmail-release.jks > /PRIVATE/PATH/keystore.base64
 The workflow decodes the secret into `$RUNNER_TEMP`, restricts permissions to 600,
 sets `GLASSMAIL_RELEASE_STORE_FILE` to that path, and removes the file on completion.
 Tag pushes matching `v*` must exactly match the native versionName. Manual dispatch
-is a dry run: it builds and uploads verified artifacts but never publishes a release.
-Only the native APK, AAB, and APK checksum are uploaded. Release notes come from the
-matching changelog section. Existing tags are not moved or recreated.
+is a dry run: it builds and uploads verified artifacts but never creates a release.
+Only the native APK, AAB, and their SHA-256 checksum files are uploaded. The build job
+has read-only repository permissions and holds the signing secrets. On tag pushes,
+a separate publish job downloads the artifacts, verifies both checksums again, and
+creates a draft GitHub release. Release notes are regenerated from the matching
+changelog section in that job. The release owner must complete the device/Gmail
+acceptance checklist in `RELEASE_CHECKLIST.md` before manually publishing the draft.
+Existing tags are not moved or recreated.
 
 ## Version policy
 
@@ -87,6 +92,8 @@ from signature verification.
 "$ANDROID_HOME/build-tools/BUILD_TOOLS_VERSION/aapt2" dump badging GlassMail-v1.0.0.apk
 sha256sum GlassMail-v1.0.0.apk > GlassMail-v1.0.0.apk.sha256
 sha256sum -c GlassMail-v1.0.0.apk.sha256
+sha256sum GlassMail-v1.0.0.aab > GlassMail-v1.0.0.aab.sha256
+sha256sum -c GlassMail-v1.0.0.aab.sha256
 ```
 
 F-Droid builds from source and applies its own signing key. Device/provider acceptance

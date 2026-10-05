@@ -24,7 +24,7 @@ gradle.taskGraph.whenReady {
     val buildsReleaseArtifact = allTasks.any {
         it.project.path == project.path &&
             it.name in setOf(
-                "assembleRelease", "bundleRelease", "packageRelease",
+                "assembleRelease", "bundleRelease", "packageRelease", "packageReleaseBundle",
                 "signReleaseBundle", "validateSigningRelease"
             )
     }

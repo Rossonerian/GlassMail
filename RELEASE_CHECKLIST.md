@@ -21,5 +21,8 @@
 - [ ] privacy docs accurate
 - [ ] README accurate
 - [ ] changelog complete
-- [ ] release artifact checksummed
+- [ ] native APK and AAB SHA-256 checksums generated and verified from the artifact directory
+- [ ] downloaded APK and AAB checksums verified by the publish job
 - [ ] GitHub release notes prepared
+- [ ] draft GitHub release contains the native APK, AAB, and both checksum files
+- [ ] release owner completes device/Gmail acceptance checks above, then manually publishes the draft GitHub release
