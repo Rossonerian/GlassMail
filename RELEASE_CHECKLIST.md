@@ -1,0 +1,25 @@
+# Release checklist
+
+- [ ] canonical v1 app explicitly chosen
+- [ ] version 1.0.0
+- [ ] no blocker bugs
+- [ ] no high-severity known data-loss bugs
+- [ ] native CI green
+- [ ] release workflow green
+- [ ] tests green
+- [ ] lint green
+- [ ] release build succeeds
+- [ ] signing verified
+- [ ] migrations verified
+- [ ] authorized Gmail acceptance performed
+- [ ] send/receive verified
+- [ ] offline reconciliation verified
+- [ ] notification path verified
+- [ ] process restart verified
+- [ ] security audit acceptable
+- [ ] licenses updated
+- [ ] privacy docs accurate
+- [ ] README accurate
+- [ ] changelog complete
+- [ ] release artifact checksummed
+- [ ] GitHub release notes prepared

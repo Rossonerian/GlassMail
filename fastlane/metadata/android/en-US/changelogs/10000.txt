@@ -1,0 +1,5 @@
+GlassMail 1.0.0 (native Android)
+
+Threaded inbox, categories, offline search, restricted reader, swipe/thread actions, archive undo, undo send, Drafts/Sent sync, unsubscribe, two accounts, unified inbox, cache controls, quota display, and IMAP IDLE with periodic fallback.
+
+Limitations: remote images blocked; mailto requires confirmation; imported drafts may lack attachments. Live Gmail, migrations, device behavior, performance, and F-Droid review remain unverified.

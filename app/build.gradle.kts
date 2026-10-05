@@ -14,6 +14,30 @@ val releaseKeyPassword = providers.environmentVariable("GLASSMAIL_RELEASE_KEY_PA
     ?: providers.gradleProperty("glassmailReleaseKeyPassword").orNull
 val releaseSigningConfigured = listOf(releaseStorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { !it.isNullOrBlank() }
 
+val requireReleaseSigning = providers.environmentVariable("GLASSMAIL_REQUIRE_RELEASE_SIGNING").orNull
+    ?.equals("true", ignoreCase = true) == true ||
+    providers.gradleProperty("glassmailRequireReleaseSigning").orNull
+        ?.equals("true", ignoreCase = true) == true
+
+// Gate artifact-producing tasks, not release compilation used by test/lint.
+gradle.taskGraph.whenReady {
+    val buildsReleaseArtifact = allTasks.any {
+        it.project.path == project.path &&
+            it.name in setOf(
+                "assembleRelease", "bundleRelease", "packageRelease",
+                "signReleaseBundle", "validateSigningRelease"
+            )
+    }
+    if (requireReleaseSigning && buildsReleaseArtifact && !releaseSigningConfigured) {
+        throw GradleException(
+            "Release signing is required but inputs are incomplete. Set all four " +
+                "GLASSMAIL_RELEASE_STORE_FILE, GLASSMAIL_RELEASE_STORE_PASSWORD, " +
+                "GLASSMAIL_RELEASE_KEY_ALIAS, and GLASSMAIL_RELEASE_KEY_PASSWORD " +
+                "environment variables (or their glassmailRelease* Gradle properties)."
+        )
+    }
+}
+
 android {
     namespace = "com.glassmail.app"
     compileSdk = 35
@@ -22,8 +46,8 @@ android {
         applicationId = "com.glassmail.app"
         minSdk = 34
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 10000
+        versionName = "1.0.0"
     }
 
     compileOptions {
