@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -99,7 +100,9 @@ fun InboxScreen(
     val undoableArchive by vm.undoableArchive.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val refreshing by vm.isRefreshing.collectAsStateWithLifecycle()
-    val selectedAccount = state.account ?: account
+    val olderMail by vm.olderMail.collectAsStateWithLifecycle()
+    val selectedAccount = state.account ?: account ?: state.accounts.firstOrNull()
+    val olderAccounts = if (state.unifiedInbox) state.accounts else listOfNotNull(selectedAccount)
     val isSyncing = refreshing || selectedAccount?.syncState?.equals("SYNCING", ignoreCase = true) == true
     val allMessages = state.messages
     var activeFilter by rememberSaveable { mutableStateOf(InboxFilter.All) }
@@ -412,6 +415,9 @@ fun InboxScreen(
                         Spacer(Modifier.width(GlassSpacing.xs))
                         Text("Sync Mailbox")
                     }
+                    if (!searchExpanded) olderAccounts.forEach { target ->
+                        OlderMailFooter(vm, target, olderMail[target.accountId] ?: OlderMailUiState(), isSyncing, state.unifiedInbox)
+                    }
                 }
             }
             else -> {
@@ -430,6 +436,9 @@ fun InboxScreen(
                     ) { row ->
                         MailRow(row = row, open = open, vm = vm)
                     }
+                    if (!searchExpanded) items(olderAccounts, key = { "older:${it.accountId}" }, contentType = { "olderMail" }) { target ->
+                        OlderMailFooter(vm, target, olderMail[target.accountId] ?: OlderMailUiState(), isSyncing, state.unifiedInbox)
+                    }
                 }
             }
         }
@@ -443,4 +452,43 @@ private fun categoryLabel(category: String): String = when (category) {
     MailCategory.UPDATES -> "Updates"
     MailCategory.FORUMS -> "Forums"
     else -> category
+}
+
+@Composable
+private fun OlderMailFooter(
+    vm: AppViewModel,
+    account: MailAccount,
+    state: OlderMailUiState,
+    syncing: Boolean,
+    showAccount: Boolean,
+) {
+    if (account.accountId == "debug-fixture") return
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = GlassSpacing.xs),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (showAccount) Text(account.email, style = MaterialTheme.typography.labelMedium)
+        when {
+            state.cacheLimitReached -> Text(
+                "Cache limit reached. Increase cached messages in Settings to load more.",
+                modifier = Modifier.padding(GlassSpacing.md),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            !state.hasMoreOlder && !state.isLoading -> Text(
+                "No older mail", modifier = Modifier.padding(GlassSpacing.md),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            else -> Button(
+                onClick = { vm.loadOlder(account.accountId) },
+                enabled = !state.isLoading && !syncing,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
+                Text(when {
+                    state.isLoading -> "Loading older mail…"
+                    state.failed -> "Retry loading older mail"
+                    else -> "Load older mail"
+                })
+            }
+        }
+    }
 }

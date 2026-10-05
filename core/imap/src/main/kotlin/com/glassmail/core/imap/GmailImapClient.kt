@@ -36,6 +36,8 @@ sealed class ImapException(message: String, cause: Throwable? = null) : Exceptio
         ImapException("INBOX UIDVALIDITY changed from $expected to $actual")
 }
 
+data class OlderInboxPage(val snapshot: GmailInboxSnapshot, val hasMoreOlder: Boolean)
+
 class GmailImapClient(
     private val host: String = "imap.gmail.com",
     private val port: Int = 993,
@@ -169,7 +171,7 @@ class GmailImapClient(
 
     /**
      * Reads one UID page. A caller persists its highest UID before requesting the next page,
-     * so historical enumeration and later incremental catch-up survive process death.
+     * so incremental catch-up survives process death.
      */
     suspend fun fetchInboxPage(
         email: String,
@@ -199,6 +201,66 @@ class GmailImapClient(
                 inbox = inbox,
                 messages = messages,
                 requestedThroughUid = lastUid.coerceAtLeast(0),
+            )
+        }
+    }
+
+    /** Flags only, in commands covering at most 500 UIDs; no envelopes or bodies. */
+    suspend fun fetchFlagsAndLabels(
+        email: String,
+        password: CharArray,
+        uidRanges: List<LongRange>,
+        expectedUidValidity: Long,
+    ): List<ImapMessageMetadata> = withContext(Dispatchers.IO.limitedParallelism(1)) {
+        require(uidRanges.all { !it.isEmpty() && it.first > 0 })
+        TlsImapConnection.withIdleConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
+            val client = ImapCommandClient(connection)
+            client.requireGreeting()
+            client.login(email, password)
+            val capabilities = client.capability()
+            val inbox = client.selectInbox()
+            if (inbox.uidValidity != expectedUidValidity) {
+                throw ImapException.UidValidityChanged(expectedUidValidity, inbox.uidValidity)
+            }
+            val fields = if ("X-GM-EXT-1" in capabilities) "FLAGS X-GM-LABELS" else "FLAGS"
+            buildList {
+                uidRanges.asSequence().flatMap { it.asSequence() }.chunked(500).forEach { uids ->
+                    coroutineContext.ensureActive()
+                    addAll(client.fetchFlagsAndLabels(uids.joinToString(","), fields))
+                }
+            }
+        }
+    }
+
+    /** Search actual UIDs so a sparse mailbox still returns a full older page. */
+    suspend fun fetchOlderInbox(
+        email: String,
+        password: CharArray,
+        beforeUid: Long,
+        expectedUidValidity: Long,
+        limit: Int = 50,
+    ): OlderInboxPage = withContext(Dispatchers.IO.limitedParallelism(1)) {
+        require(beforeUid > 1 && limit in 1..200)
+        TlsImapConnection.withIdleConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
+            val client = ImapCommandClient(connection)
+            client.requireGreeting()
+            client.login(email, password)
+            val capabilities = client.capability()
+            val inbox = client.selectInbox()
+            if (inbox.uidValidity != expectedUidValidity) {
+                throw ImapException.UidValidityChanged(expectedUidValidity, inbox.uidValidity)
+            }
+            val uids = client.searchOlderUids(beforeUid)
+            val selected = uids.takeLast(limit)
+            coroutineContext.ensureActive()
+            val messages = if (selected.isEmpty()) emptyList() else client.fetchMetadata(
+                selected.joinToString(","), "X-GM-EXT-1" in capabilities,
+            ).filter { it.uid in selected }
+            // If messages vanished between SEARCH and FETCH, allow retry rather than
+            // falsely declaring older history exhausted.
+            OlderInboxPage(
+                GmailInboxSnapshot(capabilities, client.listMailboxes(), inbox, messages),
+                hasMoreOlder = uids.size > selected.size || messages.size < selected.size,
             )
         }
     }
@@ -639,6 +701,18 @@ private class ImapCommandClient(private val connection: TlsImapConnection) {
         return execute("$prefix $uidRange ($fields)").mapNotNull { response -> GmailFetchMapper.map(response) }
     }
 
+    fun fetchFlagsAndLabels(uidSet: String, fields: String): List<ImapMessageMetadata> =
+        execute("UID FETCH $uidSet ($fields)").mapNotNull(GmailFetchMapper::map)
+
+    fun searchOlderUids(beforeUid: Long): List<Long> {
+        val search = execute("UID SEARCH UID 1:${beforeUid - 1}")
+            .filterIsInstance<ImapResponse.Untagged>()
+            .firstOrNull { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
+            ?: throw ImapException.Protocol("Missing UID SEARCH response")
+        return search.values.drop(1).mapNotNull { it.atomValue()?.toLongOrNull() }
+            .filter { it in 1 until beforeUid }.distinct().sorted()
+    }
+
     fun fetchBodyPart(uid: Long, partId: String): ByteArray {
         val response = execute("UID FETCH $uid (BODY.PEEK[$partId])")
             .asSequence().filterIsInstance<ImapResponse.Untagged>().firstOrNull { item ->
@@ -706,7 +780,7 @@ private class ImapCommandClient(private val connection: TlsImapConnection) {
     }
 }
 
-private object GmailFetchMapper {
+internal object GmailFetchMapper {
     fun map(response: ImapResponse): ImapMessageMetadata? {
         val values = (response as? ImapResponse.Untagged)?.values ?: return null
         if (values.getOrNull(1)?.atomValue()?.equals("FETCH", ignoreCase = true) != true) return null

@@ -7,6 +7,7 @@ import com.glassmail.core.security.CredentialStore
 import com.glassmail.domain.mail.DraftRepository
 import com.glassmail.domain.mail.MailAccount
 import com.glassmail.domain.mail.MailListItem
+import com.glassmail.domain.mail.OlderMailResult
 import com.glassmail.domain.mail.MailRepository
 import com.glassmail.sync.AccountSyncScheduler
 import com.glassmail.sync.IdleServiceController
@@ -18,6 +19,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,6 +75,49 @@ class AppViewModelTest {
         viewModelStore.clear()
         Dispatchers.resetMain()
         unmockkObject(IdleServiceController)
+    }
+
+    @Test
+    fun `older mail exposes loading suppresses duplicate request and becomes exhausted`() = runTest(testDispatcher) {
+        val response = CompletableDeferred<OlderMailResult>()
+        var requests = 0
+        coEvery { repository.loadOlder("account1") } coAnswers { requests++; response.await() }
+        val first = viewModel.loadOlder("account1")
+        runCurrent()
+        assertEquals(true, viewModel.olderMail.value["account1"]?.isLoading)
+        viewModel.loadOlder("account1")
+        runCurrent()
+        assertEquals(1, requests)
+        response.complete(OlderMailResult.Success(2, hasMoreOlder = false))
+        first.join()
+        assertEquals(OlderMailUiState(hasMoreOlder = false), viewModel.olderMail.value["account1"])
+    }
+
+    @Test
+    fun `cache setting change during older request clears stale exhausted result`() = runTest(testDispatcher) {
+        val response = CompletableDeferred<OlderMailResult>()
+        coEvery { repository.loadOlder("account1") } coAnswers { response.await() }
+        val request = viewModel.loadOlder("account1")
+        runCurrent()
+        viewModel.updateCacheSettings { it.copy(offlineMessageCount = 500) }.join()
+        response.complete(OlderMailResult.Success(0, hasMoreOlder = false, cacheLimitReached = true))
+        request.join()
+        assertEquals(OlderMailUiState(), viewModel.olderMail.value["account1"])
+    }
+
+    @Test
+    fun `failed older mail remains retryable and cancellation clears loading`() = runTest(testDispatcher) {
+        coEvery { repository.loadOlder("account1") } returns OlderMailResult.Failure(com.glassmail.core.model.MailSyncError.Network)
+        viewModel.loadOlder("account1").join()
+        assertEquals(OlderMailUiState(failed = true), viewModel.olderMail.value["account1"])
+        val response = CompletableDeferred<OlderMailResult>()
+        coEvery { repository.loadOlder("account1") } coAnswers { response.await() }
+        val request = viewModel.loadOlder("account1")
+        runCurrent()
+        assertEquals(true, viewModel.olderMail.value["account1"]?.isLoading)
+        request.cancel()
+        request.join()
+        assertEquals(OlderMailUiState(failed = true), viewModel.olderMail.value["account1"])
     }
 
     @Test

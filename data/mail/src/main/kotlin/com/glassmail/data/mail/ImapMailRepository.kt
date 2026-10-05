@@ -10,8 +10,8 @@ import com.glassmail.core.database.MessageEntity
 import com.glassmail.core.database.MessageLabelEntity
 import com.glassmail.core.database.DraftEntity
 import com.glassmail.core.database.MutationState
-import com.glassmail.core.database.PendingMutationEntity
 import com.glassmail.core.database.SyncCheckpointEntity
+import com.glassmail.core.database.PendingMutationEntity
 import com.glassmail.core.database.NotificationStateEntity
 import com.glassmail.core.database.CacheConfigEntity
 import com.glassmail.core.database.StorageQuotaEntity
@@ -28,6 +28,7 @@ import com.glassmail.domain.mail.MailListItem
 import com.glassmail.domain.mail.MailMessage
 import com.glassmail.domain.mail.MailCategory
 import com.glassmail.domain.mail.MailRepository
+import com.glassmail.domain.mail.OlderMailResult
 import com.glassmail.domain.mail.DraftRepository
 import com.glassmail.domain.mail.MailDraft
 import com.glassmail.domain.mail.DraftStatus
@@ -119,12 +120,14 @@ class ImapMailRepository(
     }
 
     override suspend fun saveCacheSettings(accountId: String, settings: MailCacheSettings) {
-        require(database.accountDao().account(accountId) != null)
-        require(settings.offlineMessageCount in CACHE_MESSAGE_PRESETS)
-        require(settings.attachmentCacheLimitMb in CACHE_ATTACHMENT_PRESETS)
-        require(settings.autoEvictReadOlderThanDays in setOf(30, 60, 90))
-        database.cacheConfigDao().upsert(settings.toEntity(accountId))
-        enforceCacheLimits(accountId)
+        accountMutexes.getOrPut(accountId) { Mutex() }.withLock {
+            require(database.accountDao().account(accountId) != null)
+            require(settings.offlineMessageCount in CACHE_MESSAGE_PRESETS)
+            require(settings.attachmentCacheLimitMb in CACHE_ATTACHMENT_PRESETS)
+            require(settings.autoEvictReadOlderThanDays in setOf(30, 60, 90))
+            database.cacheConfigDao().upsert(settings.toEntity(accountId))
+            enforceCacheLimits(accountId)
+        }
     }
 
     override suspend fun enforceCacheLimits(accountId: String) {
@@ -303,6 +306,46 @@ class ImapMailRepository(
             synchronizeLocked(accountId)
         }
 
+    override suspend fun loadOlder(accountId: String): OlderMailResult = accountMutexes
+        .getOrPut(accountId) { Mutex() }.withLock {
+            val account = database.accountDao().account(accountId)
+                ?: return@withLock OlderMailResult.Failure(MailSyncError.Protocol)
+            val inboxId = "$accountId:INBOX"
+            val checkpoint = database.syncDao().checkpoint(inboxId)
+                ?: return@withLock OlderMailResult.Failure(MailSyncError.Protocol)
+            val settings = database.cacheConfigDao().get(accountId)?.toSettings() ?: MailCacheSettings()
+            try {
+                loadOlderInbox(
+                    inboxId, settings.offlineMessageCount, database.mailDao(),
+                    fetch = { low, limit ->
+                        credentialStore.withCredential(accountId) { password ->
+                            imapClient.fetchOlderInbox(account.email, password, low, checkpoint.uidValidity, limit)
+                        }
+                    },
+                    persist = { page ->
+                        persistInboxBatch(
+                            database.mailDao(), database.syncDao(), database.pendingMutationDao(), database.accountDao(),
+                            { block -> database.withTransaction { block() } }, clock, advanceCheckpoint = false, cacheCap = settings.offlineMessageCount,
+                            accountId = accountId, inboxId = inboxId, snapshot = page.snapshot,
+                            batch = page.snapshot.messages, isFinalBatch = true,
+                        )
+                    },
+                    enforceLimits = { enforceCacheLimits(accountId) },
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: ImapException.Authentication) {
+                OlderMailResult.Failure(MailSyncError.Authentication)
+            } catch (_: ImapException.Transport) {
+                OlderMailResult.Failure(MailSyncError.Network)
+            } catch (_: ImapException.UidValidityChanged) {
+                synchronizeLocked(accountId)
+                OlderMailResult.Failure(MailSyncError.Protocol)
+            } catch (_: ImapException.Protocol) {
+                OlderMailResult.Failure(MailSyncError.Protocol)
+            }
+        }
+
     private suspend fun applyMutationInternal(mutation: MailMutation) {
         val previousMembership = database.mailDao().membershipsForMessage(mutation.messageId)
             .firstOrNull { mutation.mailboxId == null || it.mailboxId == mutation.mailboxId }
@@ -402,6 +445,15 @@ class ImapMailRepository(
             } ?: return fail(accountId, MailSyncError.MissingCredential)
             val newMessages = persistSnapshot(accountId, snapshot)
             if (newMessages.isNotEmpty()) onNewMessages(newMessages.map { it.toListItem(accountId, snapshot.inbox.uidValidity) })
+            // Reconcile BEFORE flush: acknowledgements must not expose these cached
+            // messages to a server response obtained before their local intent was sent.
+            credentialStore.withCredential(accountId) { password ->
+                reconcileCachedInbox(
+                    accountId, snapshot.inbox.uidValidity, database.syncDao().checkpoint(inboxId)?.highestKnownUid ?: 0,
+                    database.mailDao(), database.pendingMutationDao(),
+                    { block -> database.withTransaction { block() } },
+                ) { uids -> imapClient.fetchFlagsAndLabels(account.email, password, uids.map { it..it }, snapshot.inbox.uidValidity) }
+            } ?: return fail(accountId, MailSyncError.MissingCredential)
             mutationExecutor.flush(accountId, account.email)
 
             // Prefetch recent message bodies (up to 12) so inbox list immediately displays rich previews
@@ -440,6 +492,9 @@ class ImapMailRepository(
             fail(accountId, MailSyncError.Authentication)
         } catch (_: ImapException.Transport) {
             fail(accountId, MailSyncError.Network)
+        } catch (_: ImapException.UidValidityChanged) {
+            // Next sync re-seeds the changed namespace using the existing recovery path.
+            fail(accountId, MailSyncError.Protocol)
         } catch (_: ImapException.Protocol) {
             fail(accountId, MailSyncError.Protocol)
         }
@@ -485,7 +540,9 @@ class ImapMailRepository(
         val existing = if (state?.baselineEstablished == true) database.mailDao().messageIds(ids).toSet() else emptySet()
         val inboxId = "$accountId:INBOX"
         snapshot.messages.chunked(BATCH_SIZE).forEachIndexed { index, batch ->
-            persistBatch(
+            persistInboxBatch(
+                mailDao = database.mailDao(), syncDao = database.syncDao(), mutationDao = database.pendingMutationDao(),
+                accountDao = database.accountDao(), inTransaction = { block -> database.withTransaction { block() } }, clock = clock,
                 accountId = accountId,
                 inboxId = inboxId,
                 snapshot = snapshot,
@@ -494,99 +551,14 @@ class ImapMailRepository(
             )
         }
         if (snapshot.messages.isEmpty()) {
-            persistBatch(accountId, inboxId, snapshot, emptyList(), isFinalBatch = true)
+            persistInboxBatch(
+                database.mailDao(), database.syncDao(), database.pendingMutationDao(), database.accountDao(),
+                { block -> database.withTransaction { block() } }, clock,
+                accountId = accountId, inboxId = inboxId, snapshot = snapshot, batch = emptyList(), isFinalBatch = true,
+            )
         }
         database.notificationStateDao().upsert(NotificationStateEntity(accountId, baselineEstablished = true))
         return if (state?.baselineEstablished == true) snapshot.messages.filterNot { it.canonicalId(accountId, snapshot.inbox.uidValidity) in existing } else emptyList()
-    }
-
-    private suspend fun persistBatch(
-        accountId: String,
-        inboxId: String,
-        snapshot: GmailInboxSnapshot,
-        batch: List<com.glassmail.core.model.ImapMessageMetadata>,
-        isFinalBatch: Boolean,
-    ) {
-        database.withTransaction {
-            val previousCheckpoint = database.syncDao().checkpoint(inboxId)
-            val mailboxes = snapshot.mailboxes.map { mailbox ->
-                MailboxEntity(
-                    mailboxId = "$accountId:${mailbox.name}",
-                    accountId = accountId,
-                    remoteName = mailbox.name,
-                    uidValidity = if (mailbox.name.equals("INBOX", true)) snapshot.inbox.uidValidity else 0,
-                    uidNext = if (mailbox.name.equals("INBOX", true)) snapshot.inbox.uidNext else 0,
-                    messageCount = if (mailbox.name.equals("INBOX", true)) snapshot.inbox.messageCount else 0,
-                )
-            }
-            database.mailDao().upsertMailboxes(mailboxes)
-            val batchIds = batch.map { it.canonicalId(accountId, snapshot.inbox.uidValidity) }
-            val existingBodies = if (batchIds.isNotEmpty()) {
-                database.mailDao().existingBodyStates(batchIds).associateBy { it.messageId }
-            } else {
-                emptyMap()
-            }
-            val messages = batch.map { message ->
-                val mId = message.canonicalId(accountId, snapshot.inbox.uidValidity)
-                val existing = existingBodies[mId]
-                MessageEntity(
-                    messageId = mId,
-                    accountId = accountId,
-                    gmailMessageId = message.gmailMessageId,
-                    gmailThreadId = message.gmailThreadId,
-                    subject = message.subject,
-                    sender = message.sender,
-                    sentAtEpochMillis = message.sentAtEpochMillis,
-                    sizeBytes = message.sizeBytes,
-                    category = message.resolveCategory(),
-                    preview = existing?.preview,
-                    body = existing?.body,
-                    contentKind = existing?.contentKind ?: "PLAIN",
-                    bodyDownloadState = existing?.bodyDownloadState ?: com.glassmail.core.database.DownloadState.NOT_FETCHED,
-                    listUnsubscribe = message.listUnsubscribe,
-                    listUnsubscribePost = message.listUnsubscribePost,
-                )
-            }
-            database.mailDao().upsertMessages(messages)
-            database.mailDao().upsertMailboxMessages(batch.map { message ->
-                val messageId = message.canonicalId(accountId, snapshot.inbox.uidValidity)
-                val resolvedFlags = reconcilePendingFlags(message.flags, database.pendingMutationDao().activeForMessage(messageId))
-                MailboxMessageEntity(
-                    mailboxId = inboxId,
-                    uid = message.uid,
-                    messageId = messageId,
-                    flags = resolvedFlags.sorted().joinToString(" "),
-                    labels = message.labels.sorted().joinToString("\u001F"),
-                )
-            })
-            database.mailDao().upsertLabels(batch.flatMap { message ->
-                message.labels.map { label ->
-                    MessageLabelEntity(message.canonicalId(accountId, snapshot.inbox.uidValidity), label)
-                }
-            })
-            database.syncDao().upsertCheckpoint(
-                SyncCheckpointEntity(
-                    mailboxId = inboxId,
-                    accountId = accountId,
-                    uidValidity = snapshot.inbox.uidValidity,
-                    // Persist the requested range boundary, rather than only returned messages.
-                    // IMAP UIDs are sparse; an empty range must still make durable progress.
-                    highestKnownUid = maxOf(
-                        previousCheckpoint?.highestKnownUid ?: 0,
-                        snapshot.requestedThroughUid,
-                        batch.maxOfOrNull { it.uid } ?: 0,
-                    ),
-                    syncGeneration = previousCheckpoint?.syncGeneration ?: 0,
-                    lastSuccessfulSyncEpochMillis = if (isFinalBatch) clock() else previousCheckpoint?.lastSuccessfulSyncEpochMillis,
-                ),
-            )
-            if (isFinalBatch) database.accountDao().markSyncSuccess(
-                accountId = accountId,
-                state = "IDLE",
-                gmailExtensionsEnabled = snapshot.supportsGmailExtensions,
-                timestamp = clock(),
-            )
-        }
     }
 
     private companion object {
@@ -617,7 +589,7 @@ class ImapMailRepository(
 private fun CacheConfigEntity.toSettings() = MailCacheSettings(offlineMessageCount, attachmentCacheLimitMb, autoEvictReadOlderThanDays, prefetchUnreadBodies)
 private fun MailCacheSettings.toEntity(accountId: String) = CacheConfigEntity(accountId, offlineMessageCount, attachmentCacheLimitMb, autoEvictReadOlderThanDays, prefetchUnreadBodies)
 
-private fun com.glassmail.core.model.ImapMessageMetadata.canonicalId(accountId: String, uidValidity: Long): String =
+internal fun com.glassmail.core.model.ImapMessageMetadata.canonicalId(accountId: String, uidValidity: Long): String =
     gmailMessageId?.let { "gmail:$accountId:$it" } ?: "imap:$accountId:$uidValidity:$uid"
 
 private fun com.glassmail.core.model.ImapMessageMetadata.toListItem(accountId: String, uidValidity: Long) = MailListItem(
@@ -682,7 +654,7 @@ private fun List<com.glassmail.core.database.MailboxMessageRow>.toThreadItems():
         }
         .sortedByDescending { it.sentAtEpochMillis ?: Long.MIN_VALUE }
 
-private fun com.glassmail.core.model.ImapMessageMetadata.resolveCategory(): String {
+internal fun com.glassmail.core.model.ImapMessageMetadata.resolveCategory(): String {
     labels.firstNotNullOfOrNull { label ->
         MailCategory.all.firstOrNull { label.equals("\\Category$it", ignoreCase = true) }
     }?.let { return it }
@@ -737,15 +709,3 @@ private fun fixtureMessage(index: Int): MessageEntity {
         preview = preview, body = if (html) "<p>$preview</p><p>Remote images are blocked in this local preview.</p>" else preview, contentKind = if (html) "HTML" else "PLAIN",
     )
 }
-
-private fun reconcilePendingFlags(serverFlags: Set<String>, mutations: List<PendingMutationEntity>): Set<String> =
-    mutations.fold(serverFlags) { flags, mutation ->
-        when (mutation.type) {
-            "MARK_READ" -> flags.withFlag("\\Seen", true)
-            "MARK_UNREAD" -> flags.withFlag("\\Seen", false)
-            "STAR" -> flags.withFlag("\\Flagged", true)
-            "UNSTAR" -> flags.withFlag("\\Flagged", false)
-            "DELETE" -> flags.withFlag("\\Deleted", true)
-            else -> flags
-        }
-    }

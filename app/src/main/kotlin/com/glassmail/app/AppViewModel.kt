@@ -20,6 +20,7 @@ import com.glassmail.domain.mail.MailMessage
 import com.glassmail.domain.mail.MailMutation
 import com.glassmail.domain.mail.MailCategory
 import com.glassmail.domain.mail.MailRepository
+import com.glassmail.domain.mail.OlderMailResult
 import com.glassmail.domain.mail.MailCacheSettings
 import com.glassmail.domain.mail.StorageQuota
 import com.glassmail.sync.AccountSyncScheduler
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID
@@ -113,6 +115,41 @@ class AppViewModel(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
+    private val _olderMail = MutableStateFlow<Map<String, OlderMailUiState>>(emptyMap())
+    val olderMail: StateFlow<Map<String, OlderMailUiState>> = _olderMail
+    private val invalidatedOlderMail = mutableSetOf<String>()
+
+    private fun invalidateOlderMail(accountId: String) {
+        if (_olderMail.value[accountId]?.isLoading == true) invalidatedOlderMail.add(accountId)
+        else _olderMail.value = _olderMail.value - accountId
+    }
+
+    private fun completeOlderMail(accountId: String, state: OlderMailUiState) {
+        val resolved = if (invalidatedOlderMail.remove(accountId)) OlderMailUiState() else state
+        _olderMail.value = _olderMail.value + (accountId to resolved)
+    }
+
+    fun loadOlder(accountId: String) = viewModelScope.launch {
+        if (_olderMail.value[accountId]?.isLoading == true) return@launch
+        val previous = _olderMail.value[accountId] ?: OlderMailUiState()
+        _olderMail.value = _olderMail.value + (accountId to previous.copy(isLoading = true, failed = false))
+        try {
+            val result = repository.loadOlder(accountId)
+            val state = when (result) {
+                is OlderMailResult.Success -> OlderMailUiState(
+                    hasMoreOlder = result.hasMoreOlder, cacheLimitReached = result.cacheLimitReached,
+                )
+                is OlderMailResult.Failure -> previous.copy(failed = true)
+            }
+            completeOlderMail(accountId, state)
+        } catch (error: CancellationException) {
+            completeOlderMail(accountId, previous)
+            throw error
+        } catch (_: Exception) {
+            completeOlderMail(accountId, previous.copy(failed = true))
+        }
+    }
+
     private val _undoableArchive = MutableStateFlow<UndoableArchive?>(null)
     val undoableArchive: StateFlow<UndoableArchive?> = _undoableArchive
 
@@ -199,7 +236,11 @@ class AppViewModel(
         _isRefreshing.value = true
         try {
             val selected = if (_appearance.value.unifiedInbox) accounts.value else listOfNotNull(accounts.value.firstOrNull { it.accountId == accountId.value })
-            selected.forEach { repository.synchronize(it.accountId) }
+            selected.forEach { account ->
+                val result = repository.synchronize(account.accountId)
+                // Membership changes or a namespace reset can make older mail available.
+                if (result is com.glassmail.core.model.MailSyncResult.Success) invalidateOlderMail(account.accountId)
+            }
         } finally {
             _isRefreshing.value = false
         }
@@ -228,7 +269,10 @@ class AppViewModel(
     }
 
     fun updateCacheSettings(update: (MailCacheSettings) -> MailCacheSettings) = viewModelScope.launch {
-        accountId.value?.let { repository.saveCacheSettings(it, update(cacheSettings.value)) }
+        accountId.value?.let {
+            repository.saveCacheSettings(it, update(cacheSettings.value))
+            invalidateOlderMail(it)
+        }
     }
 
     fun refreshStorageQuota() = viewModelScope.launch {
@@ -322,4 +366,12 @@ data class UndoableArchive(val actionId: String, val messageIds: List<String>)
 data class ReaderUiState(
     val selected: MailMessage? = null,
     val thread: List<MailMessage> = emptyList(),
+)
+
+/** Per-account transient request state; never stored in saved state or preferences. */
+data class OlderMailUiState(
+    val isLoading: Boolean = false,
+    val hasMoreOlder: Boolean = true,
+    val cacheLimitReached: Boolean = false,
+    val failed: Boolean = false,
 )

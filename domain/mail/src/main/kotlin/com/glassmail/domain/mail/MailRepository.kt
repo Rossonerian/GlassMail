@@ -1,6 +1,7 @@
 package com.glassmail.domain.mail
 
 import com.glassmail.core.model.MailSyncResult
+import com.glassmail.core.model.MailSyncError
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.combine
@@ -34,12 +35,18 @@ interface MailRepository {
     suspend fun createAccount(accountId: String, email: String, syncState: String = "READY")
     suspend fun removeAccount(accountId: String)
     suspend fun synchronize(accountId: String): MailSyncResult
+    suspend fun loadOlder(accountId: String): OlderMailResult = OlderMailResult.Failure(MailSyncError.Protocol)
     suspend fun applyMutation(mutation: MailMutation)
     suspend fun applyMutations(mutations: List<MailMutation>) { mutations.forEach { applyMutation(it) } }
     suspend fun undoPendingArchive(messageId: String): Boolean = false
     suspend fun seedDebugMailbox(count: Int)
     suspend fun clearDebugMailbox()
     suspend fun loadMessageBody(messageId: String): Result<MailMessage>
+}
+
+sealed interface OlderMailResult {
+    data class Success(val messageCount: Int, val hasMoreOlder: Boolean, val cacheLimitReached: Boolean = false) : OlderMailResult
+    data class Failure(val error: MailSyncError) : OlderMailResult
 }
 
 data class DownloadedAttachment(val filePath: String, val fileName: String, val mimeType: String)

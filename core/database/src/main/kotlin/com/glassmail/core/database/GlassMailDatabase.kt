@@ -306,6 +306,18 @@ interface MailDao {
     @Query("SELECT COUNT(*) FROM mailbox_messages WHERE mailboxId = :mailboxId")
     suspend fun countMailboxMessages(mailboxId: String): Int
 
+    @Query("SELECT * FROM mailbox_messages WHERE mailboxId = :mailboxId AND uid > :afterUid AND uid <= :throughUid ORDER BY uid LIMIT :limit")
+    suspend fun mailboxMembershipPage(mailboxId: String, afterUid: Long, throughUid: Long, limit: Int): List<MailboxMessageEntity>
+
+    @Query("SELECT MIN(uid) FROM mailbox_messages WHERE mailboxId = :mailboxId")
+    suspend fun lowestMailboxUid(mailboxId: String): Long?
+
+    @Query("DELETE FROM message_labels WHERE messageId = :messageId")
+    suspend fun clearMessageLabels(messageId: String)
+
+    @Query("UPDATE messages SET category = :category WHERE messageId = :messageId")
+    suspend fun updateCategory(messageId: String, category: String)
+
     @Query("SELECT messageCount FROM mailboxes WHERE mailboxId = :mailboxId")
     suspend fun inboxMessageCount(mailboxId: String): Int?
 
