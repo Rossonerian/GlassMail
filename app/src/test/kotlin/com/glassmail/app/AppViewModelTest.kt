@@ -76,15 +76,15 @@ class AppViewModelTest {
     }
 
     @Test
-    fun `removeAccount cancels sync and removes current account`() = runTest(testDispatcher) {
+    fun `removeAccount delegates all cleanup to repository entry point`() = runTest(testDispatcher) {
         advanceUntilIdle()
 
         viewModel.removeAccount()
         advanceUntilIdle()
 
-        verify(exactly = 1) { syncScheduler.cancel("account1") }
+        verify(exactly = 0) { syncScheduler.cancel(any()) }
         coVerify(exactly = 1) { repository.removeAccount("account1") }
-        verify(exactly = 1) { IdleServiceController.start(context) }
+        verify(exactly = 0) { IdleServiceController.start(any()) }
     }
 
     @Test

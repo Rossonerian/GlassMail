@@ -237,7 +237,7 @@ class GmailImapClient(
     /** Stay in IMAP IDLE for a bounded interval and return when the server ends it. */
     suspend fun idle(email: String, password: CharArray, onMailboxChanged: suspend () -> Unit) =
         withContext(Dispatchers.IO.limitedParallelism(1)) {
-            TlsImapConnection.open(host, port, connectTimeoutMillis, IDLE_WINDOW_MILLIS.toInt() + 60_000).use { connection ->
+            TlsImapConnection.withIdleConnection(host, port, connectTimeoutMillis, IDLE_WINDOW_MILLIS.toInt() + 60_000) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 client.login(email, password)
@@ -380,17 +380,48 @@ private class TlsImapConnection private constructor(private val socket: SSLSocke
         private const val MAX_LITERAL_BYTES = 8 * 1024 * 1024
 
         fun open(host: String, port: Int, connectTimeoutMillis: Int, readTimeoutMillis: Int): TlsImapConnection = try {
-            val socket = (SSLSocketFactory.getDefault().createSocket() as SSLSocket).apply {
-                sslParameters = SSLParameters().apply { endpointIdentificationAlgorithm = "HTTPS" }
-                connect(InetSocketAddress(host, port), connectTimeoutMillis)
-                soTimeout = readTimeoutMillis
-                startHandshake()
+            val socket = SSLSocketFactory.getDefault().createSocket() as SSLSocket
+            try {
+                initializeSocket(socket, host, port, connectTimeoutMillis, readTimeoutMillis)
+                TlsImapConnection(socket)
+            } catch (error: Exception) {
+                runCatching { socket.close() }
+                throw error
             }
-            TlsImapConnection(socket)
         } catch (error: ImapException) {
             throw error
         } catch (error: Exception) {
             throw ImapException.Transport(error)
+        }
+
+        suspend fun <T> withIdleConnection(
+            host: String,
+            port: Int,
+            connectTimeoutMillis: Int,
+            readTimeoutMillis: Int,
+            block: suspend (TlsImapConnection) -> T,
+        ): T {
+            val socket = SSLSocketFactory.getDefault().createSocket() as SSLSocket
+            return try {
+                socket.use {
+                    withConnectionCancellation(socket) {
+                        // Register before connecting/handshaking: these can also block.
+                        initializeSocket(socket, host, port, connectTimeoutMillis, readTimeoutMillis)
+                        block(TlsImapConnection(socket))
+                    }
+                }
+            } catch (error: IOException) {
+                coroutineContext.ensureActive()
+                throw ImapException.Transport(error)
+            }
+        }
+
+        private fun initializeSocket(socket: SSLSocket, host: String, port: Int, connectTimeoutMillis: Int, readTimeoutMillis: Int) {
+            socket.sslParameters = SSLParameters().apply { endpointIdentificationAlgorithm = "HTTPS" }
+            socket.keepAlive = true
+            socket.soTimeout = readTimeoutMillis
+            socket.connect(InetSocketAddress(host, port), connectTimeoutMillis)
+            socket.startHandshake()
         }
     }
 }

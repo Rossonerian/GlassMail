@@ -319,6 +319,7 @@ class AccountSetupViewModel(
     private suspend fun completeConnection(accountId: String) {
         when (val result = syncAccount(accountId)) {
             is MailSyncResult.Success -> {
+                com.glassmail.sync.IdleRuntime.allowAccount(accountId)
                 graph.syncScheduler.schedulePeriodic(accountId)
                 runCatching { com.glassmail.sync.IdleServiceController.start(graph.context) }
                 mutableState.value = AccountSetupUiState(

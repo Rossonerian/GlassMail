@@ -190,9 +190,7 @@ class AppViewModel(
 
     fun removeAccount() = viewModelScope.launch {
         accounts.value.firstOrNull { it.accountId == accountId.value }?.let {
-            syncScheduler.cancel(it.accountId)
             repository.removeAccount(it.accountId)
-            runCatching { com.glassmail.sync.IdleServiceController.start(context) }
         }
     }
 

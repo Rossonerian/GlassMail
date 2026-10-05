@@ -42,6 +42,9 @@ import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
@@ -58,6 +61,8 @@ class ImapMailRepository(
     private val attachmentRoot: File? = null,
     private val clock: () -> Long = System::currentTimeMillis,
     private val onNewMessages: suspend (List<MailListItem>) -> Unit = {},
+    private val onBeforeAccountRemoval: suspend (String, List<String>) -> Unit = { _, _ -> },
+    private val onAccountRemoved: suspend (String) -> Unit = {},
 ) : MailRepository, DraftRepository, AttachmentRepository {
     private val accountMutexes = ConcurrentHashMap<String, Mutex>()
     private val mutationExecutor = PendingMutationExecutor(database, credentialStore, imapClient)
@@ -204,28 +209,30 @@ class ImapMailRepository(
     }
 
     override suspend fun downloadAttachment(accountId: String, attachmentId: String): Result<DownloadedAttachment> = runCatching {
-        val root = attachmentRoot ?: error("Attachment storage is unavailable")
-        val account = database.accountDao().account(accountId) ?: error("Account is unavailable")
-        val attachment = database.mailDao().attachment(attachmentId) ?: error("Attachment is unavailable")
-        require(attachment.messageId.startsWith("gmail:$accountId:") || attachment.messageId.startsWith("imap:$accountId:")) { "Attachment does not belong to account" }
-        val membership = database.mailDao().membershipsForMessage(attachment.messageId).firstOrNull() ?: error("Mailbox mapping is unavailable")
-        database.mailDao().setAttachmentState(attachmentId, com.glassmail.core.database.DownloadState.FETCHING)
-        val payload = credentialStore.withCredential(accountId) { password ->
-            imapClient.fetchAttachment(account.email, password, membership.mailboxId.substringAfter(':', "INBOX"), membership.uid, attachment.partId)
-        } ?: error("Authentication required")
-        val safeName = sanitizeAttachmentName(attachment.fileName.orEmpty())
-        val accountDir = File(root, "attachments/$accountId").apply { mkdirs() }
-        val target = File(accountDir, "${attachmentId.hashCode().toUInt().toString(16)}-$safeName")
-        if (target.isFile && attachment.downloadState == com.glassmail.core.database.DownloadState.AVAILABLE) {
+        accountMutexes.getOrPut(accountId) { Mutex() }.withLock {
+            val root = attachmentRoot ?: error("Attachment storage is unavailable")
+            val account = database.accountDao().account(accountId) ?: error("Account is unavailable")
+            val attachment = database.mailDao().attachment(attachmentId) ?: error("Attachment is unavailable")
+            require(attachment.messageId.startsWith("gmail:$accountId:") || attachment.messageId.startsWith("imap:$accountId:")) { "Attachment does not belong to account" }
+            val membership = database.mailDao().membershipsForMessage(attachment.messageId).firstOrNull() ?: error("Mailbox mapping is unavailable")
+            database.mailDao().setAttachmentState(attachmentId, com.glassmail.core.database.DownloadState.FETCHING)
+            val payload = credentialStore.withCredential(accountId) { password ->
+                imapClient.fetchAttachment(account.email, password, membership.mailboxId.substringAfter(':', "INBOX"), membership.uid, attachment.partId)
+            } ?: error("Authentication required")
+            val safeName = sanitizeAttachmentName(attachment.fileName.orEmpty())
+            val accountDir = File(root, "attachments/$accountId").apply { mkdirs() }
+            val target = File(accountDir, "${attachmentId.hashCode().toUInt().toString(16)}-$safeName")
+            if (target.isFile && attachment.downloadState == com.glassmail.core.database.DownloadState.AVAILABLE) {
+                database.mailDao().markAttachmentAccessed(attachmentId, clock())
+                return@runCatching DownloadedAttachment(target.canonicalPath, safeName, attachment.mimeType ?: "application/octet-stream")
+            }
+            val temp = File(accountDir, ".${target.name}.part")
+            temp.outputStream().use { it.write(payload) }
+            check(temp.renameTo(target)) { "Could not store attachment" }
+            database.mailDao().setAttachmentState(attachmentId, com.glassmail.core.database.DownloadState.AVAILABLE)
             database.mailDao().markAttachmentAccessed(attachmentId, clock())
-            return@runCatching DownloadedAttachment(target.canonicalPath, safeName, attachment.mimeType ?: "application/octet-stream")
+            DownloadedAttachment(target.canonicalPath, safeName, attachment.mimeType ?: "application/octet-stream")
         }
-        val temp = File(accountDir, ".${target.name}.part")
-        temp.outputStream().use { it.write(payload) }
-        check(temp.renameTo(target)) { "Could not store attachment" }
-        database.mailDao().setAttachmentState(attachmentId, com.glassmail.core.database.DownloadState.AVAILABLE)
-        database.mailDao().markAttachmentAccessed(attachmentId, clock())
-        DownloadedAttachment(target.canonicalPath, safeName, attachment.mimeType ?: "application/octet-stream")
     }.onFailure { database.mailDao().setAttachmentState(attachmentId, com.glassmail.core.database.DownloadState.FAILED) }
 
     override suspend fun createAccount(accountId: String, email: String, syncState: String) {
@@ -241,11 +248,37 @@ class ImapMailRepository(
     }
 
     override suspend fun removeAccount(accountId: String) {
-        database.accountDao().deleteWithAccountData(accountId)
-        credentialStore.delete(accountId)
+        // Once removal starts, finish cleanup even if the initiating screen goes away.
+        withContext(NonCancellable + Dispatchers.IO) {
+            accountMutexes.getOrPut(accountId) { Mutex() }.withLock {
+                // Serialize with sync and attachment writes so they cannot recreate
+                // notifications or cached files after cleanup. Preserve draft IDs
+                // before their rows cascade away (workers are named by draft ID).
+                val draftIds = database.draftDao().observeDrafts(accountId).first().map { it.draftId }
+                onBeforeAccountRemoval(accountId, draftIds)
+                try {
+                    database.accountDao().deleteWithAccountData(accountId)
+                } finally {
+                    try {
+                        credentialStore.delete(accountId)
+                    } finally {
+                        try {
+                            attachmentRoot?.let { root ->
+                                val attachments = File(root, "attachments").canonicalFile
+                                val accountDir = File(attachments, accountId).canonicalFile
+                                require(accountDir.parentFile == attachments) { "Invalid attachment account path" }
+                                check(!accountDir.exists() || accountDir.deleteRecursively()) { "Could not delete account attachment cache" }
+                            }
+                        } finally {
+                            onAccountRemoved(accountId)
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    override suspend fun clearDebugMailbox() { database.accountDao().delete(DEBUG_ACCOUNT_ID) }
+    override suspend fun clearDebugMailbox() { removeAccount(DEBUG_ACCOUNT_ID) }
 
     override suspend fun seedDebugMailbox(count: Int) {
         require(count in setOf(10, 100, 1_000, 10_000))

@@ -51,17 +51,27 @@ class AppGraph(application: Application) {
     private val database = GlassMailDatabase.create(application)
     val credentialStore = AndroidKeystoreCredentialStore(application)
     private val imapClient = GmailImapClient()
+    val syncScheduler = AccountSyncScheduler(application)
     private val repositoryImpl = ImapMailRepository(
         database = database,
         credentialStore = credentialStore,
         imapClient = imapClient,
         attachmentRoot = java.io.File(application.filesDir, "mail-cache"),
         onNewMessages = notificationCoordinator::onNewMessages,
+        onBeforeAccountRemoval = { accountId, draftIds ->
+            syncScheduler.cancel(accountId)
+            draftIds.forEach { draftId ->
+                DelayedSendWorker.cancel(context, draftId)
+                RemoteDraftSyncWorker.cancel(context, draftId)
+            }
+            IdleRuntime.cancelAccount(accountId)
+            notificationCoordinator.cancelForAccount(accountId)
+        },
+        onAccountRemoved = { runCatching { com.glassmail.sync.IdleServiceController.start(context) }; Unit },
     )
     val mailRepository: MailRepository = repositoryImpl
     val draftRepository: DraftRepository = repositoryImpl
     val syncAccountUseCase = SyncAccountUseCase(mailRepository)
-    val syncScheduler = AccountSyncScheduler(application)
     val mailSender = GmailSmtpMailSender(object : SmtpCredentialProvider {
         override suspend fun <T> withCredential(accountId: String, block: suspend (CharArray) -> T): T? = credentialStore.withCredential(accountId, block)
     }, imapClient = imapClient)

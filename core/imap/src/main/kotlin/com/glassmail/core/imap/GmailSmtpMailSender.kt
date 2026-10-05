@@ -72,11 +72,13 @@ class GmailSmtpMailSender(
                             close()
                         }
                     }
-                    // SMTP has accepted the message at this point. Filing it is best-effort:
-                    // an APPEND failure must not prompt the user to resend a delivered message.
+                    // SMTP has accepted the message at this point. Filing is best-effort.
                     if (imapClient != null) {
-                        runCatching { imapClient.deleteRemoteDraft(account.email, password, mail.operationId) }
-                        runCatching { imapClient.appendSent(account.email, password, rawMessage) }
+                        fileAcceptedSmtpMessage(
+                            host,
+                            deleteDraft = { imapClient.deleteRemoteDraft(account.email, password, mail.operationId) },
+                            appendSent = { imapClient.appendSent(account.email, password, rawMessage) },
+                        )
                     }
                     coroutineContext.ensureActive()
                     SendMailResult.Sent
@@ -100,6 +102,19 @@ class GmailSmtpMailSender(
         const val MAX_ESTIMATED_MESSAGE_BYTES = 24L * 1024 * 1024
 
     }
+}
+
+/** Gmail SMTP already files Sent mail; other configurable SMTP hosts still need APPEND. */
+internal suspend fun fileAcceptedSmtpMessage(
+    host: String,
+    deleteDraft: suspend () -> Unit,
+    appendSent: suspend () -> Unit,
+) {
+    runCatching { deleteDraft() }
+    val normalizedHost = host.trimEnd('.').lowercase(java.util.Locale.ROOT)
+    val gmailHost = normalizedHost == "gmail.com" || normalizedHost.endsWith(".gmail.com") ||
+        normalizedHost == "googlemail.com" || normalizedHost.endsWith(".googlemail.com")
+    if (!gmailHost) runCatching { appendSent() }
 }
 
 /** Shared RFC 822 encoder for SMTP submission and IMAP draft synchronization. */
