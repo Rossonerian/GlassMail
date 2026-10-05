@@ -58,6 +58,7 @@ class AppGraph(application: Application) {
         imapClient = imapClient,
         attachmentRoot = java.io.File(application.filesDir, "mail-cache"),
         onNewMessages = notificationCoordinator::onNewMessages,
+        onMutationsQueued = syncScheduler::enqueueMutation,
         onBeforeAccountRemoval = { accountId, draftIds ->
             syncScheduler.cancel(accountId)
             draftIds.forEach { draftId ->
@@ -113,12 +114,12 @@ class AppGraph(application: Application) {
             override suspend fun idle(accountId: String) {
                 val account = mailRepository.observeAccounts().first().firstOrNull { it.accountId == accountId } ?: return
                 val connected = credentialStore.withCredential(accountId) { password ->
-                    imapClient.idle(account.email, password) { syncScheduler.enqueueManual(accountId) }
+                    imapClient.idle(account.email, password) { syncScheduler.enqueueMutation(accountId, com.glassmail.domain.mail.ARCHIVE_UNDO_MILLIS) }
                 }
                 if (connected == null) error("IMAP credentials are unavailable")
             }
 
-            override fun enqueueSync(accountId: String) = syncScheduler.enqueueManual(accountId)
+            override fun enqueueSync(accountId: String) = syncScheduler.enqueueMutation(accountId, com.glassmail.domain.mail.ARCHIVE_UNDO_MILLIS)
         })
     }
 }

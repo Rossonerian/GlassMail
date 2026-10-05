@@ -143,6 +143,17 @@ class GmailImapClient(
         }
     }
 
+    /** Resolve the complete Gmail conversation in the server's All Mail namespace. */
+    suspend fun applyThreadMutation(email: String, password: CharArray, gmailThreadId: String, type: String) =
+        withContext(Dispatchers.IO.limitedParallelism(1)) {
+            TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+                val client = ImapCommandClient(connection)
+                client.requireGreeting()
+                client.login(email, password)
+                client.applyThreadMutation(gmailThreadId, type)
+            }
+        }
+
     suspend fun fetchLatestInbox(email: String, password: CharArray, limit: Int = 50): GmailInboxSnapshot =
         withContext(Dispatchers.IO.limitedParallelism(1)) {
             coroutineContext.ensureActive()
@@ -335,11 +346,18 @@ internal fun applySelectedInboxMutations(
     operations.forEach(apply)
 }
 
-private class TlsImapConnection private constructor(private val socket: SSLSocket) : AutoCloseable {
+internal interface ImapCommandConnection {
+    fun readResponse(): ImapResponse
+    fun write(command: String)
+    fun writeLogin(tag: String, email: String, password: CharArray)
+    fun writeLiteral(bytes: ByteArray)
+}
+
+private class TlsImapConnection private constructor(private val socket: SSLSocket) : AutoCloseable, ImapCommandConnection {
     private val input = BufferedInputStream(socket.inputStream)
     private val output = BufferedOutputStream(socket.outputStream)
 
-    fun readResponse(): ImapResponse {
+    override fun readResponse(): ImapResponse {
         val literals = mutableListOf<ByteArray>()
         val assembled = StringBuilder()
         var line = readLine()
@@ -365,13 +383,13 @@ private class TlsImapConnection private constructor(private val socket: SSLSocke
         }
     }
 
-    fun write(command: String) {
+    override fun write(command: String) {
         require(!command.contains('\r') && !command.contains('\n')) { "Invalid IMAP command" }
         output.write((command + "\r\n").toByteArray(StandardCharsets.UTF_8))
         output.flush()
     }
 
-    fun writeLogin(tag: String, email: String, password: CharArray) {
+    override fun writeLogin(tag: String, email: String, password: CharArray) {
         require(email.none { it == '\r' || it == '\n' || it.code < 0x20 }) { "Invalid IMAP credential" }
         val prefix = "$tag LOGIN \"${email.replace("\\", "\\\\").replace("\"", "\\\"")}\" "
         output.write(prefix.toByteArray(StandardCharsets.UTF_8))
@@ -408,7 +426,7 @@ private class TlsImapConnection private constructor(private val socket: SSLSocke
         }
     }
 
-    fun writeLiteral(bytes: ByteArray) {
+    override fun writeLiteral(bytes: ByteArray) {
         output.write(bytes)
         output.write("\r\n".toByteArray(StandardCharsets.US_ASCII))
         output.flush()
@@ -508,7 +526,7 @@ private class TlsImapConnection private constructor(private val socket: SSLSocke
     }
 }
 
-private class ImapCommandClient(private val connection: TlsImapConnection) {
+internal class ImapCommandClient(private val connection: ImapCommandConnection) {
     private var commandNumber = 1
 
     fun requireGreeting() {
@@ -623,7 +641,8 @@ private class ImapCommandClient(private val connection: TlsImapConnection) {
                     is ImapResponse.Continuation -> Unit
                     is ImapResponse.Untagged -> {
                         val values = response.values
-                        if (values.getOrNull(1)?.atomValue()?.equals("EXISTS", ignoreCase = true) == true) onMailboxChanged()
+                        if (values.firstOrNull()?.atomValue()?.toLongOrNull() != null &&
+                            values.getOrNull(1)?.atomValue()?.uppercase() in setOf("EXISTS", "FETCH", "EXPUNGE")) onMailboxChanged()
                     }
                     is ImapResponse.Tagged -> if (response.tag == tag) {
                         if (response.status.equals("OK", ignoreCase = true)) return
@@ -732,6 +751,28 @@ private class ImapCommandClient(private val connection: TlsImapConnection) {
         val rawBytes = fields.firstNotNullOfOrNull { it.literalValue() }
             ?: throw ImapException.Protocol("Message body payload missing")
         return MimeDecoder.parseRfc822(rawBytes)
+    }
+
+    fun applyThreadMutation(gmailThreadId: String, type: String) {
+        if (!gmailThreadId.matches(Regex("[0-9]+"))) throw ImapException.Protocol("Invalid Gmail thread ID")
+        if (type !in setOf("ARCHIVE", "DELETE", "MARK_READ", "MARK_UNREAD", "STAR", "UNSTAR")) {
+            throw ImapException.Protocol("Unsupported conversation action")
+        }
+        val folders = listMailboxes()
+        val allMail = folders.firstOrNull { box -> box.attributes.any { it.equals("\\All", true) } }?.name
+            ?: listOf("[Gmail]/All Mail", "[Google Mail]/All Mail").firstOrNull { name -> folders.any { it.name.equals(name, true) } }
+            ?: throw ImapException.Protocol("Server did not advertise All Mail")
+        selectMailbox(allMail)
+        val search = execute("UID SEARCH X-GM-THRID $gmailThreadId")
+            .filterIsInstance<ImapResponse.Untagged>()
+            .firstOrNull { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
+            ?: throw ImapException.Protocol("Missing thread SEARCH response")
+        val uids = search.values.drop(1).map { value ->
+            value.atomValue()?.toLongOrNull()?.takeIf { it > 0 }
+                ?: throw ImapException.Protocol("Invalid thread SEARCH UID")
+        }.distinct()
+        // Commands are idempotent; a retry safely resolves UIDs again after transport loss.
+        uids.forEach { uid -> applyMutation(ImapMutation(uid, type)) }
     }
 
     fun applyMutation(mutation: ImapMutation) {

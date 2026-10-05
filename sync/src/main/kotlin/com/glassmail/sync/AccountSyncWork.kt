@@ -154,14 +154,14 @@ class ImapIdleService : Service() {
 
     private fun foregroundNotification(): Notification =
         if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
-            .setContentTitle("GlassMail is keeping mail up to date")
+            .setSmallIcon(R.drawable.ic_stat_glerio)
+            .setContentTitle("glerio is keeping mail up to date")
             .setContentText("Secure mailbox connection is active")
             .setOngoing(true)
             .build()
         else @Suppress("DEPRECATION") Notification.Builder(this)
-            .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
-            .setContentTitle("GlassMail is keeping mail up to date")
+            .setSmallIcon(R.drawable.ic_stat_glerio)
+            .setContentTitle("glerio is keeping mail up to date")
             .setOngoing(true)
             .build()
 
@@ -232,6 +232,17 @@ class AccountSyncScheduler(context: Context) {
 
     fun enqueueStartup(accountId: String) = enqueueUnique(accountId, "startup")
 
+    /** Replace the debounce timer so bursts of local actions produce one prompt flush. */
+    fun enqueueMutation(accountId: String, delayMillis: Long) {
+        val request = OneTimeWorkRequestBuilder<AccountSyncWorker>()
+            .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+            .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .setInputData(workDataOf(AccountSyncWorker.KEY_ACCOUNT_ID to accountId, "source" to "mutation"))
+            .build()
+        workManager.enqueueUniqueWork(mutationName(accountId), ExistingWorkPolicy.REPLACE, request)
+    }
+
     fun schedulePeriodic(accountId: String) {
         val request = PeriodicWorkRequestBuilder<AccountSyncWorker>(15, TimeUnit.MINUTES)
             .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -248,6 +259,7 @@ class AccountSyncScheduler(context: Context) {
 
     fun cancel(accountId: String) {
         workManager.cancelUniqueWork(oneTimeName(accountId))
+        workManager.cancelUniqueWork(mutationName(accountId))
         workManager.cancelUniqueWork(periodicName(accountId))
         workManager.cancelUniqueWork(cacheName(accountId))
     }
@@ -261,6 +273,7 @@ class AccountSyncScheduler(context: Context) {
         workManager.enqueueUniqueWork(oneTimeName(accountId), ExistingWorkPolicy.KEEP, request)
     }
 
+    private fun mutationName(accountId: String) = "glassmail.account.$accountId.mutation-sync"
     private fun oneTimeName(accountId: String) = "glassmail.account.$accountId.sync"
     private fun periodicName(accountId: String) = "glassmail.account.$accountId.periodic-sync"
     private fun cacheName(accountId: String) = "glassmail.account.$accountId.cache-eviction"

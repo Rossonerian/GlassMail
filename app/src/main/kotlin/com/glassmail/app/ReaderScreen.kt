@@ -115,7 +115,10 @@ fun ReaderScreen(
     var expandedMessageKeys by rememberSaveable(id) { mutableStateOf("") }
     val expandedMessageIds = remember(expandedMessageKeys) { expandedMessageKeys.split('\n').filter(String::isNotBlank).toSet() }
     LaunchedEffect(messages.lastOrNull()?.messageId) {
-        if (expandedMessageKeys.isBlank()) messages.lastOrNull()?.messageId?.let { expandedMessageKeys = it }
+        if (expandedMessageKeys.isBlank()) messages.lastOrNull()?.messageId?.let {
+            expandedMessageKeys = it
+            if (it != id) vm.openReaderMessage(it)
+        }
     }
     val participantCount = remember(messages) { messages.map { it.sender.lowercase() }.distinct().size.coerceAtLeast(1) }
     val collapsed by remember {
@@ -161,8 +164,7 @@ fun ReaderScreen(
                         }
                         DropdownMenu(expanded = threadActionsOpen, onDismissRequest = { threadActionsOpen = false }) {
                             DropdownMenuItem(text = { Text("Archive conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "archive") })
-                            DropdownMenuItem(text = { Text("Mute conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "archive") })
-                            DropdownMenuItem(text = { Text(if (messages.any { it.starred }) "Unstar conversation" else "Star conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "star") })
+                            DropdownMenuItem(text = { Text(if (messages.any { it.starred }) "Unstar conversation" else "Star conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "star", desiredStarred = !messages.any { it.starred }) })
                             DropdownMenuItem(text = { Text("Delete conversation", color = MaterialTheme.colorScheme.error) }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "delete") })
                             DropdownMenuItem(text = { Text("Command palette") }, onClick = { threadActionsOpen = false; openPalette() })
                         }
@@ -260,7 +262,7 @@ fun ReaderScreen(
                                 indication = null,
                             ) {
                                 expandedMessageKeys = (if (expanded) expandedMessageIds - item.messageId else expandedMessageIds + item.messageId).joinToString("\n")
-                                if (!expanded && item.body == null) vm.loadMessageBody(item.messageId)
+                                if (!expanded) vm.openReaderMessage(item.messageId)
                             }
                             .padding(vertical = GlassSpacing.xs),
                         verticalAlignment = Alignment.CenterVertically,

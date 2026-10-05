@@ -98,6 +98,7 @@ fun InboxScreen(
     val state by vm.inboxUiState.collectAsStateWithLifecycle()
     val searchState by vm.searchUiState.collectAsStateWithLifecycle()
     val undoableArchive by vm.undoableArchive.collectAsStateWithLifecycle()
+    val failedMutations by vm.failedMutations.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val refreshing by vm.isRefreshing.collectAsStateWithLifecycle()
     val olderMail by vm.olderMail.collectAsStateWithLifecycle()
@@ -222,6 +223,22 @@ fun InboxScreen(
                         }
                     },
                 )
+
+                if (failedMutations.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = GlassSpacing.base),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "${failedMutations.values.sum()} action(s) couldn't be applied",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        androidx.compose.material3.TextButton(onClick = { vm.retryFailedActions(failedMutations.keys.toList()) }) { Text("Retry") }
+                        androidx.compose.material3.TextButton(onClick = { vm.dismissFailedActions(failedMutations.keys.toList()) }) { Text("Dismiss") }
+                    }
+                }
 
                 if (searchExpanded) {
                     TextField(

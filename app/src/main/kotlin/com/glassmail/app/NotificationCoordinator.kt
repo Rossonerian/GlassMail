@@ -29,9 +29,9 @@ class NotificationCoordinator(private val context: Context, private val preferen
             val pending = PendingIntent.getActivity(context, stableId(message.messageId), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val previews = preferences.read().showNotificationPreviews
             NotificationManagerCompat.from(context).notify(accountTag(accountId), stableId(message.messageId), NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_dialog_email)
+                .setSmallIcon(R.drawable.ic_stat_glerio)
                 .setContentTitle(if (previews) message.sender else "New email")
-                .setContentText(if (previews) message.subject.ifBlank { message.preview.take(80) } else "Open GlassMail to view it")
+                .setContentText(if (previews) message.subject.ifBlank { message.preview.take(80) } else "Open glerio to view it")
                 .setContentIntent(pending).setAutoCancel(true).setGroup(accountTag(accountId))
                 .addExtras(Bundle().apply { putString(EXTRA_ACCOUNT_ID, accountId) })
                 .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).build())

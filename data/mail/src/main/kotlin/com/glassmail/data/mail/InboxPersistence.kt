@@ -29,7 +29,9 @@ internal suspend fun persistInboxBatch(
         // Overlay those intents; never recreate optimistic archive/delete membership.
         val pending = batch.associate { message ->
             val id = message.canonicalId(accountId, snapshot.inbox.uidValidity)
-            id to mutationDao.activeForMessage(id)
+            id to (mutationDao.activeForMessage(id) +
+                (message.gmailThreadId?.let { mutationDao.activeForThread(accountId, it) }.orEmpty()))
+                .distinctBy { it.mutationId }
         }
         val eligible = batch.filter { message ->
             pending[message.canonicalId(accountId, snapshot.inbox.uidValidity)].orEmpty()
@@ -137,7 +139,7 @@ internal fun reconcilePendingFlags(serverFlags: Set<String>, mutations: List<Pen
         }
     }
 
-private fun reconcilePendingLabels(serverLabels: Set<String>, mutations: List<PendingMutationEntity>): Set<String> =
+internal fun reconcilePendingLabels(serverLabels: Set<String>, mutations: List<PendingMutationEntity>): Set<String> =
     mutations.fold(serverLabels) { labels, mutation ->
         val label = mutation.payload
         when {

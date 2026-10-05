@@ -452,22 +452,55 @@ interface PendingMutationDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(mutation: PendingMutationEntity)
 
-    @Query("SELECT * FROM pending_mutations WHERE accountId = :accountId AND state IN ('PENDING', 'IN_FLIGHT') ORDER BY createdAtEpochMillis, mutationId")
+    @Query("SELECT * FROM pending_mutations WHERE accountId = :accountId AND state IN ('PENDING', 'IN_FLIGHT', 'FAILED_PERMANENT') ORDER BY createdAtEpochMillis, rowid")
     suspend fun activeForAccount(accountId: String): List<PendingMutationEntity>
 
-    @Query("SELECT * FROM pending_mutations WHERE messageId = :messageId AND state IN ('PENDING', 'IN_FLIGHT') ORDER BY createdAtEpochMillis, mutationId")
+    @Query("SELECT * FROM pending_mutations WHERE (messageId = :messageId OR (accountId = (SELECT accountId FROM messages WHERE messageId = :messageId) AND type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND (payload = 'gmail-thread:' || (SELECT gmailThreadId FROM messages WHERE messageId = :messageId) OR payload LIKE 'gmail-thread:' || (SELECT gmailThreadId FROM messages WHERE messageId = :messageId) || ':%'))) AND state IN ('PENDING', 'IN_FLIGHT', 'FAILED_PERMANENT') ORDER BY createdAtEpochMillis, rowid")
     suspend fun activeForMessage(messageId: String): List<PendingMutationEntity>
 
-    @Query("UPDATE pending_mutations SET targetUid = NULL WHERE accountId = :accountId AND state IN ('PENDING', 'IN_FLIGHT')")
+    @Query("SELECT * FROM pending_mutations WHERE accountId = :accountId AND type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND (payload = 'gmail-thread:' || :threadId OR payload LIKE 'gmail-thread:' || :threadId || ':%') AND state IN ('PENDING', 'IN_FLIGHT', 'FAILED_PERMANENT') ORDER BY createdAtEpochMillis, rowid")
+    suspend fun activeForThread(accountId: String, threadId: String): List<PendingMutationEntity>
+
+    @Query("UPDATE pending_mutations SET targetUid = NULL WHERE accountId = :accountId AND state IN ('PENDING', 'IN_FLIGHT', 'FAILED_PERMANENT')")
     suspend fun clearActiveTargetUids(accountId: String)
 
     @Query("UPDATE pending_mutations SET state = :state, retryCount = :retryCount, lastErrorCode = :errorCode WHERE mutationId = :mutationId")
     suspend fun updateState(mutationId: String, state: String, retryCount: Int, errorCode: String?)
 
+    @Query("UPDATE pending_mutations SET state = 'IN_FLIGHT', lastErrorCode = NULL WHERE mutationId = :mutationId AND state = 'PENDING'")
+    suspend fun claim(mutationId: String): Int
+
+    @Query("UPDATE pending_mutations SET state = 'IN_FLIGHT', lastErrorCode = NULL WHERE payload = :payload AND type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND state = 'PENDING'")
+    suspend fun claimThreadAction(payload: String): Int
+
+    @Query("UPDATE pending_mutations SET state = :state, retryCount = :retryCount, lastErrorCode = :errorCode WHERE payload = :payload AND type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND state = 'IN_FLIGHT'")
+    suspend fun updateThreadActionState(payload: String, state: String, retryCount: Int, errorCode: String?)
+
+    @Query("DELETE FROM pending_mutations WHERE payload = :payload AND type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND state = 'IN_FLIGHT'")
+    suspend fun deleteThreadAction(payload: String)
+
+    @Query("UPDATE pending_mutations SET state = 'PENDING' WHERE accountId = :accountId AND state = 'IN_FLIGHT'")
+    suspend fun recoverInFlight(accountId: String)
+
+    @Query("SELECT COUNT(DISTINCT CASE WHEN type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND payload LIKE 'gmail-thread:%' THEN payload ELSE mutationId END) FROM pending_mutations WHERE accountId = :accountId AND state = 'FAILED_PERMANENT'")
+    fun observeFailedCount(accountId: String): Flow<Int>
+
+    @Query("SELECT * FROM pending_mutations WHERE accountId = :accountId AND state = 'FAILED_PERMANENT' ORDER BY createdAtEpochMillis, rowid")
+    suspend fun failedForAccount(accountId: String): List<PendingMutationEntity>
+
+    @Query("UPDATE pending_mutations SET state = 'PENDING', lastErrorCode = NULL WHERE accountId = :accountId AND state = 'FAILED_PERMANENT'")
+    suspend fun retryFailed(accountId: String)
+
+    @Query("DELETE FROM pending_mutations WHERE accountId = :accountId AND state = 'FAILED_PERMANENT'")
+    suspend fun deleteFailed(accountId: String)
+
+    @Query("DELETE FROM pending_mutations WHERE mutationId = :mutationId AND state = 'PENDING'")
+    suspend fun deletePending(mutationId: String): Int
+
     @Query("DELETE FROM pending_mutations WHERE mutationId = :mutationId")
     suspend fun delete(mutationId: String)
 
-    @Query("SELECT * FROM pending_mutations WHERE messageId = :messageId AND type = 'ARCHIVE' AND state = 'PENDING' ORDER BY createdAtEpochMillis DESC LIMIT 1")
+    @Query("SELECT * FROM pending_mutations WHERE messageId = :messageId AND type = 'ARCHIVE' AND state = 'PENDING' ORDER BY createdAtEpochMillis DESC, rowid DESC LIMIT 1")
     suspend fun undoableArchive(messageId: String): PendingMutationEntity?
 }
 

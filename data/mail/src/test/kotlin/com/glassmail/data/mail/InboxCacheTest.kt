@@ -59,6 +59,7 @@ class InboxCacheTest {
         coEvery { mail.lowestMailboxUid(any()) } coAnswers { memberships.values.filter { it.mailboxId == firstArg<String>() }.minOfOrNull { it.uid } }
         coEvery { mail.countMailboxMessages(any()) } coAnswers { memberships.values.count { it.mailboxId == firstArg<String>() } }
         coEvery { mail.membershipsForMessage(any()) } coAnswers { memberships.values.filter { it.messageId == firstArg<String>() } }
+        coEvery { mutations.activeForThread(any(), any()) } returns emptyList()
         coEvery { mutations.activeForMessage(any()) } coAnswers { pending[firstArg<String>()].orEmpty() }
         coEvery { mail.removeMailboxMembership(any(), any()) } coAnswers {
             assertTrue(transactionActive)
@@ -246,6 +247,24 @@ class InboxCacheTest {
         persist(page(listOf(remote(10), remote(20))))
         assertTrue(memberships.isEmpty())
         assertTrue(messages.isEmpty())
+    }
+
+
+    @Test fun `newly fetched uncached member cannot resurrect a pending archived conversation`() = runTest {
+        coEvery { mutations.activeForThread("a", "123") } returns listOf(mutation(10, "ARCHIVE", "gmail-thread:123"))
+        persist(page(listOf(remote(99).copy(gmailThreadId = "123"))))
+        assertTrue(memberships.isEmpty())
+        assertTrue(messages.isEmpty())
+    }
+
+    @Test fun `newly fetched thread member overlays pending unread and unstar intent`() = runTest {
+        coEvery { mutations.activeForThread("a", "123") } returns listOf(
+            mutation(10, "MARK_UNREAD", "gmail-thread:123"), mutation(10, "UNSTAR", "gmail-thread:123"),
+        )
+        persist(page(listOf(remote(99, setOf("\\Seen", "\\Flagged"), setOf("Project Alpha", "Work")).copy(gmailThreadId = "123"))))
+        assertEquals("", memberships[99]?.flags)
+        assertEquals(listOf("Project Alpha", "Work"), memberships[99]!!.labels.toLabels())
+        assertEquals(setOf("Project Alpha", "Work"), labels["gmail:a:99"])
     }
 
     private suspend fun reconcile(fetch: suspend (List<Long>) -> List<ImapMessageMetadata>) =

@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -65,6 +66,7 @@ fun MailRow(
     vm: AppViewModel,
     modifier: Modifier = Modifier,
 ) {
+    val currentRow by rememberUpdatedState(row)
     var menuOpen by remember(row.messageId) { mutableStateOf(false) }
     val appearance by vm.appearance.collectAsStateWithLifecycle()
     val timestamp = remember(row.sentAtEpochMillis) { timeLabel(row.sentAtEpochMillis) }
@@ -100,7 +102,7 @@ fun MailRow(
                                 distance >= shortThreshold -> appearance.shortSwipeRight
                                 else -> null
                             }
-                            action?.let { vm.mutation(row, it.asMutationType()) }
+                            action?.let { vm.mutation(currentRow, it.asMutationType()) }
                         },
                         onDragCancel = { horizontalDistance = 0f },
                     )
@@ -160,7 +162,7 @@ fun MailRow(
                     )
                 }
 
-                val visibleLabel = row.labels.firstOrNull { !it.equals("INBOX", ignoreCase = true) }
+                val visibleLabel = row.labels.firstOrNull { isUserLabelChip(it) }
                 if (visibleLabel != null || row.hasAttachment) {
                     Row(
                         modifier = Modifier.padding(top = 4.dp),
@@ -284,6 +286,8 @@ fun MailRow(
         }
     }
 }
+
+internal fun isUserLabelChip(label: String): Boolean = !label.startsWith("\\") && !label.equals("INBOX", ignoreCase = true)
 
 private fun SwipeAction.asMutationType(): String = when (this) {
     SwipeAction.MARK_READ -> "read"

@@ -7,6 +7,9 @@ import com.glassmail.core.security.CredentialStore
 import com.glassmail.domain.mail.DraftRepository
 import com.glassmail.domain.mail.MailAccount
 import com.glassmail.domain.mail.MailListItem
+import com.glassmail.domain.mail.MailMessage
+import com.glassmail.domain.mail.MailMutation
+import kotlinx.coroutines.flow.flowOf
 import com.glassmail.domain.mail.OlderMailResult
 import com.glassmail.domain.mail.MailRepository
 import com.glassmail.sync.AccountSyncScheduler
@@ -59,6 +62,7 @@ class AppViewModelTest {
         every { IdleServiceController.start(any()) } returns Unit
         every { appearancePreferences.read() } returns AppearanceSettings(selectedAccountId = "account1")
         every { repository.observeAccounts() } returns accountsFlow
+        coEvery { repository.loadMessageBody(any()) } returns Result.failure(IllegalStateException("offline"))
         viewModel = AppViewModel(
             context = context,
             repository = repository,
@@ -207,4 +211,82 @@ class AppViewModelTest {
         assertArrayEquals(charArrayOf('p', 'a', 's', 's'), storedCredential)
         assertArrayEquals(CharArray(4), password)
     }
+    @Test fun `inbox archive submits every cached member once atomically with remote thread identity`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        val submitted = mutableListOf<List<MailMutation>>()
+        coEvery { repository.applyMutations(any()) } coAnswers { submitted.add(firstArg()) }
+        val item = MailListItem("gmail:account1:1", "123", "sender", "subject", "", 1, true, true, emptyList(), false,
+            threadMessageIds = listOf("gmail:account1:1", "gmail:account1:2", "gmail:account1:1"))
+        viewModel.mutation(item, "archive").join()
+        assertEquals(1, submitted.size)
+        assertEquals(listOf(
+            MailMutation.Archive("account1", "gmail:account1:1", "account1:INBOX", "123"),
+            MailMutation.Archive("account1", "gmail:account1:2", "account1:INBOX", "123"),
+        ), submitted.single())
+        assertEquals(listOf("gmail:account1:1", "gmail:account1:2"), viewModel.undoableArchive.value?.messageIds)
+        coVerify(exactly = 0) { repository.applyMutation(any()) }
+    }
+
+    @Test fun `mixed starred reader conversation unstars all members using the displayed aggregate`() = runTest(testDispatcher) {
+        val first = MailMessage("gmail:account1:1", "123", "s", "subject", "", "cached", false, 1, false, true, emptyList())
+        val second = first.copy(messageId = "gmail:account1:2", starred = false)
+        every { repository.observeMessage(first.messageId) } returns flowOf(first)
+        every { repository.observeThread(first.messageId) } returns flowOf(listOf(first, second))
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.readerUiState.collect() }
+        viewModel.selectReaderMessage(first.messageId)
+        runCurrent()
+        val submitted = mutableListOf<List<MailMutation>>()
+        coEvery { repository.applyMutations(any()) } coAnswers { submitted.add(firstArg()) }
+        viewModel.threadMutation(listOf(first.messageId, second.messageId), "star").join()
+        assertEquals(listOf(
+            MailMutation.Star("account1", first.messageId, "account1:INBOX", false, "123"),
+            MailMutation.Star("account1", second.messageId, "account1:INBOX", false, "123"),
+        ), submitted.single())
+    }
+
+    @Test fun `opening unread cached message enqueues offline read but background body fetch does not`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        val message = MailMessage("gmail:account1:1", "123", "s", "subject", "", "cached", false, 1, true, false, emptyList())
+        val current = MutableStateFlow(message)
+        every { repository.observeMessage(message.messageId) } returns current
+        val sent = mutableListOf<MailMutation>()
+        coEvery { repository.applyMutation(any()) } coAnswers {
+            sent.add(firstArg())
+            current.value = current.value.copy(unread = false)
+        }
+        viewModel.loadMessageBody(message.messageId).join()
+        assertEquals(emptyList<MailMutation>(), sent)
+        viewModel.selectReaderMessage(message.messageId)
+        runCurrent()
+        assertEquals(listOf(MailMutation.MarkRead("account1", message.messageId, null, true)), sent)
+        viewModel.openReaderMessage(message.messageId)
+        runCurrent()
+        assertEquals(1, sent.size)
+    }
+
+    @Test fun `failed actions flow follows selected account and unified view`() = runTest(testDispatcher) {
+        val a = MutableStateFlow(2)
+        val b = MutableStateFlow(1)
+        every { repository.observeFailedMutationCount("account1") } returns a
+        every { repository.observeFailedMutationCount("account2") } returns b
+        accountsFlow.value = accountsFlow.value + MailAccount("account2", "other@example.com", "READY")
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.failedMutations.collect() }
+        runCurrent()
+        assertEquals(mapOf("account1" to 2), viewModel.failedMutations.value)
+        viewModel.selectAccount("account2")
+        runCurrent()
+        assertEquals(mapOf("account2" to 1), viewModel.failedMutations.value)
+        viewModel.setUnifiedInbox(true)
+        runCurrent()
+        assertEquals(mapOf("account1" to 2, "account2" to 1), viewModel.failedMutations.value)
+        a.value = 0
+        runCurrent()
+        assertEquals(mapOf("account2" to 1), viewModel.failedMutations.value)
+    }
+
+    @Test fun `system labels are skipped while user labels with spaces remain visible`() {
+        val labels = listOf("\\Important", "\\Inbox", "\\Seen", "\\Flagged", "\\Sent", "\\Draft", "Project Alpha", "Work")
+        assertEquals("Project Alpha", labels.firstOrNull(::isUserLabelChip))
+    }
+
 }

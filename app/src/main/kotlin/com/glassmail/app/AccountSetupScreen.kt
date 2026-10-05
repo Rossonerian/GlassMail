@@ -91,13 +91,13 @@ fun AccountSetupRoute(graph: AppGraph, onConnected: () -> Unit = {}) {
         ) {
             Spacer(Modifier.height(GlassSpacing.md))
             Icon(
-                Icons.Outlined.MarkEmailUnread,
-                contentDescription = null,
+                painter = androidx.compose.ui.res.painterResource(R.drawable.glerio_logo),
+                contentDescription = "glerio logo",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(64.dp),
             )
             Text(
-                "GlassMail",
+                "glerio",
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -264,6 +264,7 @@ class AccountSetupViewModel(
     val state: StateFlow<AccountSetupUiState> = mutableState.asStateFlow()
     private var pendingAccountId: String? = null
     private var pendingEmail: String? = null
+    private var createdByAttempt = false
 
     fun connect(email: String, credential: CharArray) {
         viewModelScope.launch {
@@ -275,9 +276,10 @@ class AccountSetupViewModel(
                 mutableState.value = AccountSetupUiState(message = "The free version supports up to two accounts.")
                 return@launch
             }
+            val ownsAttemptAccount = existingAccount == null || (existingAccount.accountId == pendingAccountId && createdByAttempt)
             val previousPendingId = pendingAccountId
             if (previousPendingId != null && !pendingEmail.equals(normalizedEmail, ignoreCase = true)) {
-                graph.mailRepository.removeAccount(previousPendingId)
+                if (createdByAttempt) graph.mailRepository.removeAccount(previousPendingId)
                 pendingAccountId = null
                 pendingEmail = null
             }
@@ -286,9 +288,12 @@ class AccountSetupViewModel(
                     pendingAccountId = it
                     pendingEmail = normalizedEmail
                 }
+            createdByAttempt = ownsAttemptAccount
+            pendingAccountId = accountId
+            pendingEmail = normalizedEmail
             mutableState.value = AccountSetupUiState(isWorking = true, message = "Connecting securely…")
             try {
-                graph.mailRepository.createAccount(accountId, normalizedEmail, syncState = "CONNECTING")
+                if (existingAccount == null) graph.mailRepository.createAccount(accountId, normalizedEmail, syncState = "CONNECTING")
                 graph.credentialStore.store(accountId, credential)
                 completeConnection(accountId)
             } catch (error: CancellationException) {
@@ -333,7 +338,7 @@ class AccountSetupViewModel(
             }
             is MailSyncResult.Failure -> {
                 if (result.error == com.glassmail.core.model.MailSyncError.Authentication) {
-                    graph.mailRepository.removeAccount(accountId)
+                    if (createdByAttempt) graph.mailRepository.removeAccount(accountId)
                     pendingAccountId = null
                     pendingEmail = null
                     mutableState.value = AccountSetupUiState(message = result.error.toUserMessage())

@@ -148,14 +148,15 @@ class ArchiveUndoUidValidityTest {
         coEvery { sync.checkpoint("a:INBOX") } returns SyncCheckpointEntity("a:INBOX", "a", 11, 500, 0, null)
         coEvery { mail.mailboxUidValidity("a:INBOX") } returns 11
         coEvery { mail.upsertMailboxMessages(any()) } returns Unit
-        coEvery { mutations.delete("archive") } returns Unit
+        coEvery { mutations.deletePending("archive") } returns 1
+        coEvery { mutations.activeForMessage(any()) } returns emptyList()
     }
 
     @Test fun `matching local namespace restores captured archive membership`() = runTest {
         assertTrue(undoArchiveInCurrentNamespace(archive.messageId, mail, sync, mutations))
         coVerify(exactly = 1) {
             mail.upsertMailboxMessages(listOf(MailboxMessageEntity("a:INBOX", 7, archive.messageId, "\\Seen", "\\Inbox")))
-            mutations.delete("archive")
+            mutations.deletePending("archive")
         }
     }
 
@@ -183,8 +184,23 @@ class ArchiveUndoUidValidityTest {
         verifyNoRestore()
     }
 
+
+    @Test fun `an executor claim prevents Undo from recreating a membership`() = runTest {
+        coEvery { mutations.deletePending("archive") } returns 0
+        assertFalse(undoArchiveInCurrentNamespace(archive.messageId, mail, sync, mutations))
+        coVerify(exactly = 0) { mail.upsertMailboxMessages(any()) }
+    }
+
+    @Test fun `Undo restores membership with newer local unread and star intent`() = runTest {
+        coEvery { mutations.activeForMessage(archive.messageId) } returns listOf(
+            archive.copy(mutationId = "read", type = "MARK_UNREAD"), archive.copy(mutationId = "star", type = "STAR"),
+        )
+        assertTrue(undoArchiveInCurrentNamespace(archive.messageId, mail, sync, mutations))
+        coVerify { mail.upsertMailboxMessages(listOf(MailboxMessageEntity("a:INBOX", 7, archive.messageId, "\\Flagged", "\\Inbox"))) }
+    }
+
     private fun verifyNoRestore() {
         coVerify(exactly = 0) { mail.upsertMailboxMessages(any()) }
-        coVerify(exactly = 0) { mutations.delete(any()) }
+        coVerify(exactly = 0) { mutations.deletePending(any()) }
     }
 }

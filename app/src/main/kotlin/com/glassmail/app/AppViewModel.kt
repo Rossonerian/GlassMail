@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.CancellationException
@@ -95,6 +96,22 @@ class AppViewModel(
             unreadByCategory = data.unreadByCategory,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InboxUiState())
+
+    val failedMutations: StateFlow<Map<String, Int>> = combine(accounts, accountId, _appearance.map { it.unifiedInbox }) { available, id, unified ->
+        if (unified) available.map { it.accountId } else listOfNotNull(id)
+    }.flatMapLatest { ids ->
+        if (ids.isEmpty()) flowOf(emptyMap()) else combine(ids.map { id -> repository.observeFailedMutationCount(id).map { id to it } }) { counts ->
+            counts.filter { it.second > 0 }.toMap()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    fun retryFailedActions(accountIds: List<String>) = viewModelScope.launch {
+        accountIds.forEach { repository.retryFailedMutations(it) }
+    }
+
+    fun dismissFailedActions(accountIds: List<String>) = viewModelScope.launch {
+        accountIds.forEach { repository.dismissFailedMutations(it) }
+    }
 
     private val searchQuery = MutableStateFlow("")
     private val searchResults: StateFlow<SearchUiState> = combine(accounts, accountId, _appearance.map { it.unifiedInbox }, searchQuery.debounce(250)) { available, id, unified, query ->
@@ -162,33 +179,35 @@ class AppViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReaderUiState())
 
     fun mutation(item: MailListItem, type: String) = viewModelScope.launch {
-        val threadIds = item.threadMessageIds.ifEmpty { listOf(item.messageId) }
-        threadIds.forEach { messageId ->
-            val account = accountForMessage(messageId) ?: return@forEach
-            val inboxId = "${account.accountId}:INBOX"
-            repository.applyMutation(
-                when (type) {
-                    "star" -> MailMutation.Star(account.accountId, messageId, inboxId, !item.starred)
-                    "read" -> MailMutation.MarkRead(account.accountId, messageId, inboxId, item.unread)
-                    "archive" -> MailMutation.Archive(account.accountId, messageId, inboxId)
-                    else -> MailMutation.Delete(account.accountId, messageId, inboxId)
-                }
-            )
-        }
-        if (type == "archive") _undoableArchive.value = UndoableArchive(UUID.randomUUID().toString(), threadIds)
-    }
-
-    fun threadMutation(messageIds: List<String>, type: String) = viewModelScope.launch {
-        val messages = messageIds.distinct()
-        val currentThread = messages.mapNotNull { id -> readerUiState.value.thread.firstOrNull { it.messageId == id } }
-        val star = type == "star" && currentThread.any { !it.starred }
-        val mutations = messages.mapNotNull { messageId ->
+        val threadIds = item.threadMessageIds.distinct().ifEmpty { listOf(item.messageId) }
+        val mutations = threadIds.mapNotNull { messageId ->
             val account = accountForMessage(messageId) ?: return@mapNotNull null
             val inboxId = "${account.accountId}:INBOX"
             when (type) {
-                "star" -> MailMutation.Star(account.accountId, messageId, inboxId, star)
-                "archive", "mute" -> MailMutation.Archive(account.accountId, messageId, inboxId)
-                else -> MailMutation.Delete(account.accountId, messageId, inboxId)
+                "star" -> MailMutation.Star(account.accountId, messageId, inboxId, !item.starred, item.threadId)
+                "read" -> MailMutation.MarkRead(account.accountId, messageId, inboxId, item.unread, item.threadId)
+                "archive" -> MailMutation.Archive(account.accountId, messageId, inboxId, item.threadId)
+                "delete" -> MailMutation.Delete(account.accountId, messageId, inboxId, item.threadId)
+                else -> null
+            }
+        }
+        repository.applyMutations(mutations)
+        if (type == "archive" && mutations.isNotEmpty()) _undoableArchive.value = UndoableArchive(UUID.randomUUID().toString(), mutations.map { it.messageId })
+    }
+
+    fun threadMutation(messageIds: List<String>, type: String, desiredStarred: Boolean? = null) = viewModelScope.launch {
+        val messages = messageIds.distinct()
+        val currentThread = messages.mapNotNull { id -> readerUiState.value.thread.firstOrNull { it.messageId == id } }
+        val star = desiredStarred ?: !currentThread.any { it.starred }
+        val mutations = messages.mapNotNull { messageId ->
+            val account = accountForMessage(messageId) ?: return@mapNotNull null
+            val inboxId = "${account.accountId}:INBOX"
+            val threadId = currentThread.firstOrNull { it.messageId == messageId }?.threadId
+            when (type) {
+                "star" -> MailMutation.Star(account.accountId, messageId, inboxId, star, threadId)
+                "archive" -> MailMutation.Archive(account.accountId, messageId, inboxId, threadId)
+                "delete" -> MailMutation.Delete(account.accountId, messageId, inboxId, threadId)
+                else -> null
             }
         }
         repository.applyMutations(mutations)
@@ -196,7 +215,7 @@ class AppViewModel(
 
     fun undoArchive(actionId: String) = viewModelScope.launch {
         val action = _undoableArchive.value?.takeIf { it.actionId == actionId } ?: return@launch
-        action.messageIds.forEach { repository.undoPendingArchive(it) }
+        repository.undoPendingArchives(action.messageIds)
         if (_undoableArchive.value?.actionId == actionId) _undoableArchive.value = null
     }
 
@@ -256,6 +275,16 @@ class AppViewModel(
 
     fun selectReaderMessage(messageId: String) {
         readerMessageId.value = messageId
+        openReaderMessage(messageId)
+    }
+
+    fun openReaderMessage(messageId: String) {
+        viewModelScope.launch {
+            val message = repository.observeMessage(messageId).first() ?: return@launch
+            if (message.unread) accountForMessage(messageId)?.let { account ->
+                repository.applyMutation(MailMutation.MarkRead(account.accountId, messageId, null, true))
+            }
+        }
         loadMessageBody(messageId)
     }
 
@@ -302,7 +331,7 @@ class AppViewModel(
     fun updateCredential(accountId: String, credential: CharArray) = viewModelScope.launch {
         try {
             credentialStore.store(accountId, credential)
-            refresh()
+            repository.synchronize(accountId)
         } finally {
             credential.fill('\u0000')
         }
