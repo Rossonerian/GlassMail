@@ -309,6 +309,9 @@ interface MailDao {
     @Query("SELECT messageCount FROM mailboxes WHERE mailboxId = :mailboxId")
     suspend fun inboxMessageCount(mailboxId: String): Int?
 
+    @Query("SELECT uidValidity FROM mailboxes WHERE mailboxId = :mailboxId")
+    suspend fun mailboxUidValidity(mailboxId: String): Long?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertMailboxMessages(messages: List<MailboxMessageEntity>)
 
@@ -442,6 +445,9 @@ interface PendingMutationDao {
 
     @Query("SELECT * FROM pending_mutations WHERE messageId = :messageId AND state IN ('PENDING', 'IN_FLIGHT') ORDER BY createdAtEpochMillis, mutationId")
     suspend fun activeForMessage(messageId: String): List<PendingMutationEntity>
+
+    @Query("UPDATE pending_mutations SET targetUid = NULL WHERE accountId = :accountId AND state IN ('PENDING', 'IN_FLIGHT')")
+    suspend fun clearActiveTargetUids(accountId: String)
 
     @Query("UPDATE pending_mutations SET state = :state, retryCount = :retryCount, lastErrorCode = :errorCode WHERE mutationId = :mutationId")
     suspend fun updateState(mutationId: String, state: String, retryCount: Int, errorCode: String?)

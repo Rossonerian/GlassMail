@@ -350,14 +350,7 @@ class ImapMailRepository(
     }
 
     override suspend fun undoPendingArchive(messageId: String): Boolean = database.withTransaction {
-        val mutation = database.pendingMutationDao().undoableArchive(messageId) ?: return@withTransaction false
-        val mailboxId = mutation.mailboxId ?: return@withTransaction false
-        val uid = mutation.targetUid ?: return@withTransaction false
-        database.mailDao().upsertMailboxMessages(
-            listOf(MailboxMessageEntity(mailboxId, uid, messageId, mutation.previousFlags, mutation.previousLabels)),
-        )
-        database.pendingMutationDao().delete(mutation.mutationId)
-        true
+        undoArchiveInCurrentNamespace(messageId, database.mailDao(), database.syncDao(), database.pendingMutationDao())
     }
 
     private suspend fun synchronizeLocked(accountId: String): MailSyncResult {
@@ -367,6 +360,9 @@ class ImapMailRepository(
         return try {
             val inboxId = "$accountId:INBOX"
             val checkpoint = database.syncDao().checkpoint(inboxId)
+            // Keep this even when re-seeding deletes the checkpoint below. A mailbox
+            // row also records the old namespace when no checkpoint exists.
+            val storedUidValidity = checkpoint?.uidValidity ?: database.mailDao().mailboxUidValidity(inboxId)
             val cachedMessages = database.mailDao().countMessagesForAccount(accountId)
             val cachedInboxMessages = database.mailDao().countMailboxMessages(inboxId)
             val knownRemoteInboxCount = database.mailDao().inboxMessageCount(inboxId) ?: 0
@@ -383,7 +379,7 @@ class ImapMailRepository(
                 }
             }
             val snapshot = credentialStore.withCredential(accountId) { password ->
-                if (startWithLatest) {
+                val fetched = if (startWithLatest) {
                     imapClient.fetchLatestInbox(account.email, password, limit = INITIAL_MAIL_LIMIT)
                 } else {
                     imapClient.fetchInboxPage(
@@ -393,6 +389,16 @@ class ImapMailRepository(
                         limit = BATCH_SIZE,
                     )
                 }
+                recoverInboxSnapshot(
+                    accountId = accountId,
+                    storedUidValidity = storedUidValidity,
+                    snapshot = fetched,
+                    mailDao = database.mailDao(),
+                    syncDao = database.syncDao(),
+                    mutationDao = database.pendingMutationDao(),
+                    inTransaction = { block -> database.withTransaction { block() } },
+                    fetchLatest = { imapClient.fetchLatestInbox(account.email, password, limit = INITIAL_MAIL_LIMIT) },
+                )
             } ?: return fail(accountId, MailSyncError.MissingCredential)
             val newMessages = persistSnapshot(accountId, snapshot)
             if (newMessages.isNotEmpty()) onNewMessages(newMessages.map { it.toListItem(accountId, snapshot.inbox.uidValidity) })
@@ -503,7 +509,6 @@ class ImapMailRepository(
     ) {
         database.withTransaction {
             val previousCheckpoint = database.syncDao().checkpoint(inboxId)
-            val uidValidityChanged = previousCheckpoint != null && previousCheckpoint.uidValidity != snapshot.inbox.uidValidity
             val mailboxes = snapshot.mailboxes.map { mailbox ->
                 MailboxEntity(
                     mailboxId = "$accountId:${mailbox.name}",
@@ -515,7 +520,6 @@ class ImapMailRepository(
                 )
             }
             database.mailDao().upsertMailboxes(mailboxes)
-            if (uidValidityChanged) database.mailDao().clearMailboxMembership(inboxId)
             val batchIds = batch.map { it.canonicalId(accountId, snapshot.inbox.uidValidity) }
             val existingBodies = if (batchIds.isNotEmpty()) {
                 database.mailDao().existingBodyStates(batchIds).associateBy { it.messageId }
@@ -568,11 +572,11 @@ class ImapMailRepository(
                     // Persist the requested range boundary, rather than only returned messages.
                     // IMAP UIDs are sparse; an empty range must still make durable progress.
                     highestKnownUid = maxOf(
-                        previousCheckpoint?.takeIf { !uidValidityChanged }?.highestKnownUid ?: 0,
+                        previousCheckpoint?.highestKnownUid ?: 0,
                         snapshot.requestedThroughUid,
                         batch.maxOfOrNull { it.uid } ?: 0,
                     ),
-                    syncGeneration = (previousCheckpoint?.syncGeneration ?: 0) + if (uidValidityChanged) 1 else 0,
+                    syncGeneration = previousCheckpoint?.syncGeneration ?: 0,
                     lastSuccessfulSyncEpochMillis = if (isFinalBatch) clock() else previousCheckpoint?.lastSuccessfulSyncEpochMillis,
                 ),
             )

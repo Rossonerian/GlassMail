@@ -32,6 +32,8 @@ sealed class ImapException(message: String, cause: Throwable? = null) : Exceptio
     class Authentication : ImapException("IMAP authentication failed")
     class Transport(cause: Throwable) : ImapException("IMAP transport failed", cause)
     class Protocol(message: String) : ImapException(message)
+    class UidValidityChanged(val expected: Long, val actual: Long) :
+        ImapException("INBOX UIDVALIDITY changed from $expected to $actual")
 }
 
 class GmailImapClient(
@@ -121,15 +123,20 @@ class GmailImapClient(
         }
     }
 
-    suspend fun applyInboxMutations(email: String, password: CharArray, operations: List<ImapMutation>) {
+    suspend fun applyInboxMutations(
+        email: String,
+        password: CharArray,
+        operations: List<ImapMutation>,
+        expectedUidValidity: Long?,
+    ) {
         if (operations.isEmpty()) return
         withContext(Dispatchers.IO.limitedParallelism(1)) {
             TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 client.login(email, password)
-                client.selectInbox()
-                operations.forEach(client::applyMutation)
+                val inbox = client.selectInbox()
+                applySelectedInboxMutations(inbox.uidValidity, expectedUidValidity, operations, client::applyMutation)
             }
         }
     }
@@ -252,6 +259,19 @@ data class ImapMutation(
     val type: String,
     val payload: String? = null,
 )
+
+/** Called immediately after SELECT, before any UID command is sent on that connection. */
+internal fun applySelectedInboxMutations(
+    selectedUidValidity: Long,
+    expectedUidValidity: Long?,
+    operations: List<ImapMutation>,
+    apply: (ImapMutation) -> Unit,
+) {
+    if (expectedUidValidity != null && expectedUidValidity != selectedUidValidity) {
+        throw ImapException.UidValidityChanged(expectedUidValidity, selectedUidValidity)
+    }
+    operations.forEach(apply)
+}
 
 private class TlsImapConnection private constructor(private val socket: SSLSocket) : AutoCloseable {
     private val input = BufferedInputStream(socket.inputStream)
