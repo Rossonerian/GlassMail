@@ -1,4 +1,4 @@
-name: Android build
+name: Native Android checks
 
 on:
   push:
@@ -6,18 +6,30 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   assemble:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 11479570
+      # The runner includes API 35 and Build Tools 34.0.0 (AGP 8.7.3 default).
       - uses: gradle/actions/setup-gradle@v4
-      - name: Run Kotlin unit tests, compile, and assemble debug APK
-        run: ./gradlew test :app:compileDebugKotlin :app:assembleDebug
+      - name: Run Kotlin unit tests
+        run: ./gradlew --max-workers=2 --no-parallel test
+      - name: Run Android lint
+        run: ./gradlew --max-workers=2 --no-parallel lintDebug
+      - name: Compile release with R8 (unsigned CI check only)
+        run: ./gradlew --max-workers=2 --no-parallel :app:assembleRelease
+      - name: Assemble debug APK
+        run: ./gradlew --max-workers=2 --no-parallel :app:assembleDebug
