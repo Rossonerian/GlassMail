@@ -27,6 +27,9 @@ data class OutgoingAttachment(
 sealed interface SendMailResult {
     data object Sent : SendMailResult
     data class Failed(val error: SendMailError) : SendMailResult
+
+    /** The connection failed after the message may have been accepted; retrying could duplicate it. */
+    data object Uncertain : SendMailResult
 }
 
 sealed interface SendMailError {
@@ -34,6 +37,7 @@ sealed interface SendMailError {
     data object Network : SendMailError
     data object Protocol : SendMailError
     data object InvalidMessage : SendMailError
+    data object Attachment : SendMailError
 }
 
 interface MailSender {

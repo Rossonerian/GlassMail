@@ -363,13 +363,19 @@ fun ReaderScreen(
                             modifier = Modifier.padding(vertical = GlassSpacing.xs),
                         )
                         if (item.body == null) {
-                            Text(
-                                text = "Loading complete message…",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = GlassSpacing.xs),
-                            )
+                            if (item.messageId in state.failedBodyIds) {
+                                BodyLoadFailed { vm.loadMessageBody(item.messageId) }
+                            } else {
+                                Text(
+                                    text = "Loading complete message…",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = GlassSpacing.xs),
+                                )
+                            }
                         }
+                    } else if (item.messageId in state.failedBodyIds) {
+                        BodyLoadFailed { vm.loadMessageBody(item.messageId) }
                     } else {
                         Row(
                             modifier = Modifier
@@ -671,4 +677,16 @@ internal fun openMailLink(context: android.content.Context, uri: android.net.Uri
         else -> return false
     }.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
     return runCatching { context.startActivity(intent) }.isSuccess
+}
+
+@Composable
+private fun BodyLoadFailed(onRetry: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = GlassSpacing.md)) {
+        Text(
+            text = "This message couldn't be downloaded. Check your connection and try again.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        androidx.compose.material3.TextButton(onClick = onRetry) { Text("Retry") }
+    }
 }

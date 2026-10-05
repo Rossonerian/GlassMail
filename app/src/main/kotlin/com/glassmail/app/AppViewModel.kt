@@ -171,10 +171,11 @@ class AppViewModel(
     val undoableArchive: StateFlow<UndoableArchive?> = _undoableArchive
 
     private val readerMessageId = MutableStateFlow<String?>(null)
+    private val failedBodyIds = MutableStateFlow<Set<String>>(emptySet())
     val readerUiState: StateFlow<ReaderUiState> = readerMessageId.flatMapLatest { messageId ->
         if (messageId == null) flowOf(ReaderUiState())
-        else combine(repository.observeMessage(messageId), repository.observeThread(messageId)) { selected, thread ->
-            ReaderUiState(selected = selected, thread = thread)
+        else combine(repository.observeMessage(messageId), repository.observeThread(messageId), failedBodyIds) { selected, thread, failed ->
+            ReaderUiState(selected = selected, thread = thread, failedBodyIds = failed)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReaderUiState())
 
@@ -289,7 +290,8 @@ class AppViewModel(
     }
 
     fun loadMessageBody(messageId: String) = viewModelScope.launch {
-        repository.loadMessageBody(messageId)
+        failedBodyIds.value = failedBodyIds.value - messageId
+        if (repository.loadMessageBody(messageId).isFailure) failedBodyIds.value = failedBodyIds.value + messageId
     }
 
     fun updateAppearance(update: (AppearanceSettings) -> AppearanceSettings) {
@@ -395,6 +397,8 @@ data class UndoableArchive(val actionId: String, val messageIds: List<String>)
 data class ReaderUiState(
     val selected: MailMessage? = null,
     val thread: List<MailMessage> = emptyList(),
+    /** Message ids whose body fetch failed; the Reader offers Retry instead of spinning forever. */
+    val failedBodyIds: Set<String> = emptySet(),
 )
 
 /** Per-account transient request state; never stored in saved state or preferences. */
