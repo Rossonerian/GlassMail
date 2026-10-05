@@ -76,8 +76,8 @@ The workflow validates the packaged values against `app/build.gradle.kts`.
 ## Verify an APK
 
 Choose the latest installed SDK build-tools directory, then verify signatures and
-inspect package metadata. Both v2 and v3 verification must be true for this release;
-compare the certificate SHA-256 digest with the trusted release signing identity.
+inspect package metadata. APK Signature Scheme v3 verification must be true (minSdk 34
+devices verify v3, so a v2 signature is not required); compare the certificate SHA-256 digest with the trusted release signing identity.
 Confirm package `com.glassmail.app`, versionName `1.0.0`, versionCode `10000`, and no
 `application-debuggable` entry. The workflow logs only the certificate SHA-256 digest
 from signature verification.

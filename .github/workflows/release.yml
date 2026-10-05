@@ -124,10 +124,6 @@ jobs:
             echo '::error::APK signature verification failed.'
             exit 1
           fi
-          grep -Eq '^Verified using v2 scheme .*: true$' "$RUNNER_TEMP/apk-signature.txt" || {
-            echo '::error::APK v2 signature verification must be true.'
-            exit 1
-          }
           grep -Eq '^Verified using v3 scheme .*: true$' "$RUNNER_TEMP/apk-signature.txt" || {
             echo '::error::APK v3 signature verification must be true.'
             exit 1
