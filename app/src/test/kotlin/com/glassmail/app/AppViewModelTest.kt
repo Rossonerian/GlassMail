@@ -1,39 +1,46 @@
 package com.glassmail.app
 
 import android.content.Context
+import androidx.lifecycle.ViewModelStore
+import com.glassmail.core.model.MailSyncResult
 import com.glassmail.core.security.CredentialStore
 import com.glassmail.domain.mail.DraftRepository
 import com.glassmail.domain.mail.MailAccount
+import com.glassmail.domain.mail.MailListItem
 import com.glassmail.domain.mail.MailRepository
 import com.glassmail.sync.AccountSyncScheduler
+import com.glassmail.sync.IdleServiceController
+import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import com.glassmail.domain.mail.MailCacheSettings
-import com.glassmail.domain.mail.StorageQuota
-import kotlinx.coroutines.flow.flowOf
-import com.glassmail.sync.IdleServiceController
-import io.mockk.mockkObject
-import io.mockk.unmockkObject
-import io.mockk.slot
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModelTest {
-
     private lateinit var viewModel: AppViewModel
+    private val viewModelStore = ViewModelStore()
     private val context: Context = mockk(relaxed = true)
     private val repository: MailRepository = mockk(relaxed = true)
     private val syncScheduler: AccountSyncScheduler = mockk(relaxed = true)
@@ -41,77 +48,47 @@ class AppViewModelTest {
     private val draftRepository: DraftRepository = mockk(relaxed = true)
     private val credentialStore: CredentialStore = mockk(relaxed = true)
     private val testDispatcher = StandardTestDispatcher()
+    private val accountsFlow = MutableStateFlow(listOf(MailAccount("account1", "test@test.com", "READY")))
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         mockkObject(IdleServiceController)
         every { IdleServiceController.start(any()) } returns Unit
+        every { appearancePreferences.read() } returns AppearanceSettings(selectedAccountId = "account1")
+        every { repository.observeAccounts() } returns accountsFlow
+        viewModel = AppViewModel(
+            context = context,
+            repository = repository,
+            syncScheduler = syncScheduler,
+            appearancePreferences = appearancePreferences,
+            draftRepository = draftRepository,
+            credentialStore = credentialStore,
+        )
+        viewModelStore.put("test", viewModel)
     }
 
     @After
     fun tearDown() {
+        viewModelStore.clear()
         Dispatchers.resetMain()
         unmockkObject(IdleServiceController)
     }
 
     @Test
-    fun `removeAccount removes current account and selects empty account`() = runTest(testDispatcher) {
-        val initialAppearance = AppearanceSettings(selectedAccountId = "account1")
-        val accountsFlow = MutableStateFlow(listOf(MailAccount("account1", "test@test.com", "READY")))
-
-        every { appearancePreferences.read() } returns initialAppearance
-        every { appearancePreferences.write(any()) } returns Unit
-        every { repository.observeAccounts() } returns accountsFlow
-        every { draftRepository.observeDrafts(any()) } returns flowOf(emptyList())
-        every { repository.observeCacheSettings(any()) } returns flowOf(MailCacheSettings())
-        every { repository.observeStorageQuota(any()) } returns flowOf(null as StorageQuota?)
-        every { repository.observeInbox(any(), any()) } returns flowOf(emptyList())
-        every { repository.observeCategoryUnreadCounts(any()) } returns flowOf(emptyMap())
-
-        viewModel = AppViewModel(
-            context = context,
-            repository = repository,
-            syncScheduler = syncScheduler,
-            appearancePreferences = appearancePreferences,
-            draftRepository = draftRepository,
-            credentialStore = credentialStore
-        )
-
+    fun `removeAccount cancels sync and removes current account`() = runTest(testDispatcher) {
         advanceUntilIdle()
 
         viewModel.removeAccount()
         advanceUntilIdle()
 
-        verify { syncScheduler.cancel("account1") }
-        coVerify { repository.removeAccount("account1") }
-        verify { IdleServiceController.start(context) }
+        verify(exactly = 1) { syncScheduler.cancel("account1") }
+        coVerify(exactly = 1) { repository.removeAccount("account1") }
+        verify(exactly = 1) { IdleServiceController.start(context) }
     }
 
     @Test
     fun `clear invokes repository clearDebugMailbox`() = runTest(testDispatcher) {
-        // Setup viewModel since @Before didn't do it because it needs flow mocking
-        val initialAppearance = AppearanceSettings(selectedAccountId = "account1")
-        val accountsFlow = MutableStateFlow(listOf(MailAccount("account1", "test@test.com", "READY")))
-
-        every { appearancePreferences.read() } returns initialAppearance
-        every { appearancePreferences.write(any()) } returns Unit
-        every { repository.observeAccounts() } returns accountsFlow
-        every { draftRepository.observeDrafts(any()) } returns flowOf(emptyList())
-        every { repository.observeCacheSettings(any()) } returns flowOf(MailCacheSettings())
-        every { repository.observeStorageQuota(any()) } returns flowOf(null as StorageQuota?)
-        every { repository.observeInbox(any(), any()) } returns flowOf(emptyList())
-        every { repository.observeCategoryUnreadCounts(any()) } returns flowOf(emptyMap())
-
-        viewModel = AppViewModel(
-            context = context,
-            repository = repository,
-            syncScheduler = syncScheduler,
-            appearancePreferences = appearancePreferences,
-            draftRepository = draftRepository,
-            credentialStore = credentialStore
-        )
-
         advanceUntilIdle()
 
         viewModel.clear()
@@ -121,68 +98,68 @@ class AppViewModelTest {
     }
 
     @Test
-    fun `setSearchQuery updates state`() = runTest(testDispatcher) {
-        val initialAppearance = AppearanceSettings(selectedAccountId = "account1")
-        val accountsFlow = MutableStateFlow(listOf(MailAccount("account1", "test@test.com", "READY")))
-
-        every { appearancePreferences.read() } returns initialAppearance
-        every { appearancePreferences.write(any()) } returns Unit
-        every { repository.observeAccounts() } returns accountsFlow
-        every { draftRepository.observeDrafts(any()) } returns flowOf(emptyList())
-        every { repository.observeCacheSettings(any()) } returns flowOf(MailCacheSettings())
-        every { repository.observeStorageQuota(any()) } returns flowOf(null as StorageQuota?)
-        every { repository.observeInbox(any(), any()) } returns flowOf(emptyList())
-        every { repository.observeCategoryUnreadCounts(any()) } returns flowOf(emptyMap())
-
-        viewModel = AppViewModel(
-            context = context,
-            repository = repository,
-            syncScheduler = syncScheduler,
-            appearancePreferences = appearancePreferences,
-            draftRepository = draftRepository,
-            credentialStore = credentialStore
+    fun `setSearchQuery exposes loading then debounced results and clears blank query`() = runTest(testDispatcher) {
+        val result = MailListItem(
+            messageId = "message1",
+            threadId = null,
+            sender = "sender@test.com",
+            subject = "hello",
+            preview = "matching message",
+            sentAtEpochMillis = 1L,
+            unread = true,
+            starred = false,
+            labels = emptyList(),
+            hasAttachment = false,
         )
-
-        advanceUntilIdle()
+        every { repository.search("account1", "hello") } returns MutableStateFlow(listOf(result))
+        // These states use WhileSubscribed; keep a collector alive for the test.
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.searchUiState.collect()
+        }
+        runCurrent()
+        assertEquals(SearchUiState(), viewModel.searchUiState.value)
 
         viewModel.setSearchQuery("hello")
-        advanceUntilIdle()
+        runCurrent()
+        assertEquals(SearchUiState(query = "hello", isLoading = true), viewModel.searchUiState.value)
+        advanceTimeBy(249)
+        runCurrent()
+        verify(exactly = 0) { repository.search(any(), any()) }
 
-        assertEquals("hello", viewModel.uiState.value.searchQuery)
+        advanceTimeBy(1)
+        runCurrent()
+        verify(exactly = 1) { repository.search("account1", "hello") }
+        assertEquals(SearchUiState(query = "hello", messages = listOf(result)), viewModel.searchUiState.value)
+
+        viewModel.setSearchQuery("")
+        runCurrent()
+        assertEquals(SearchUiState(), viewModel.searchUiState.value)
+        advanceTimeBy(250)
+        runCurrent()
+        verify(exactly = 1) { repository.search(any(), any()) }
     }
 
     @Test
-    fun `updateCredential updates credential store and syncs`() = runTest(testDispatcher) {
-        val initialAppearance = AppearanceSettings(selectedAccountId = "account1")
-        val accountsFlow = MutableStateFlow(listOf(MailAccount("account1", "test@test.com", "READY")))
-
-        every { appearancePreferences.read() } returns initialAppearance
-        every { appearancePreferences.write(any()) } returns Unit
-        every { repository.observeAccounts() } returns accountsFlow
-        every { draftRepository.observeDrafts(any()) } returns flowOf(emptyList())
-        every { repository.observeCacheSettings(any()) } returns flowOf(MailCacheSettings())
-        every { repository.observeStorageQuota(any()) } returns flowOf(null as StorageQuota?)
-        every { repository.observeInbox(any(), any()) } returns flowOf(emptyList())
-        every { repository.observeCategoryUnreadCounts(any()) } returns flowOf(emptyMap())
-
-        viewModel = AppViewModel(
-            context = context,
-            repository = repository,
-            syncScheduler = syncScheduler,
-            appearancePreferences = appearancePreferences,
-            draftRepository = draftRepository,
-            credentialStore = credentialStore
-        )
-
+    fun `updateCredential stores original credential before refresh and wipes input`() = runTest(testDispatcher) {
+        var storedCredential: CharArray? = null
+        coEvery { credentialStore.store("account1", any()) } coAnswers {
+            // Copy at call time because production wipes the caller's array afterward.
+            storedCredential = secondArg<CharArray>().copyOf()
+        }
+        coEvery { repository.synchronize("account1") } returns MailSyncResult.Success(0, false)
         advanceUntilIdle()
-
         val password = charArrayOf('p', 'a', 's', 's')
-        
+
         viewModel.updateCredential("account1", password)
         advanceUntilIdle()
-        
-        coVerify(exactly = 1) { credentialStore.putCredential("account1", password) }
-        verify(exactly = 1) { syncScheduler.scheduleSynchronize("account1") }
-    }
 
+        coVerify(exactly = 1) { credentialStore.store("account1", any()) }
+        coVerify(exactly = 1) { repository.synchronize("account1") }
+        coVerifyOrder {
+            credentialStore.store("account1", any())
+            repository.synchronize("account1")
+        }
+        assertArrayEquals(charArrayOf('p', 'a', 's', 's'), storedCredential)
+        assertArrayEquals(CharArray(4), password)
+    }
 }
