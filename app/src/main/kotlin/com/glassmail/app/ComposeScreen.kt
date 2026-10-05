@@ -492,4 +492,5 @@ private fun SendMailError.userMessage(): String = when (this) {
     SendMailError.Network -> "Could not reach Gmail. The draft is saved; try Send again when online."
     SendMailError.Protocol -> "Gmail rejected this message. The draft is saved for correction."
     SendMailError.InvalidMessage -> "Check recipients and message details."
+    SendMailError.Attachment -> "An attachment could not be read. Remove it and attach the file again."
 }

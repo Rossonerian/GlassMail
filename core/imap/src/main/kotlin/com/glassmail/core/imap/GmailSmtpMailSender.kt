@@ -3,6 +3,8 @@ package com.glassmail.core.imap
 import com.glassmail.domain.mail.MailAccount
 import com.glassmail.domain.mail.MailSender
 import com.glassmail.domain.mail.OutgoingMail
+import com.sun.mail.smtp.SMTPSendFailedException
+import javax.mail.SendFailedException
 import com.glassmail.domain.mail.SendMailError
 import com.glassmail.domain.mail.SendMailResult
 import com.glassmail.domain.mail.validateAddresses
@@ -64,19 +66,29 @@ class GmailSmtpMailSender(
                         message.writeTo(output)
                         output.toByteArray()
                     }
-                    session.getTransport("smtp").apply {
+                    val transport = session.getTransport("smtp")
+                    try {
+                        transport.connect(host, port, account.email, String(password))
                         try {
-                            connect(host, port, account.email, String(password))
-                            sendMessage(message, message.allRecipients)
-                        } finally {
-                            close()
+                            transport.sendMessage(message, message.allRecipients)
+                        } catch (error: SendFailedException) {
+                            throw error // the server answered with a definite rejection
+                        } catch (error: MessagingException) {
+                            // An I/O failure after the DATA phase may have started leaves the outcome unknown.
+                            if (error.hasIoCause()) return@withContext SendMailResult.Uncertain
+                            throw error
                         }
+                    } finally {
+                        // A failing QUIT must never turn an accepted message into a failure (duplicate on retry).
+                        runCatching { transport.close() }
                     }
-                    // SMTP has accepted the message at this point. Filing it is best-effort:
-                    // an APPEND failure must not prompt the user to resend a delivered message.
+                    // SMTP has accepted the message at this point. Filing is best-effort.
                     if (imapClient != null) {
-                        runCatching { imapClient.deleteRemoteDraft(account.email, password, mail.operationId) }
-                        runCatching { imapClient.appendSent(account.email, password, rawMessage) }
+                        fileAcceptedSmtpMessage(
+                            host,
+                            deleteDraft = { imapClient.deleteRemoteDraft(account.email, password, mail.operationId) },
+                            appendSent = { imapClient.appendSent(account.email, password, rawMessage) },
+                        )
                     }
                     coroutineContext.ensureActive()
                     SendMailResult.Sent
@@ -88,10 +100,17 @@ class GmailSmtpMailSender(
             SendMailResult.Failed(SendMailError.InvalidMessage)
         } catch (_: AuthenticationFailedException) {
             SendMailResult.Failed(SendMailError.Authentication)
+        } catch (error: SendFailedException) {
+            SendMailResult.Failed(
+                if (error is SMTPSendFailedException && error.returnCode in 400..499) SendMailError.Network else SendMailError.Protocol,
+            )
         } catch (_: MessagingException) {
             SendMailResult.Failed(SendMailError.Network)
         } catch (_: IllegalArgumentException) {
             SendMailResult.Failed(SendMailError.InvalidMessage)
+        } catch (_: java.io.IOException) {
+            // Raised while encoding (for example an unreadable attachment), before anything reached the server.
+            SendMailResult.Failed(SendMailError.Attachment)
         }
     }
 
@@ -100,6 +119,19 @@ class GmailSmtpMailSender(
         const val MAX_ESTIMATED_MESSAGE_BYTES = 24L * 1024 * 1024
 
     }
+}
+
+/** Gmail SMTP already files Sent mail; other configurable SMTP hosts still need APPEND. */
+internal suspend fun fileAcceptedSmtpMessage(
+    host: String,
+    deleteDraft: suspend () -> Unit,
+    appendSent: suspend () -> Unit,
+) {
+    runCatching { deleteDraft() }
+    val normalizedHost = host.trimEnd('.').lowercase(java.util.Locale.ROOT)
+    val gmailHost = normalizedHost == "gmail.com" || normalizedHost.endsWith(".gmail.com") ||
+        normalizedHost == "googlemail.com" || normalizedHost.endsWith(".googlemail.com")
+    if (!gmailHost) runCatching { appendSent() }
 }
 
 /** Shared RFC 822 encoder for SMTP submission and IMAP draft synchronization. */
@@ -112,7 +144,13 @@ object Rfc822MessageEncoder {
     }
 }
 
-private fun createMimeMessage(session: Session, mail: OutgoingMail): MimeMessage = MimeMessage(session).apply {
+private fun createMimeMessage(session: Session, mail: OutgoingMail): MimeMessage = object : MimeMessage(session) {
+    // saveChanges() would otherwise replace the stable id that remote draft replace/delete searches for.
+    override fun updateMessageID() {
+        setHeader("Message-ID", "<${mail.operationId}@glassmail.local>")
+    }
+}.apply {
+    sentDate = java.util.Date()
     setFrom(InternetAddress(mail.from, true))
     if (mail.to.isNotEmpty()) setRecipients(Message.RecipientType.TO, mail.to.map(::InternetAddress).toTypedArray())
     if (mail.cc.isNotEmpty()) setRecipients(Message.RecipientType.CC, mail.cc.map(::InternetAddress).toTypedArray())
@@ -140,3 +178,7 @@ private fun createMimeMessage(session: Session, mail: OutgoingMail): MimeMessage
     if (mail.references.isNotEmpty()) setHeader("References", mail.references.joinToString(" "))
     setHeader("Message-ID", "<${mail.operationId}@glassmail.local>")
 }
+
+internal fun MessagingException.hasIoCause(): Boolean =
+    generateSequence<Throwable>(this) { it.cause ?: (it as? MessagingException)?.nextException }
+        .any { it is java.io.IOException }

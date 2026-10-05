@@ -24,6 +24,7 @@ import com.glassmail.domain.mail.MailRepository
 import com.glassmail.domain.mail.MailAccount
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -31,6 +32,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
@@ -52,13 +57,44 @@ interface IdleSessionProvider {
 
 object IdleRuntime {
     @Volatile private var provider: IdleSessionProvider? = null
+    private val sessions = mutableMapOf<String, MutableSet<Job>>()
+    private val stoppedAccounts = mutableSetOf<String>()
     fun install(value: IdleSessionProvider) { provider = value }
     fun provider(): IdleSessionProvider? = provider
+
+    fun allowAccount(accountId: String) = synchronized(this) { stoppedAccounts.remove(accountId); Unit }
+
+    fun register(accountId: String, job: Job) {
+        synchronized(this) {
+            if (accountId in stoppedAccounts) job.cancel()
+            else sessions.getOrPut(accountId) { mutableSetOf() }.add(job)
+        }
+        job.invokeOnCompletion {
+            synchronized(this) {
+                sessions[accountId]?.let { jobs ->
+                    jobs.remove(job)
+                    if (jobs.isEmpty()) sessions.remove(accountId)
+                }
+            }
+        }
+    }
+
+    suspend fun cancelAccount(accountId: String) {
+        val jobs = synchronized(this) {
+            // Block a refresh that read the old account list from starting another
+            // session while database removal is in progress.
+            stoppedAccounts.add(accountId)
+            sessions.remove(accountId)?.toList().orEmpty()
+        }
+        jobs.forEach { it.cancel() }
+        jobs.joinAll()
+    }
 }
 
 class ImapIdleService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val accountJobs = ConcurrentHashMap<String, Job>()
+    private val refreshMutex = Mutex()
 
     override fun onCreate() {
         super.onCreate()
@@ -67,7 +103,7 @@ class ImapIdleService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        serviceScope.launch { refreshAccountJobs(startId) }
+        serviceScope.launch { refreshMutex.withLock { refreshAccountJobs(startId) } }
         return START_STICKY
     }
 
@@ -82,16 +118,20 @@ class ImapIdleService : Service() {
         }
         val ids = accounts.map { it.accountId }.toSet()
         (accountJobs.keys - ids).forEach { accountId -> accountJobs.remove(accountId)?.cancel() }
+        accountJobs.entries.filter { it.value.isCompleted }.forEach { (id, job) -> accountJobs.remove(id, job) }
         accounts.forEach { account ->
             accountJobs.computeIfAbsent(account.accountId) { id ->
-                serviceScope.launch { maintainIdle(provider, id) }
+                serviceScope.launch(start = CoroutineStart.LAZY) { maintainIdle(provider, id) }.also { job ->
+                    IdleRuntime.register(id, job)
+                    job.start()
+                }
             }
         }
     }
 
     private suspend fun maintainIdle(provider: IdleSessionProvider, accountId: String) {
         var retryDelay = 2_000L
-        while (serviceScope.isActive) {
+        while (currentCoroutineContext().isActive) {
             try {
                 if (provider.accounts().none { it.accountId == accountId }) return
                 provider.idle(accountId)
@@ -114,14 +154,14 @@ class ImapIdleService : Service() {
 
     private fun foregroundNotification(): Notification =
         if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
-            .setContentTitle("GlassMail is keeping mail up to date")
+            .setSmallIcon(R.drawable.ic_stat_glerio)
+            .setContentTitle("glerio is keeping mail up to date")
             .setContentText("Secure mailbox connection is active")
             .setOngoing(true)
             .build()
         else @Suppress("DEPRECATION") Notification.Builder(this)
-            .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
-            .setContentTitle("GlassMail is keeping mail up to date")
+            .setSmallIcon(R.drawable.ic_stat_glerio)
+            .setContentTitle("glerio is keeping mail up to date")
             .setOngoing(true)
             .build()
 
@@ -192,6 +232,17 @@ class AccountSyncScheduler(context: Context) {
 
     fun enqueueStartup(accountId: String) = enqueueUnique(accountId, "startup")
 
+    /** Replace the debounce timer so bursts of local actions produce one prompt flush. */
+    fun enqueueMutation(accountId: String, delayMillis: Long) {
+        val request = OneTimeWorkRequestBuilder<AccountSyncWorker>()
+            .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+            .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .setInputData(workDataOf(AccountSyncWorker.KEY_ACCOUNT_ID to accountId, "source" to "mutation"))
+            .build()
+        workManager.enqueueUniqueWork(mutationName(accountId), ExistingWorkPolicy.REPLACE, request)
+    }
+
     fun schedulePeriodic(accountId: String) {
         val request = PeriodicWorkRequestBuilder<AccountSyncWorker>(15, TimeUnit.MINUTES)
             .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -208,6 +259,7 @@ class AccountSyncScheduler(context: Context) {
 
     fun cancel(accountId: String) {
         workManager.cancelUniqueWork(oneTimeName(accountId))
+        workManager.cancelUniqueWork(mutationName(accountId))
         workManager.cancelUniqueWork(periodicName(accountId))
         workManager.cancelUniqueWork(cacheName(accountId))
     }
@@ -221,6 +273,7 @@ class AccountSyncScheduler(context: Context) {
         workManager.enqueueUniqueWork(oneTimeName(accountId), ExistingWorkPolicy.KEEP, request)
     }
 
+    private fun mutationName(accountId: String) = "glassmail.account.$accountId.mutation-sync"
     private fun oneTimeName(accountId: String) = "glassmail.account.$accountId.sync"
     private fun periodicName(accountId: String) = "glassmail.account.$accountId.periodic-sync"
     private fun cacheName(accountId: String) = "glassmail.account.$accountId.cache-eviction"

@@ -15,6 +15,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.Transaction
 import androidx.room.Upsert
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -242,6 +243,24 @@ interface AccountDao {
     @Query("DELETE FROM accounts WHERE accountId = :accountId")
     suspend fun delete(accountId: String)
 
+    @Query("DELETE FROM cache_config WHERE accountId = :accountId")
+    suspend fun deleteCacheConfig(accountId: String)
+
+    @Query("DELETE FROM storage_quota WHERE accountId = :accountId")
+    suspend fun deleteStorageQuota(accountId: String)
+
+    @Query("DELETE FROM notification_state WHERE accountId = :accountId")
+    suspend fun deleteNotificationState(accountId: String)
+
+    @Transaction
+    suspend fun deleteWithAccountData(accountId: String) {
+        // These tables have no foreign keys; the remaining account data cascades.
+        deleteCacheConfig(accountId)
+        deleteStorageQuota(accountId)
+        deleteNotificationState(accountId)
+        delete(accountId)
+    }
+
     @Query("UPDATE accounts SET syncState = :state WHERE accountId = :accountId")
     suspend fun setSyncState(accountId: String, state: String)
 
@@ -278,6 +297,10 @@ interface MailDao {
         downloadState: String,
     )
 
+    /** Earlier builds stored extracted plain text but labelled it HTML; those rows must be fetched again. */
+    @Query("UPDATE messages SET body = NULL, bodyDownloadState = 'NOT_FETCHED', contentKind = 'PLAIN' WHERE contentKind = 'HTML' AND bodyDownloadState = 'AVAILABLE' AND (body IS NULL OR instr(body, '<') = 0)")
+    suspend fun invalidateTextStoredAsHtml()
+
     @Query("SELECT bodyDownloadState FROM messages WHERE messageId = :messageId")
     suspend fun bodyDownloadState(messageId: String): String?
 
@@ -287,8 +310,26 @@ interface MailDao {
     @Query("SELECT COUNT(*) FROM mailbox_messages WHERE mailboxId = :mailboxId")
     suspend fun countMailboxMessages(mailboxId: String): Int
 
+    @Query("SELECT * FROM mailbox_messages WHERE mailboxId = :mailboxId AND uid > :afterUid AND uid <= :throughUid ORDER BY uid LIMIT :limit")
+    suspend fun mailboxMembershipPage(mailboxId: String, afterUid: Long, throughUid: Long, limit: Int): List<MailboxMessageEntity>
+
+    @Query("SELECT MIN(uid) FROM mailbox_messages WHERE mailboxId = :mailboxId")
+    suspend fun lowestMailboxUid(mailboxId: String): Long?
+
+    @Query("DELETE FROM message_labels WHERE messageId = :messageId")
+    suspend fun clearMessageLabels(messageId: String)
+
+    @Query("UPDATE messages SET category = :category WHERE messageId = :messageId")
+    suspend fun updateCategory(messageId: String, category: String)
+
+    @Query("UPDATE messages SET sentAtEpochMillis = :sentAtEpochMillis WHERE messageId = :messageId AND sentAtEpochMillis IS NULL")
+    suspend fun updateMissingSentAt(messageId: String, sentAtEpochMillis: Long)
+
     @Query("SELECT messageCount FROM mailboxes WHERE mailboxId = :mailboxId")
     suspend fun inboxMessageCount(mailboxId: String): Int?
+
+    @Query("SELECT uidValidity FROM mailboxes WHERE mailboxId = :mailboxId")
+    suspend fun mailboxUidValidity(mailboxId: String): Long?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertMailboxMessages(messages: List<MailboxMessageEntity>)
@@ -301,6 +342,10 @@ interface MailDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAttachments(attachments: List<AttachmentEntity>)
+
+    /** Keeps the download state of attachments that were already fetched. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAttachmentsIfAbsent(attachments: List<AttachmentEntity>)
 
     @Query("SELECT * FROM attachments WHERE attachmentId = :attachmentId LIMIT 1")
     suspend fun attachment(attachmentId: String): AttachmentEntity?
@@ -338,16 +383,16 @@ interface MailDao {
     @Query("SELECT m.category, COUNT(*) AS unreadCount FROM mailbox_messages mm JOIN messages m ON m.messageId = mm.messageId WHERE mm.mailboxId = :mailboxId AND instr(mm.flags, char(92) || 'Seen') = 0 GROUP BY m.category")
     fun observeCategoryUnreadCounts(mailboxId: String): Flow<List<CategoryUnreadCountRow>>
 
-    @Query("SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, mm.flags, mm.labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.messageId = :messageId LIMIT 1")
+    @Query("SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, COALESCE(mm.flags, '') AS flags, COALESCE(mm.labels, '') AS labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m LEFT JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.messageId = :messageId LIMIT 1")
     fun observeMessage(messageId: String): Flow<MessageDetailRow?>
 
-    @Query("SELECT DISTINCT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, mm.flags, mm.labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE (m.messageId = :messageId OR (m.gmailThreadId IS NOT NULL AND m.gmailThreadId != '' AND m.gmailThreadId = (SELECT target.gmailThreadId FROM messages target WHERE target.messageId = :messageId AND target.gmailThreadId IS NOT NULL AND target.gmailThreadId != ''))) ORDER BY m.sentAtEpochMillis ASC")
+    @Query("SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, COALESCE(mm.flags, '') AS flags, COALESCE(mm.labels, '') AS labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m LEFT JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.accountId = (SELECT target.accountId FROM messages target WHERE target.messageId = :messageId) AND (m.messageId = :messageId OR (m.gmailThreadId IS NOT NULL AND m.gmailThreadId != '' AND m.gmailThreadId = (SELECT target.gmailThreadId FROM messages target WHERE target.messageId = :messageId AND target.gmailThreadId IS NOT NULL AND target.gmailThreadId != ''))) GROUP BY m.messageId ORDER BY m.sentAtEpochMillis ASC")
     fun observeThread(messageId: String): Flow<List<MessageDetailRow>>
 
     @Query("SELECT * FROM attachments WHERE messageId = :messageId ORDER BY partId")
     fun observeAttachments(messageId: String): Flow<List<AttachmentEntity>>
 
-    @Query("WITH matched_threads AS (SELECT DISTINCT m.gmailThreadId FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid WHERE messages_fts MATCH :ftsQuery AND m.gmailThreadId IS NOT NULL), matched_messages AS (SELECT m.messageId FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid WHERE messages_fts MATCH :ftsQuery) SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.sentAtEpochMillis, mm.flags, mm.labels, EXISTS(SELECT 1 FROM attachments a WHERE a.messageId = m.messageId) AS hasAttachment, m.category FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE mm.mailboxId = :mailboxId AND (m.messageId IN matched_messages OR m.gmailThreadId IN matched_threads) ORDER BY m.sentAtEpochMillis DESC LIMIT 500")
+    @Query("WITH matched_threads AS (SELECT DISTINCT m.accountId, m.gmailThreadId FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid WHERE messages_fts MATCH :ftsQuery AND m.gmailThreadId IS NOT NULL AND m.gmailThreadId != ''), matched_messages AS (SELECT m.messageId FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid WHERE messages_fts MATCH :ftsQuery) SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.sentAtEpochMillis, mm.flags, mm.labels, EXISTS(SELECT 1 FROM attachments a WHERE a.messageId = m.messageId) AS hasAttachment, m.category FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE mm.mailboxId = :mailboxId AND (m.messageId IN matched_messages OR EXISTS (SELECT 1 FROM matched_threads matched WHERE matched.accountId = m.accountId AND matched.gmailThreadId = m.gmailThreadId)) ORDER BY m.sentAtEpochMillis DESC LIMIT 500")
     fun search(mailboxId: String, ftsQuery: String): Flow<List<MailboxMessageRow>>
 }
 
@@ -418,19 +463,55 @@ interface PendingMutationDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(mutation: PendingMutationEntity)
 
-    @Query("SELECT * FROM pending_mutations WHERE accountId = :accountId AND state IN ('PENDING', 'IN_FLIGHT') ORDER BY createdAtEpochMillis, mutationId")
+    @Query("SELECT * FROM pending_mutations WHERE accountId = :accountId AND state IN ('PENDING', 'IN_FLIGHT', 'FAILED_PERMANENT') ORDER BY createdAtEpochMillis, rowid")
     suspend fun activeForAccount(accountId: String): List<PendingMutationEntity>
 
-    @Query("SELECT * FROM pending_mutations WHERE messageId = :messageId AND state IN ('PENDING', 'IN_FLIGHT') ORDER BY createdAtEpochMillis, mutationId")
+    @Query("SELECT * FROM pending_mutations WHERE (messageId = :messageId OR (accountId = (SELECT accountId FROM messages WHERE messageId = :messageId) AND type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND (payload = 'gmail-thread:' || (SELECT gmailThreadId FROM messages WHERE messageId = :messageId) OR payload LIKE 'gmail-thread:' || (SELECT gmailThreadId FROM messages WHERE messageId = :messageId) || ':%'))) AND state IN ('PENDING', 'IN_FLIGHT', 'FAILED_PERMANENT') ORDER BY createdAtEpochMillis, rowid")
     suspend fun activeForMessage(messageId: String): List<PendingMutationEntity>
+
+    @Query("SELECT * FROM pending_mutations WHERE accountId = :accountId AND type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND (payload = 'gmail-thread:' || :threadId OR payload LIKE 'gmail-thread:' || :threadId || ':%') AND state IN ('PENDING', 'IN_FLIGHT', 'FAILED_PERMANENT') ORDER BY createdAtEpochMillis, rowid")
+    suspend fun activeForThread(accountId: String, threadId: String): List<PendingMutationEntity>
+
+    @Query("UPDATE pending_mutations SET targetUid = NULL WHERE accountId = :accountId AND state IN ('PENDING', 'IN_FLIGHT', 'FAILED_PERMANENT')")
+    suspend fun clearActiveTargetUids(accountId: String)
 
     @Query("UPDATE pending_mutations SET state = :state, retryCount = :retryCount, lastErrorCode = :errorCode WHERE mutationId = :mutationId")
     suspend fun updateState(mutationId: String, state: String, retryCount: Int, errorCode: String?)
 
+    @Query("UPDATE pending_mutations SET state = 'IN_FLIGHT', lastErrorCode = NULL WHERE mutationId = :mutationId AND state = 'PENDING'")
+    suspend fun claim(mutationId: String): Int
+
+    @Query("UPDATE pending_mutations SET state = 'IN_FLIGHT', lastErrorCode = NULL WHERE payload = :payload AND type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND state = 'PENDING'")
+    suspend fun claimThreadAction(payload: String): Int
+
+    @Query("UPDATE pending_mutations SET state = :state, retryCount = :retryCount, lastErrorCode = :errorCode WHERE payload = :payload AND type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND state = 'IN_FLIGHT'")
+    suspend fun updateThreadActionState(payload: String, state: String, retryCount: Int, errorCode: String?)
+
+    @Query("DELETE FROM pending_mutations WHERE payload = :payload AND type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND state = 'IN_FLIGHT'")
+    suspend fun deleteThreadAction(payload: String)
+
+    @Query("UPDATE pending_mutations SET state = 'PENDING' WHERE accountId = :accountId AND state = 'IN_FLIGHT'")
+    suspend fun recoverInFlight(accountId: String)
+
+    @Query("SELECT COUNT(DISTINCT CASE WHEN type IN ('ARCHIVE', 'DELETE', 'MARK_READ', 'MARK_UNREAD', 'STAR', 'UNSTAR') AND payload LIKE 'gmail-thread:%' THEN payload ELSE mutationId END) FROM pending_mutations WHERE accountId = :accountId AND state = 'FAILED_PERMANENT'")
+    fun observeFailedCount(accountId: String): Flow<Int>
+
+    @Query("SELECT * FROM pending_mutations WHERE accountId = :accountId AND state = 'FAILED_PERMANENT' ORDER BY createdAtEpochMillis, rowid")
+    suspend fun failedForAccount(accountId: String): List<PendingMutationEntity>
+
+    @Query("UPDATE pending_mutations SET state = 'PENDING', lastErrorCode = NULL WHERE accountId = :accountId AND state = 'FAILED_PERMANENT'")
+    suspend fun retryFailed(accountId: String)
+
+    @Query("DELETE FROM pending_mutations WHERE accountId = :accountId AND state = 'FAILED_PERMANENT'")
+    suspend fun deleteFailed(accountId: String)
+
+    @Query("DELETE FROM pending_mutations WHERE mutationId = :mutationId AND state = 'PENDING'")
+    suspend fun deletePending(mutationId: String): Int
+
     @Query("DELETE FROM pending_mutations WHERE mutationId = :mutationId")
     suspend fun delete(mutationId: String)
 
-    @Query("SELECT * FROM pending_mutations WHERE messageId = :messageId AND type = 'ARCHIVE' AND state = 'PENDING' ORDER BY createdAtEpochMillis DESC LIMIT 1")
+    @Query("SELECT * FROM pending_mutations WHERE messageId = :messageId AND type = 'ARCHIVE' AND state = 'PENDING' ORDER BY createdAtEpochMillis DESC, rowid DESC LIMIT 1")
     suspend fun undoableArchive(messageId: String): PendingMutationEntity?
 }
 
@@ -524,7 +605,7 @@ abstract class GlassMailDatabase : RoomDatabase() {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE messages ADD COLUMN category TEXT NOT NULL DEFAULT 'PRIMARY'")
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_messages_accountId_category ON messages(accountId, category)")
-                database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING FTS4(subject, sender, preview, body, content='messages', tokenize=unicode61)")
+                database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `messages_fts` USING FTS4(`subject` TEXT, `sender` TEXT, `preview` TEXT, `body` TEXT, tokenize=unicode61, content=`messages`)")
                 database.execSQL("INSERT INTO messages_fts(messages_fts) VALUES('rebuild')")
             }
         }

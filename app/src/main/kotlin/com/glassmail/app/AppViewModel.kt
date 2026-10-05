@@ -20,6 +20,7 @@ import com.glassmail.domain.mail.MailMessage
 import com.glassmail.domain.mail.MailMutation
 import com.glassmail.domain.mail.MailCategory
 import com.glassmail.domain.mail.MailRepository
+import com.glassmail.domain.mail.OlderMailResult
 import com.glassmail.domain.mail.MailCacheSettings
 import com.glassmail.domain.mail.StorageQuota
 import com.glassmail.sync.AccountSyncScheduler
@@ -30,8 +31,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID
@@ -94,6 +97,22 @@ class AppViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InboxUiState())
 
+    val failedMutations: StateFlow<Map<String, Int>> = combine(accounts, accountId, _appearance.map { it.unifiedInbox }) { available, id, unified ->
+        if (unified) available.map { it.accountId } else listOfNotNull(id)
+    }.flatMapLatest { ids ->
+        if (ids.isEmpty()) flowOf(emptyMap()) else combine(ids.map { id -> repository.observeFailedMutationCount(id).map { id to it } }) { counts ->
+            counts.filter { it.second > 0 }.toMap()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    fun retryFailedActions(accountIds: List<String>) = viewModelScope.launch {
+        accountIds.forEach { repository.retryFailedMutations(it) }
+    }
+
+    fun dismissFailedActions(accountIds: List<String>) = viewModelScope.launch {
+        accountIds.forEach { repository.dismissFailedMutations(it) }
+    }
+
     private val searchQuery = MutableStateFlow("")
     private val searchResults: StateFlow<SearchUiState> = combine(accounts, accountId, _appearance.map { it.unifiedInbox }, searchQuery.debounce(250)) { available, id, unified, query ->
         SearchInputs(available.map { it.accountId }, id, unified, query)
@@ -113,45 +132,83 @@ class AppViewModel(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
+    private val _olderMail = MutableStateFlow<Map<String, OlderMailUiState>>(emptyMap())
+    val olderMail: StateFlow<Map<String, OlderMailUiState>> = _olderMail
+    private val invalidatedOlderMail = mutableSetOf<String>()
+
+    private fun invalidateOlderMail(accountId: String) {
+        if (_olderMail.value[accountId]?.isLoading == true) invalidatedOlderMail.add(accountId)
+        else _olderMail.value = _olderMail.value - accountId
+    }
+
+    private fun completeOlderMail(accountId: String, state: OlderMailUiState) {
+        val resolved = if (invalidatedOlderMail.remove(accountId)) OlderMailUiState() else state
+        _olderMail.value = _olderMail.value + (accountId to resolved)
+    }
+
+    fun loadOlder(accountId: String) = viewModelScope.launch {
+        if (_olderMail.value[accountId]?.isLoading == true) return@launch
+        val previous = _olderMail.value[accountId] ?: OlderMailUiState()
+        _olderMail.value = _olderMail.value + (accountId to previous.copy(isLoading = true, failed = false))
+        try {
+            val result = repository.loadOlder(accountId)
+            val state = when (result) {
+                is OlderMailResult.Success -> OlderMailUiState(
+                    hasMoreOlder = result.hasMoreOlder, cacheLimitReached = result.cacheLimitReached,
+                )
+                is OlderMailResult.Failure -> previous.copy(failed = true)
+            }
+            completeOlderMail(accountId, state)
+        } catch (error: CancellationException) {
+            completeOlderMail(accountId, previous)
+            throw error
+        } catch (_: Exception) {
+            completeOlderMail(accountId, previous.copy(failed = true))
+        }
+    }
+
     private val _undoableArchive = MutableStateFlow<UndoableArchive?>(null)
     val undoableArchive: StateFlow<UndoableArchive?> = _undoableArchive
 
     private val readerMessageId = MutableStateFlow<String?>(null)
+    private val failedBodyIds = MutableStateFlow<Set<String>>(emptySet())
     val readerUiState: StateFlow<ReaderUiState> = readerMessageId.flatMapLatest { messageId ->
         if (messageId == null) flowOf(ReaderUiState())
-        else combine(repository.observeMessage(messageId), repository.observeThread(messageId)) { selected, thread ->
-            ReaderUiState(selected = selected, thread = thread)
+        else combine(repository.observeMessage(messageId), repository.observeThread(messageId), failedBodyIds) { selected, thread, failed ->
+            ReaderUiState(selected = selected, thread = thread, failedBodyIds = failed)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReaderUiState())
 
     fun mutation(item: MailListItem, type: String) = viewModelScope.launch {
-        val threadIds = item.threadMessageIds.ifEmpty { listOf(item.messageId) }
-        threadIds.forEach { messageId ->
-            val account = accountForMessage(messageId) ?: return@forEach
-            val inboxId = "${account.accountId}:INBOX"
-            repository.applyMutation(
-                when (type) {
-                    "star" -> MailMutation.Star(account.accountId, messageId, inboxId, !item.starred)
-                    "read" -> MailMutation.MarkRead(account.accountId, messageId, inboxId, item.unread)
-                    "archive" -> MailMutation.Archive(account.accountId, messageId, inboxId)
-                    else -> MailMutation.Delete(account.accountId, messageId, inboxId)
-                }
-            )
-        }
-        if (type == "archive") _undoableArchive.value = UndoableArchive(UUID.randomUUID().toString(), threadIds)
-    }
-
-    fun threadMutation(messageIds: List<String>, type: String) = viewModelScope.launch {
-        val messages = messageIds.distinct()
-        val currentThread = messages.mapNotNull { id -> readerUiState.value.thread.firstOrNull { it.messageId == id } }
-        val star = type == "star" && currentThread.any { !it.starred }
-        val mutations = messages.mapNotNull { messageId ->
+        val threadIds = item.threadMessageIds.distinct().ifEmpty { listOf(item.messageId) }
+        val mutations = threadIds.mapNotNull { messageId ->
             val account = accountForMessage(messageId) ?: return@mapNotNull null
             val inboxId = "${account.accountId}:INBOX"
             when (type) {
-                "star" -> MailMutation.Star(account.accountId, messageId, inboxId, star)
-                "archive", "mute" -> MailMutation.Archive(account.accountId, messageId, inboxId)
-                else -> MailMutation.Delete(account.accountId, messageId, inboxId)
+                "star" -> MailMutation.Star(account.accountId, messageId, inboxId, !item.starred, item.threadId)
+                "read" -> MailMutation.MarkRead(account.accountId, messageId, inboxId, item.unread, item.threadId)
+                "archive" -> MailMutation.Archive(account.accountId, messageId, inboxId, item.threadId)
+                "delete" -> MailMutation.Delete(account.accountId, messageId, inboxId, item.threadId)
+                else -> null
+            }
+        }
+        repository.applyMutations(mutations)
+        if (type == "archive" && mutations.isNotEmpty()) _undoableArchive.value = UndoableArchive(UUID.randomUUID().toString(), mutations.map { it.messageId })
+    }
+
+    fun threadMutation(messageIds: List<String>, type: String, desiredStarred: Boolean? = null) = viewModelScope.launch {
+        val messages = messageIds.distinct()
+        val currentThread = messages.mapNotNull { id -> readerUiState.value.thread.firstOrNull { it.messageId == id } }
+        val star = desiredStarred ?: !currentThread.any { it.starred }
+        val mutations = messages.mapNotNull { messageId ->
+            val account = accountForMessage(messageId) ?: return@mapNotNull null
+            val inboxId = "${account.accountId}:INBOX"
+            val threadId = currentThread.firstOrNull { it.messageId == messageId }?.threadId
+            when (type) {
+                "star" -> MailMutation.Star(account.accountId, messageId, inboxId, star, threadId)
+                "archive" -> MailMutation.Archive(account.accountId, messageId, inboxId, threadId)
+                "delete" -> MailMutation.Delete(account.accountId, messageId, inboxId, threadId)
+                else -> null
             }
         }
         repository.applyMutations(mutations)
@@ -159,7 +216,7 @@ class AppViewModel(
 
     fun undoArchive(actionId: String) = viewModelScope.launch {
         val action = _undoableArchive.value?.takeIf { it.actionId == actionId } ?: return@launch
-        action.messageIds.forEach { repository.undoPendingArchive(it) }
+        repository.undoPendingArchives(action.messageIds)
         if (_undoableArchive.value?.actionId == actionId) _undoableArchive.value = null
     }
 
@@ -190,9 +247,7 @@ class AppViewModel(
 
     fun removeAccount() = viewModelScope.launch {
         accounts.value.firstOrNull { it.accountId == accountId.value }?.let {
-            syncScheduler.cancel(it.accountId)
             repository.removeAccount(it.accountId)
-            runCatching { com.glassmail.sync.IdleServiceController.start(context) }
         }
     }
 
@@ -201,7 +256,11 @@ class AppViewModel(
         _isRefreshing.value = true
         try {
             val selected = if (_appearance.value.unifiedInbox) accounts.value else listOfNotNull(accounts.value.firstOrNull { it.accountId == accountId.value })
-            selected.forEach { repository.synchronize(it.accountId) }
+            selected.forEach { account ->
+                val result = repository.synchronize(account.accountId)
+                // Membership changes or a namespace reset can make older mail available.
+                if (result is com.glassmail.core.model.MailSyncResult.Success) invalidateOlderMail(account.accountId)
+            }
         } finally {
             _isRefreshing.value = false
         }
@@ -217,11 +276,22 @@ class AppViewModel(
 
     fun selectReaderMessage(messageId: String) {
         readerMessageId.value = messageId
+        openReaderMessage(messageId)
+    }
+
+    fun openReaderMessage(messageId: String) {
+        viewModelScope.launch {
+            val message = repository.observeMessage(messageId).first() ?: return@launch
+            if (message.unread) accountForMessage(messageId)?.let { account ->
+                repository.applyMutation(MailMutation.MarkRead(account.accountId, messageId, null, true))
+            }
+        }
         loadMessageBody(messageId)
     }
 
     fun loadMessageBody(messageId: String) = viewModelScope.launch {
-        repository.loadMessageBody(messageId)
+        failedBodyIds.value = failedBodyIds.value - messageId
+        if (repository.loadMessageBody(messageId).isFailure) failedBodyIds.value = failedBodyIds.value + messageId
     }
 
     fun updateAppearance(update: (AppearanceSettings) -> AppearanceSettings) {
@@ -230,7 +300,10 @@ class AppViewModel(
     }
 
     fun updateCacheSettings(update: (MailCacheSettings) -> MailCacheSettings) = viewModelScope.launch {
-        accountId.value?.let { repository.saveCacheSettings(it, update(cacheSettings.value)) }
+        accountId.value?.let {
+            repository.saveCacheSettings(it, update(cacheSettings.value))
+            invalidateOlderMail(it)
+        }
     }
 
     fun refreshStorageQuota() = viewModelScope.launch {
@@ -260,7 +333,7 @@ class AppViewModel(
     fun updateCredential(accountId: String, credential: CharArray) = viewModelScope.launch {
         try {
             credentialStore.store(accountId, credential)
-            refresh()
+            repository.synchronize(accountId)
         } finally {
             credential.fill('\u0000')
         }
@@ -324,4 +397,14 @@ data class UndoableArchive(val actionId: String, val messageIds: List<String>)
 data class ReaderUiState(
     val selected: MailMessage? = null,
     val thread: List<MailMessage> = emptyList(),
+    /** Message ids whose body fetch failed; the Reader offers Retry instead of spinning forever. */
+    val failedBodyIds: Set<String> = emptySet(),
+)
+
+/** Per-account transient request state; never stored in saved state or preferences. */
+data class OlderMailUiState(
+    val isLoading: Boolean = false,
+    val hasMoreOlder: Boolean = true,
+    val cacheLimitReached: Boolean = false,
+    val failed: Boolean = false,
 )

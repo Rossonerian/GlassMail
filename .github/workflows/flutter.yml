@@ -1,4 +1,4 @@
-name: Flutter build and checks
+name: Experimental Flutter build and checks
 
 on:
   push:
@@ -6,9 +6,17 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: flutter_app
@@ -18,13 +26,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      # The runner includes API 36 and Build Tools 36.0.0 for Flutter's AGP 9.1.
+      - uses: subosito/flutter-action@v2
         with:
-          cmdline-tools-version: 11479570
-      - uses: flutter-actions/setup-flutter@v4.2
-        with:
-          version: 'any'
+          flutter-version: '3.47.5'
           channel: stable
+          cache: true
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze
@@ -53,10 +60,24 @@ jobs:
         working-directory: flutter_app/packages/data_mail
       - run: flutter test
         working-directory: flutter_app/packages/data_mail
-      - run: flutter build appbundle --release
+      # The app selects a release signing config, so supply a disposable CI key.
+      # This bundle is a build check and must never be published as a release.
+      - name: Create temporary CI signing key
+        run: >-
+          keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/flutter-ci.jks"
+          -storetype JKS -storepass android -keypass android -alias ci
+          -keyalg RSA -keysize 2048 -validity 1 -dname "CN=GlassMail CI"
+      - name: Build release app bundle (CI signing only)
+        env:
+          GLASSMAIL_KEYSTORE: ${{ runner.temp }}/flutter-ci.jks
+          GLASSMAIL_KEYSTORE_PASSWORD: android
+          GLASSMAIL_KEY_ALIAS: ci
+          GLASSMAIL_KEY_PASSWORD: android
+        run: flutter build appbundle --release
 
   ios-simulator:
     runs-on: macos-latest
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: flutter_app
@@ -66,10 +87,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: flutter-actions/setup-flutter@v4.2
+      - uses: subosito/flutter-action@v2
         with:
-          version: 'any'
+          flutter-version: '3.47.5'
           channel: stable
+          cache: true
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze

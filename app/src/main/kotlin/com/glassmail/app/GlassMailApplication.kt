@@ -51,17 +51,28 @@ class AppGraph(application: Application) {
     private val database = GlassMailDatabase.create(application)
     val credentialStore = AndroidKeystoreCredentialStore(application)
     private val imapClient = GmailImapClient()
+    val syncScheduler = AccountSyncScheduler(application)
     private val repositoryImpl = ImapMailRepository(
         database = database,
         credentialStore = credentialStore,
         imapClient = imapClient,
         attachmentRoot = java.io.File(application.filesDir, "mail-cache"),
         onNewMessages = notificationCoordinator::onNewMessages,
+        onMutationsQueued = syncScheduler::enqueueMutation,
+        onBeforeAccountRemoval = { accountId, draftIds ->
+            syncScheduler.cancel(accountId)
+            draftIds.forEach { draftId ->
+                DelayedSendWorker.cancel(context, draftId)
+                RemoteDraftSyncWorker.cancel(context, draftId)
+            }
+            IdleRuntime.cancelAccount(accountId)
+            notificationCoordinator.cancelForAccount(accountId)
+        },
+        onAccountRemoved = { runCatching { com.glassmail.sync.IdleServiceController.start(context) }; Unit },
     )
     val mailRepository: MailRepository = repositoryImpl
     val draftRepository: DraftRepository = repositoryImpl
     val syncAccountUseCase = SyncAccountUseCase(mailRepository)
-    val syncScheduler = AccountSyncScheduler(application)
     val mailSender = GmailSmtpMailSender(object : SmtpCredentialProvider {
         override suspend fun <T> withCredential(accountId: String, block: suspend (CharArray) -> T): T? = credentialStore.withCredential(accountId, block)
     }, imapClient = imapClient)
@@ -103,12 +114,12 @@ class AppGraph(application: Application) {
             override suspend fun idle(accountId: String) {
                 val account = mailRepository.observeAccounts().first().firstOrNull { it.accountId == accountId } ?: return
                 val connected = credentialStore.withCredential(accountId) { password ->
-                    imapClient.idle(account.email, password) { syncScheduler.enqueueManual(accountId) }
+                    imapClient.idle(account.email, password) { syncScheduler.enqueueMutation(accountId, com.glassmail.domain.mail.ARCHIVE_UNDO_MILLIS) }
                 }
                 if (connected == null) error("IMAP credentials are unavailable")
             }
 
-            override fun enqueueSync(accountId: String) = syncScheduler.enqueueManual(accountId)
+            override fun enqueueSync(accountId: String) = syncScheduler.enqueueMutation(accountId, com.glassmail.domain.mail.ARCHIVE_UNDO_MILLIS)
         })
     }
 }

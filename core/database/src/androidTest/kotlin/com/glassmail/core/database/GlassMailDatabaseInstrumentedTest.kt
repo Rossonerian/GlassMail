@@ -1,14 +1,14 @@
 package com.glassmail.core.database
 
+import android.database.sqlite.SQLiteException
 import androidx.room.Room
-import androidx.sqlite.db.SupportSQLiteOpenHelper
-import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,28 +63,98 @@ class GlassMailDatabaseInstrumentedTest {
         assertNotNull(db.pendingMutationDao().activeForAccount("a").singleOrNull())
     }
 
-    @Test fun migrationThreeToFourAddsMessagePresentationColumns() {
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val helper = FrameworkSQLiteOpenHelperFactory().create(
-            SupportSQLiteOpenHelper.Configuration.builder(context)
-                .name("migration-test-${System.nanoTime()}")
-                .callback(object : SupportSQLiteOpenHelper.Callback(3) {
-                    override fun onCreate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-                        database.execSQL(
-                            "CREATE TABLE messages (messageId TEXT NOT NULL, accountId TEXT NOT NULL, gmailMessageId TEXT, gmailThreadId TEXT, subject TEXT, sender TEXT, sentAtEpochMillis INTEGER, sizeBytes INTEGER, bodyDownloadState TEXT NOT NULL, PRIMARY KEY(messageId))",
-                        )
-                    }
+    @Test fun threadQueryDoesNotMixAccountsWithTheSameGmailThreadId() = runBlocking {
+        db.accountDao().upsert(AccountEntity("a", "a@example.test", 1, "READY"))
+        db.accountDao().upsert(AccountEntity("b", "b@example.test", 2, "READY"))
+        db.mailDao().upsertMailboxes(listOf(
+            MailboxEntity("a:INBOX", "a", "INBOX", 7, 3, 2),
+            MailboxEntity("b:INBOX", "b", "INBOX", 7, 2, 1),
+        ))
+        db.mailDao().upsertMessages(listOf(
+            MessageEntity("a1", "a", "1", "shared", "First", "Sender", 1, 1),
+            MessageEntity("a2", "a", "2", "shared", "Second", "Sender", 2, 1),
+            MessageEntity("b1", "b", "1", "shared", "Foreign", "Sender", 3, 1),
+        ))
+        db.mailDao().upsertMailboxMessages(listOf(
+            MailboxMessageEntity("a:INBOX", 1, "a1", "", "INBOX"),
+            MailboxMessageEntity("a:INBOX", 2, "a2", "", "INBOX"),
+            MailboxMessageEntity("b:INBOX", 1, "b1", "", "INBOX"),
+        ))
+        assertEquals(listOf("a1", "a2"), db.mailDao().observeThread("a1").first().map { it.messageId })
+        assertEquals(listOf("b1"), db.mailDao().observeThread("b1").first().map { it.messageId })
+        assertTrue(db.mailDao().observeThread("missing").first().isEmpty())
+    }
 
-                    override fun onUpgrade(database: androidx.sqlite.db.SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
-                }).build(),
-        )
-        val sqlite = helper.writableDatabase
-        GlassMailDatabase.MIGRATION_3_4.migrate(sqlite)
+    @Test fun threadQueryKeepsNullAndEmptyThreadIdsAsSingleMessages() = runBlocking {
+        db.accountDao().upsert(AccountEntity("a", "a@example.test", 1, "READY"))
+        db.mailDao().upsertMailboxes(listOf(MailboxEntity("a:INBOX", "a", "INBOX", 7, 5, 4)))
+        db.mailDao().upsertMessages(listOf(
+            MessageEntity("null1", "a", "1", null, "First", "Sender", 1, 1),
+            MessageEntity("null2", "a", "2", null, "Second", "Sender", 2, 1),
+            MessageEntity("empty1", "a", "3", "", "Third", "Sender", 3, 1),
+            MessageEntity("empty2", "a", "4", "", "Fourth", "Sender", 4, 1),
+        ))
+        db.mailDao().upsertMailboxMessages(listOf("null1", "null2", "empty1", "empty2").mapIndexed { index, id ->
+            MailboxMessageEntity("a:INBOX", index.toLong() + 1, id, "", "INBOX")
+        })
+        assertEquals(listOf("null1"), db.mailDao().observeThread("null1").first().map { it.messageId })
+        assertEquals(listOf("empty1"), db.mailDao().observeThread("empty1").first().map { it.messageId })
+    }
 
-        val columns = sqlite.query("PRAGMA table_info(messages)").use { cursor ->
-            buildSet { while (cursor.moveToNext()) add(cursor.getString(cursor.getColumnIndexOrThrow("name"))) }
+    @Test fun searchExpandsThreadsWithinTheSameAccountIncludingMatchesOutsideInbox() = runBlocking {
+        db.accountDao().upsert(AccountEntity("a", "a@example.test", 1, "READY"))
+        db.accountDao().upsert(AccountEntity("b", "b@example.test", 2, "READY"))
+        db.mailDao().upsertMailboxes(listOf(
+            MailboxEntity("a:INBOX", "a", "INBOX", 7, 3, 2),
+            MailboxEntity("a:Archive", "a", "Archive", 7, 2, 1),
+            MailboxEntity("b:INBOX", "b", "INBOX", 7, 2, 1),
+        ))
+        db.mailDao().upsertMessages(listOf(
+            MessageEntity("a1", "a", "1", "shared", "Ordinary", "Sender", 1, 1),
+            MessageEntity("a2", "a", "2", "shared", "Threadneedle", "Sender", 2, 1),
+            MessageEntity("a3", "a", "3", null, "Directneedle", "Sender", 3, 1),
+            MessageEntity("b1", "b", "1", "shared", "Foreignneedle", "Sender", 4, 1),
+        ))
+        db.mailDao().upsertMailboxMessages(listOf(
+            MailboxMessageEntity("a:INBOX", 1, "a1", "", "INBOX"),
+            MailboxMessageEntity("a:Archive", 1, "a2", "", "Archive"),
+            MailboxMessageEntity("a:INBOX", 2, "a3", "", "INBOX"),
+            MailboxMessageEntity("b:INBOX", 1, "b1", "", "INBOX"),
+        ))
+        assertTrue(db.mailDao().search("a:INBOX", "Foreignneedle").first().isEmpty())
+        assertEquals(listOf("a1"), db.mailDao().search("a:INBOX", "Threadneedle").first().map { it.messageId })
+        assertEquals(listOf("a3"), db.mailDao().search("a:INBOX", "Directneedle").first().map { it.messageId })
+        assertEquals(listOf("b1"), db.mailDao().search("b:INBOX", "Foreignneedle").first().map { it.messageId })
+        assertTrue(db.mailDao().search("b:INBOX", "Threadneedle").first().isEmpty())
+    }
+
+    @Test fun accountDeletionRemovesAllAccountRowsAndPreservesOtherAccounts() = runBlocking {
+        val sqlite = db.openHelper.writableDatabase
+        HistoricalRows.insert(sqlite, 10, "a")
+        HistoricalRows.insert(sqlite, 10, "b")
+
+        db.accountDao().deleteWithAccountData("a")
+
+        HistoricalRows.assertAbsent(sqlite, "a")
+        HistoricalRows.assertSurvive(sqlite, 10, "b")
+        assertTrue(ftsMessageIds(sqlite, "Migrationneedle").isEmpty())
+        assertEquals(listOf("b:message"), ftsMessageIds(sqlite, "Other"))
+    }
+
+    @Test fun accountDeletionRollsBackEveryTableWhenTheAccountDeleteFails() = runBlocking {
+        val sqlite = db.openHelper.writableDatabase
+        HistoricalRows.insert(sqlite, 10)
+        sqlite.execSQL("CREATE TRIGGER reject_account_delete BEFORE DELETE ON accounts " +
+            "WHEN OLD.accountId = 'a' BEGIN SELECT RAISE(ABORT, 'test failure'); END")
+
+        var rejected = false
+        try {
+            db.accountDao().deleteWithAccountData("a")
+        } catch (_: SQLiteException) {
+            rejected = true
         }
-        assertEquals(setOf("preview", "body", "contentKind"), columns.intersect(setOf("preview", "body", "contentKind")))
-        helper.close()
+        assertTrue("The injected delete failure must be reached", rejected)
+        HistoricalRows.assertSurvive(sqlite, 10)
+        assertEquals(listOf("a:message"), ftsMessageIds(sqlite, "Migrationneedle"))
     }
 }
