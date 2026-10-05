@@ -548,7 +548,10 @@ private fun HtmlMessageBody(
                 settings.domStorageEnabled = false
                 settings.setSupportMultipleWindows(false)
                 webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        openMailLink(view.context, request.url)
+                        return true
+                    }
 
                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): android.webkit.WebResourceResponse? =
                         if (request.url.scheme == "data" || request.url.scheme == "about") null
@@ -653,4 +656,19 @@ private fun ReaderAttachmentRow(
             Text(if (attachment.downloadState == "AVAILABLE") "Open" else "Download")
         }
     }
+}
+
+/**
+ * Opens a link tapped inside an HTML message. Only web, mail and phone links are honored; every other scheme
+ * (javascript:, file:, content:, intent:, data:) is ignored. Returns whether an activity was launched.
+ */
+internal fun openMailLink(context: android.content.Context, uri: android.net.Uri): Boolean {
+    val intent = when (uri.scheme?.lowercase()) {
+        "http", "https" -> android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+            .addCategory(android.content.Intent.CATEGORY_BROWSABLE)
+        "mailto" -> android.content.Intent(android.content.Intent.ACTION_SENDTO, uri)
+        "tel" -> android.content.Intent(android.content.Intent.ACTION_DIAL, uri)
+        else -> return false
+    }.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    return runCatching { context.startActivity(intent) }.isSuccess
 }

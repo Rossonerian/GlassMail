@@ -30,3 +30,10 @@ internal fun readImapLine(input: InputStream): String {
         bytes.write(next)
     }
 }
+
+/** Undoes a MIME Content-Transfer-Encoding so attachment bytes can be stored exactly as sent. */
+internal fun decodeTransferEncoding(raw: ByteArray, encoding: String): ByteArray = when (encoding.lowercase()) {
+    "base64", "quoted-printable" -> javax.mail.internet.MimeUtility.decode(java.io.ByteArrayInputStream(raw), encoding.lowercase())
+        .use { it.readBytes() }
+    else -> raw
+}

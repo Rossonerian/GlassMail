@@ -297,6 +297,10 @@ interface MailDao {
         downloadState: String,
     )
 
+    /** Earlier builds stored extracted plain text but labelled it HTML; those rows must be fetched again. */
+    @Query("UPDATE messages SET body = NULL, bodyDownloadState = 'NOT_FETCHED', contentKind = 'PLAIN' WHERE contentKind = 'HTML' AND bodyDownloadState = 'AVAILABLE' AND (body IS NULL OR instr(body, '<') = 0)")
+    suspend fun invalidateTextStoredAsHtml()
+
     @Query("SELECT bodyDownloadState FROM messages WHERE messageId = :messageId")
     suspend fun bodyDownloadState(messageId: String): String?
 
@@ -339,6 +343,10 @@ interface MailDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAttachments(attachments: List<AttachmentEntity>)
 
+    /** Keeps the download state of attachments that were already fetched. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAttachmentsIfAbsent(attachments: List<AttachmentEntity>)
+
     @Query("SELECT * FROM attachments WHERE attachmentId = :attachmentId LIMIT 1")
     suspend fun attachment(attachmentId: String): AttachmentEntity?
 
@@ -375,10 +383,10 @@ interface MailDao {
     @Query("SELECT m.category, COUNT(*) AS unreadCount FROM mailbox_messages mm JOIN messages m ON m.messageId = mm.messageId WHERE mm.mailboxId = :mailboxId AND instr(mm.flags, char(92) || 'Seen') = 0 GROUP BY m.category")
     fun observeCategoryUnreadCounts(mailboxId: String): Flow<List<CategoryUnreadCountRow>>
 
-    @Query("SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, mm.flags, mm.labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.messageId = :messageId LIMIT 1")
+    @Query("SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, COALESCE(mm.flags, '') AS flags, COALESCE(mm.labels, '') AS labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m LEFT JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.messageId = :messageId LIMIT 1")
     fun observeMessage(messageId: String): Flow<MessageDetailRow?>
 
-    @Query("SELECT DISTINCT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, mm.flags, mm.labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.accountId = (SELECT target.accountId FROM messages target WHERE target.messageId = :messageId) AND (m.messageId = :messageId OR (m.gmailThreadId IS NOT NULL AND m.gmailThreadId != '' AND m.gmailThreadId = (SELECT target.gmailThreadId FROM messages target WHERE target.messageId = :messageId AND target.gmailThreadId IS NOT NULL AND target.gmailThreadId != ''))) ORDER BY m.sentAtEpochMillis ASC")
+    @Query("SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.body, m.contentKind, m.sentAtEpochMillis, COALESCE(mm.flags, '') AS flags, COALESCE(mm.labels, '') AS labels, m.listUnsubscribe, m.listUnsubscribePost FROM messages m LEFT JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE m.accountId = (SELECT target.accountId FROM messages target WHERE target.messageId = :messageId) AND (m.messageId = :messageId OR (m.gmailThreadId IS NOT NULL AND m.gmailThreadId != '' AND m.gmailThreadId = (SELECT target.gmailThreadId FROM messages target WHERE target.messageId = :messageId AND target.gmailThreadId IS NOT NULL AND target.gmailThreadId != ''))) GROUP BY m.messageId ORDER BY m.sentAtEpochMillis ASC")
     fun observeThread(messageId: String): Flow<List<MessageDetailRow>>
 
     @Query("SELECT * FROM attachments WHERE messageId = :messageId ORDER BY partId")

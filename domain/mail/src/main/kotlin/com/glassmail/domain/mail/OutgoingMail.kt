@@ -70,7 +70,7 @@ data class DraftAttachment(
 )
 
 fun sanitizeAttachmentName(raw: String): String = raw.substringAfterLast('/').substringAfterLast('\\')
-    .replace(Regex("[^A-Za-z0-9._ -]"), "_").take(120).ifBlank { "attachment" }
+    .replace(Regex("[^\\p{L}\\p{N}._ -]"), "_").trimStart('.', ' ').take(120).ifBlank { "attachment" }
 
 fun estimatedOutgoingMessageBytes(mail: OutgoingMail): Long = mail.body.toByteArray(Charsets.UTF_8).size.toLong() +
     (mail.attachments.sumOf { it.sizeBytes.coerceAtLeast(0) } * 4 / 3) + mail.attachments.size * 1024L + 16_384

@@ -111,9 +111,109 @@ object MimeDecoder {
     }
 
     /**
-     * Parses a full RFC 822 message payload or body text into [ParsedMessageBody].
+     * Parses a full RFC 822 message into text, HTML (with small inline `cid:` images embedded as data URIs)
+     * and attachment metadata. Part ids follow IMAP numbering so [GmailImapClient] can fetch one part.
      */
-    fun parseRfc822(rawBytes: ByteArray): ParsedMessageBody {
+    fun parseRfc822(rawBytes: ByteArray): ParsedMessageBody = runCatching { parseWithJavaMail(rawBytes) }
+        .getOrElse { parseRfc822Legacy(rawBytes) }
+
+    private const val MAX_INLINE_IMAGE_BYTES = 1_572_864
+    private const val MAX_TOTAL_INLINE_BYTES = 4_194_304
+
+    private class PartCollector {
+        var plain: String? = null
+        var html: String? = null
+        val attachments = mutableListOf<ParsedAttachmentInfo>()
+        val inlineImages = linkedMapOf<String, Pair<String, ByteArray>>()
+        var inlineBytes = 0
+    }
+
+    private fun parseWithJavaMail(rawBytes: ByteArray): ParsedMessageBody {
+        System.setProperty("mail.mime.decodefilename", "true")
+        System.setProperty("mail.mime.decodeparameters", "true")
+        val message = javax.mail.internet.MimeMessage(
+            javax.mail.Session.getInstance(java.util.Properties()),
+            java.io.ByteArrayInputStream(rawBytes),
+        )
+        val collector = PartCollector()
+        walkPart(message, "", collector)
+        var html = collector.html
+        if (html != null && collector.inlineImages.isNotEmpty()) {
+            html = Regex("(?i)cid:([^\"'\\s>)]+)").replace(html) { match ->
+                val key = match.groupValues[1].trim('<', '>').lowercase()
+                val image = collector.inlineImages[key] ?: return@replace match.value
+                "data:${image.first};base64,${Base64.getEncoder().encodeToString(image.second)}"
+            }
+        }
+        val cleanPlain = collector.plain?.let { normalizeWhitespace(it) }
+        val cleanHtmlAsText = html?.let { htmlToPlainText(it) }
+        val bestText = cleanPlain?.takeIf { it.isNotBlank() } ?: cleanHtmlAsText.orEmpty()
+        return ParsedMessageBody(
+            plainText = cleanPlain ?: cleanHtmlAsText,
+            htmlText = html?.takeIf { it.isNotBlank() },
+            previewSnippet = generateSnippet(bestText),
+            attachments = collector.attachments,
+        )
+    }
+
+    private fun walkPart(part: javax.mail.Part, id: String, collector: PartCollector) {
+        if (part.isMimeType("multipart/*")) {
+            val multipart = part.content as javax.mail.Multipart
+            for (index in 0 until multipart.count) {
+                walkPart(multipart.getBodyPart(index), if (id.isEmpty()) "${index + 1}" else "$id.${index + 1}", collector)
+            }
+            return
+        }
+        val partId = id.ifEmpty { "1" }
+        val mimeType = part.contentType.substringBefore(';').trim().lowercase().ifBlank { "text/plain" }
+        val disposition = part.disposition?.lowercase()
+        val fileName = runCatching { part.fileName }.getOrNull()?.takeIf { it.isNotBlank() }
+        val contentId = (part as? javax.mail.internet.MimePart)?.contentID?.trim('<', '>', ' ')?.lowercase()
+        val isText = mimeType == "text/plain" || mimeType == "text/html"
+        val inlineImage = mimeType.startsWith("image/") && contentId != null && disposition != "attachment"
+        when {
+            inlineImage -> {
+                val bytes = runCatching { part.inputStream.use { it.readNBytes(MAX_INLINE_IMAGE_BYTES + 1) } }.getOrNull()
+                if (bytes != null && bytes.size <= MAX_INLINE_IMAGE_BYTES &&
+                    collector.inlineBytes + bytes.size <= MAX_TOTAL_INLINE_BYTES
+                ) {
+                    collector.inlineBytes += bytes.size
+                    collector.inlineImages[contentId!!] = mimeType to bytes
+                } else if (fileName != null) {
+                    collector.attachments += ParsedAttachmentInfo(partId, fileName, mimeType, part.size.coerceAtLeast(0).toLong())
+                }
+            }
+            isText && disposition != "attachment" && fileName == null -> {
+                val text = readText(part)
+                if (mimeType == "text/html") { if (collector.html == null) collector.html = text }
+                else if (collector.plain == null) collector.plain = text
+            }
+            disposition == "attachment" || fileName != null || !isText -> {
+                val name = fileName ?: "attachment-$partId" + extensionFor(mimeType)
+                collector.attachments += ParsedAttachmentInfo(partId, name, mimeType, part.size.coerceAtLeast(0).toLong())
+            }
+        }
+    }
+
+    private fun readText(part: javax.mail.Part): String = try {
+        part.content as? String ?: ""
+    } catch (_: Exception) {
+        val bytes = part.inputStream.use { it.readBytes() }
+        val charsetName = Regex("charset=\"?([^\";\\s]+)", RegexOption.IGNORE_CASE).find(part.contentType)?.groupValues?.get(1)
+        val charset = charsetName?.let { runCatching { Charset.forName(it) }.getOrNull() } ?: StandardCharsets.UTF_8
+        String(bytes, charset)
+    }
+
+    private fun extensionFor(mimeType: String): String = when (mimeType) {
+        "application/pdf" -> ".pdf"
+        "image/jpeg" -> ".jpg"
+        "image/png" -> ".png"
+        "message/rfc822" -> ".eml"
+        "text/calendar" -> ".ics"
+        else -> ""
+    }
+
+    private fun parseRfc822Legacy(rawBytes: ByteArray): ParsedMessageBody {
         val content = rawBytes.toString(StandardCharsets.ISO_8859_1)
         val headerEnd = findHeaderEnd(content)
         val headerSection = if (headerEnd > 0) content.substring(0, headerEnd) else ""

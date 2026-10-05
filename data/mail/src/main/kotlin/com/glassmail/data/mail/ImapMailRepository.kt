@@ -199,17 +199,32 @@ class ImapMailRepository(
             imapClient.fetchMessageBody(account.email, password, mailboxName, membership.uid)
         } ?: error("Authentication required to fetch message body")
 
-        val bodyToStore = parsed.plainText ?: parsed.htmlText.orEmpty()
+        val bodyToStore = parsed.htmlText?.takeIf { it.isNotBlank() } ?: parsed.plainText.orEmpty()
         database.mailDao().updateMessageBody(
             messageId = messageId,
             body = bodyToStore,
             preview = parsed.previewSnippet,
-            contentKind = if (parsed.htmlText != null) "HTML" else "PLAIN",
+            contentKind = if (!parsed.htmlText.isNullOrBlank()) "HTML" else "PLAIN",
             downloadState = com.glassmail.core.database.DownloadState.AVAILABLE,
         )
+        persistParsedAttachments(messageId, parsed)
 
         database.mailDao().observeMessage(messageId).firstOrNull()?.toMailMessage()
             ?: error("Could not load updated message from database")
+    }
+
+    private suspend fun persistParsedAttachments(messageId: String, parsed: com.glassmail.core.imap.ParsedMessageBody) {
+        if (parsed.attachments.isEmpty()) return
+        database.mailDao().insertAttachmentsIfAbsent(parsed.attachments.map { info ->
+            AttachmentEntity(
+                attachmentId = "$messageId:${info.partId}",
+                messageId = messageId,
+                partId = info.partId,
+                fileName = info.fileName,
+                mimeType = info.mimeType,
+                sizeBytes = info.sizeBytes.takeIf { it > 0 },
+            )
+        })
     }
 
     override suspend fun downloadAttachment(accountId: String, attachmentId: String): Result<DownloadedAttachment> = runCatching {
@@ -458,6 +473,7 @@ class ImapMailRepository(
         val account = database.accountDao().account(accountId)
             ?: return MailSyncResult.Failure(MailSyncError.Protocol)
         database.accountDao().setSyncState(accountId, "SYNCING")
+        runCatching { database.mailDao().invalidateTextStoredAsHtml() }
         return try {
             val inboxId = "$accountId:INBOX"
             val checkpoint = database.syncDao().checkpoint(inboxId)
@@ -523,14 +539,15 @@ class ImapMailRepository(
                     if (database.mailDao().bodyDownloadState(mId) != com.glassmail.core.database.DownloadState.AVAILABLE) {
                         runCatching {
                             val parsed = imapClient.fetchMessageBody(account.email, password, "INBOX", meta.uid)
-                            val bodyToStore = parsed.plainText ?: parsed.htmlText.orEmpty()
+                            val bodyToStore = parsed.htmlText?.takeIf { it.isNotBlank() } ?: parsed.plainText.orEmpty()
                             database.mailDao().updateMessageBody(
                                 messageId = mId,
                                 body = bodyToStore,
                                 preview = parsed.previewSnippet,
-                                contentKind = if (parsed.htmlText != null) "HTML" else "PLAIN",
+                                contentKind = if (!parsed.htmlText.isNullOrBlank()) "HTML" else "PLAIN",
                                 downloadState = com.glassmail.core.database.DownloadState.AVAILABLE,
                             )
+                            persistParsedAttachments(mId, parsed)
                         }
                     }
                 }

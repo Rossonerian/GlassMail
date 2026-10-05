@@ -454,7 +454,8 @@ private class TlsImapConnection private constructor(private val socket: SSLSocke
         // The closing brace is a regex metacharacter too. Android's ICU regex engine
         // rejects an unescaped one during class initialization.
         private val LITERAL_SUFFIX = Regex("\\{(\\d+)\\+?\\}$")
-        private const val MAX_LITERAL_BYTES = 8 * 1024 * 1024
+        // Gmail delivers messages up to 25 MiB of content; base64 transfer encoding adds roughly one third.
+        private const val MAX_LITERAL_BYTES = 36 * 1024 * 1024
 
         fun open(host: String, port: Int, connectTimeoutMillis: Int, readTimeoutMillis: Int): TlsImapConnection = try {
             val socket = SSLSocketFactory.getDefault().createSocket() as SSLSocket
@@ -709,14 +710,23 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
             .filter { it in 1 until beforeUid }.distinct().sorted()
     }
 
+    /** Returns the DECODED bytes of one MIME part (base64 / quoted-printable undone). */
     fun fetchBodyPart(uid: Long, partId: String): ByteArray {
-        val response = execute("UID FETCH $uid (BODY.PEEK[$partId])")
+        val encoding = fetchLiteral(uid, "$partId.MIME")
+            ?.toString(StandardCharsets.ISO_8859_1)
+            ?.let { Regex("(?im)^content-transfer-encoding:\\s*([A-Za-z0-9-]+)").find(it)?.groupValues?.get(1) }
+            ?.lowercase() ?: "7bit"
+        val raw = fetchLiteral(uid, partId) ?: throw ImapException.Protocol("Attachment payload missing")
+        return decodeTransferEncoding(raw, encoding)
+    }
+
+    private fun fetchLiteral(uid: Long, section: String): ByteArray? {
+        val response = execute("UID FETCH $uid (BODY.PEEK[$section])")
             .asSequence().filterIsInstance<ImapResponse.Untagged>().firstOrNull { item ->
                 item.values.getOrNull(1)?.atomValue()?.equals("FETCH", ignoreCase = true) == true
             } ?: throw ImapException.Protocol("Attachment response missing")
         val fields = response.values.getOrNull(2)?.listValue().orEmpty()
         return fields.firstNotNullOfOrNull { it.literalValue() }
-            ?: throw ImapException.Protocol("Attachment payload missing")
     }
 
     fun fetchMessageBody(uid: Long): ParsedMessageBody {
