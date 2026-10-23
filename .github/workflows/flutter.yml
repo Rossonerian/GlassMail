@@ -20,7 +20,7 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'cmdline-tools platform-tools'
+          packages: 'cmdline-tools;latest'
       - uses: flutter-actions/setup-flutter@v4.2
         with:
           version: 3.47.5
