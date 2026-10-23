@@ -17,7 +17,7 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'cmdline-tools platform-tools'
+          packages: 'cmdline-tools;latest platform-tools'
       - uses: gradle/actions/setup-gradle@v4
       - name: Run Kotlin unit tests, compile, and assemble debug APK
         run: ./gradlew test :app:compileDebugKotlin :app:assembleDebug

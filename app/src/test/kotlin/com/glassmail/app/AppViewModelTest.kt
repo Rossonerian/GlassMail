@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.flowOf
 import com.glassmail.sync.IdleServiceController
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
-import io.mockk.slot
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModelTest {
@@ -53,6 +53,126 @@ class AppViewModelTest {
     fun tearDown() {
         Dispatchers.resetMain()
         unmockkObject(IdleServiceController)
+    }
+
+    @Test
+    fun `searchUiState emits default state when query is blank`() = runTest(testDispatcher) {
+        val initialAppearance = AppearanceSettings(selectedAccountId = "account1")
+        val accountsFlow = MutableStateFlow(listOf(MailAccount("account1", "test@test.com", "READY")))
+
+        every { appearancePreferences.read() } returns initialAppearance
+        every { repository.observeAccounts() } returns accountsFlow
+        every { repository.observeStorageQuota(any()) } returns flowOf(null)
+        every { repository.observeCacheSettings(any()) } returns flowOf(MailCacheSettings())
+        every { repository.search(any(), any()) } returns flowOf(emptyList())
+
+        viewModel = AppViewModel(
+            context = context,
+            repository = repository,
+            syncScheduler = syncScheduler,
+            appearancePreferences = appearancePreferences,
+            draftRepository = draftRepository,
+            credentialStore = credentialStore
+        )
+
+        advanceUntilIdle()
+
+        val job = kotlinx.coroutines.CoroutineScope(testDispatcher).launch {
+            viewModel.searchUiState.collect {}
+        }
+
+        viewModel.setSearchQuery("  ")
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.searchUiState.value.isLoading)
+        assertEquals("", viewModel.searchUiState.value.query)
+        assertEquals(emptyList<com.glassmail.domain.mail.MailListItem>(), viewModel.searchUiState.value.messages)
+
+        job.cancel()
+    }
+
+    @Test
+    fun `searchUiState emits loading state when query changes and is not blank`() = runTest(testDispatcher) {
+        val initialAppearance = AppearanceSettings(selectedAccountId = "account1")
+        val accountsFlow = MutableStateFlow(listOf(MailAccount("account1", "test@test.com", "READY")))
+
+        every { appearancePreferences.read() } returns initialAppearance
+        every { repository.observeAccounts() } returns accountsFlow
+        every { repository.observeStorageQuota(any()) } returns flowOf(null)
+        every { repository.observeCacheSettings(any()) } returns flowOf(MailCacheSettings())
+
+        // Mock search to delay or just never return so we can observe the intermediate loading state
+        val searchFlow = MutableStateFlow<List<com.glassmail.domain.mail.MailListItem>>(emptyList())
+        every { repository.search(any(), any()) } returns searchFlow
+
+        viewModel = AppViewModel(
+            context = context,
+            repository = repository,
+            syncScheduler = syncScheduler,
+            appearancePreferences = appearancePreferences,
+            draftRepository = draftRepository,
+            credentialStore = credentialStore
+        )
+
+        advanceUntilIdle()
+
+        val job = kotlinx.coroutines.CoroutineScope(testDispatcher).launch {
+            viewModel.searchUiState.collect {}
+        }
+
+        viewModel.setSearchQuery("query")
+
+        // Advance exactly 100ms. Less than the 250ms debounce time.
+        // Because of the flow combine, searchUiState reacts immediately to searchQuery changing.
+        // The searchResults will still have result.query == ""
+        // So query ("query") != result.query (""), therefore isLoading = true
+        testDispatcher.scheduler.advanceTimeBy(100)
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals(true, viewModel.searchUiState.value.isLoading)
+        assertEquals("query", viewModel.searchUiState.value.query)
+
+        job.cancel()
+    }
+
+    @Test
+    fun `searchUiState emits loaded state when result matches query`() = runTest(testDispatcher) {
+        val initialAppearance = AppearanceSettings(selectedAccountId = "account1")
+        val accountsFlow = MutableStateFlow(listOf(MailAccount("account1", "test@test.com", "READY")))
+
+        every { appearancePreferences.read() } returns initialAppearance
+        every { repository.observeAccounts() } returns accountsFlow
+        every { repository.observeStorageQuota(any()) } returns flowOf(null)
+        every { repository.observeCacheSettings(any()) } returns flowOf(MailCacheSettings())
+
+        val mockItems = listOf(mockk<com.glassmail.domain.mail.MailListItem>(relaxed = true))
+        every { repository.search(any(), "query") } returns flowOf(mockItems)
+
+        viewModel = AppViewModel(
+            context = context,
+            repository = repository,
+            syncScheduler = syncScheduler,
+            appearancePreferences = appearancePreferences,
+            draftRepository = draftRepository,
+            credentialStore = credentialStore
+        )
+
+        advanceUntilIdle()
+
+        val job = kotlinx.coroutines.CoroutineScope(testDispatcher).launch {
+            viewModel.searchUiState.collect {}
+        }
+
+        viewModel.setSearchQuery("query")
+
+        // Advance time to allow debounce, combine and flatMapLatest to execute and finish
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.searchUiState.value.isLoading)
+        assertEquals("query", viewModel.searchUiState.value.query)
+        assertEquals(mockItems, viewModel.searchUiState.value.messages)
+
+        job.cancel()
     }
 
     @Test
@@ -90,7 +210,6 @@ class AppViewModelTest {
 
     @Test
     fun `clear invokes repository clearDebugMailbox`() = runTest(testDispatcher) {
-        // Setup viewModel since @Before didn't do it because it needs flow mocking
         val initialAppearance = AppearanceSettings(selectedAccountId = "account1")
         val accountsFlow = MutableStateFlow(listOf(MailAccount("account1", "test@test.com", "READY")))
 
@@ -133,6 +252,7 @@ class AppViewModelTest {
         every { repository.observeStorageQuota(any()) } returns flowOf(null as StorageQuota?)
         every { repository.observeInbox(any(), any()) } returns flowOf(emptyList())
         every { repository.observeCategoryUnreadCounts(any()) } returns flowOf(emptyMap())
+        every { repository.search(any(), any()) } returns flowOf(emptyList())
 
         viewModel = AppViewModel(
             context = context,
@@ -145,10 +265,16 @@ class AppViewModelTest {
 
         advanceUntilIdle()
 
+        val job = kotlinx.coroutines.CoroutineScope(testDispatcher).launch {
+            viewModel.searchUiState.collect {}
+        }
+
         viewModel.setSearchQuery("hello")
+        // advance coroutines and debounce delay (250ms)
         advanceUntilIdle()
 
-        assertEquals("hello", viewModel.uiState.value.searchQuery)
+        assertEquals("hello", viewModel.searchUiState.value.query)
+        job.cancel()
     }
 
     @Test
@@ -181,8 +307,8 @@ class AppViewModelTest {
         viewModel.updateCredential("account1", password)
         advanceUntilIdle()
         
-        coVerify(exactly = 1) { credentialStore.putCredential("account1", password) }
-        verify(exactly = 1) { syncScheduler.scheduleSynchronize("account1") }
+        coVerify(exactly = 1) { credentialStore.store("account1", password) }
+        coVerify(exactly = 1) { repository.synchronize("account1") }
     }
 
 }

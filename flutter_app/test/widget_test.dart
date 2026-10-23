@@ -32,15 +32,15 @@ void main() {
     expect(find.byTooltip('Glass Lab'), findsOneWidget);
     expect(find.bySemanticsLabel('Inbox').last, findsOneWidget);
     expect(find.text('More'), findsOneWidget);
-    expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
+    expect(find.byKey(const ValueKey('glass-tab-bar-expanded')), findsOneWidget);
 
     await tester.dragFrom(const Offset(200, 200), const Offset(0, -180));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('mail-dock-compact')), findsOneWidget);
+    expect(find.byKey(const ValueKey('glass-tab-bar-minimized')), findsOneWidget);
 
     await tester.dragFrom(const Offset(200, 200), const Offset(0, 90));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
+    expect(find.byKey(const ValueKey('glass-tab-bar-expanded')), findsOneWidget);
 
     await tester.tap(find.byTooltip('Glass Lab'));
     await tester.pumpAndSettle();
