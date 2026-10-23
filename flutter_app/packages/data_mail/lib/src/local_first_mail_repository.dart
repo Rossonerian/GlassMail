@@ -1267,9 +1267,21 @@ final class LocalFirstMailRepository
     final rows = await _database.watchInbox(_inboxId(accountId)).first;
     final unread = rows
         .where((row) => !_decodeFlags(row.flags).contains(r'\Seen'))
-        .take(12);
+        .take(12)
+        .toList();
+
+    if (unread.isEmpty) return;
+
+    final existingStates = await _database.existingBodyStates(
+      unread.map((row) => row.messageId),
+    );
+    final availableMessageIds = existingStates
+        .where((state) => state.bodyDownloadState == 'AVAILABLE')
+        .map((state) => state.messageId)
+        .toSet();
+
     for (final row in unread) {
-      if (await _database.bodyDownloadState(row.messageId) == 'AVAILABLE') {
+      if (availableMessageIds.contains(row.messageId)) {
         continue;
       }
       await loadMessageBody(row.messageId);
