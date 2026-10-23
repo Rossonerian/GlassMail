@@ -9,6 +9,7 @@ import 'package:glassmail_domain_mail/glassmail_domain_mail.dart';
 import 'package:glassmail/main.dart';
 import 'package:glassmail/features/inbox/inbox_screen.dart';
 import 'package:glassmail/design/glass_mail_theme.dart';
+import 'package:glassmail/design/liquid_glass_nav_bar.dart';
 import 'package:glassmail/app/user_preferences.dart';
 import 'package:glassmail/app/workflow_store.dart';
 import 'package:glassmail/app/app_shortcuts.dart';
@@ -32,15 +33,15 @@ void main() {
     expect(find.byTooltip('Glass Lab'), findsOneWidget);
     expect(find.bySemanticsLabel('Inbox').last, findsOneWidget);
     expect(find.text('More'), findsOneWidget);
-    expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
+    expect(tester.widget<LiquidGlassNavBar>(find.byType(LiquidGlassNavBar)).visibilityController.isCollapsed, isFalse);
 
     await tester.dragFrom(const Offset(200, 200), const Offset(0, -180));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('mail-dock-compact')), findsOneWidget);
+    expect(tester.widget<LiquidGlassNavBar>(find.byType(LiquidGlassNavBar)).visibilityController.isCollapsed, isTrue);
 
     await tester.dragFrom(const Offset(200, 200), const Offset(0, 90));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
+    expect(tester.widget<LiquidGlassNavBar>(find.byType(LiquidGlassNavBar)).visibilityController.isCollapsed, isFalse);
 
     await tester.tap(find.byTooltip('Glass Lab'));
     await tester.pumpAndSettle();

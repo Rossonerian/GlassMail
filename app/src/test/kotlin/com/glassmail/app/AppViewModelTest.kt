@@ -7,12 +7,14 @@ import com.glassmail.domain.mail.MailAccount
 import com.glassmail.domain.mail.MailRepository
 import com.glassmail.sync.AccountSyncScheduler
 import io.mockk.coVerify
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -133,6 +135,43 @@ class AppViewModelTest {
         every { repository.observeStorageQuota(any()) } returns flowOf(null as StorageQuota?)
         every { repository.observeInbox(any(), any()) } returns flowOf(emptyList())
         every { repository.observeCategoryUnreadCounts(any()) } returns flowOf(emptyMap())
+        every { repository.search(any(), any()) } returns flowOf(emptyList())
+
+        viewModel = AppViewModel(
+            context = context,
+            repository = repository,
+            syncScheduler = syncScheduler,
+            appearancePreferences = appearancePreferences,
+            draftRepository = draftRepository,
+            credentialStore = credentialStore
+        )
+
+        val collectJob = launch { viewModel.searchUiState.collect { } }
+        advanceUntilIdle()
+
+        viewModel.setSearchQuery("hello")
+        advanceUntilIdle()
+
+        assertEquals("hello", viewModel.searchUiState.value.query)
+        collectJob.cancel()
+    }
+
+
+    @Test
+    fun `refresh resets isRefreshing even if repository synchronize throws`() = runTest(testDispatcher) {
+        val initialAppearance = AppearanceSettings(selectedAccountId = "account1")
+        val accountsFlow = MutableStateFlow(listOf(MailAccount("account1", "test@test.com", "READY")))
+
+        every { appearancePreferences.read() } returns initialAppearance
+        every { appearancePreferences.write(any()) } returns Unit
+        every { repository.observeAccounts() } returns accountsFlow
+        every { draftRepository.observeDrafts(any()) } returns flowOf(emptyList())
+        every { repository.observeCacheSettings(any()) } returns flowOf(MailCacheSettings())
+        every { repository.observeStorageQuota(any()) } returns flowOf(null as StorageQuota?)
+        every { repository.observeInbox(any(), any()) } returns flowOf(emptyList())
+        every { repository.observeCategoryUnreadCounts(any()) } returns flowOf(emptyMap())
+
+        coEvery { repository.synchronize("account1") } throws kotlinx.coroutines.CancellationException("Test Error")
 
         viewModel = AppViewModel(
             context = context,
@@ -145,10 +184,10 @@ class AppViewModelTest {
 
         advanceUntilIdle()
 
-        viewModel.setSearchQuery("hello")
+        viewModel.refresh()
         advanceUntilIdle()
 
-        assertEquals("hello", viewModel.uiState.value.searchQuery)
+        assertEquals(false, viewModel.isRefreshing.value)
     }
 
     @Test
@@ -181,8 +220,8 @@ class AppViewModelTest {
         viewModel.updateCredential("account1", password)
         advanceUntilIdle()
         
-        coVerify(exactly = 1) { credentialStore.putCredential("account1", password) }
-        verify(exactly = 1) { syncScheduler.scheduleSynchronize("account1") }
+        coVerify(exactly = 1) { credentialStore.store("account1", password) }
+        coVerify(exactly = 1) { repository.synchronize("account1") }
     }
 
 }
