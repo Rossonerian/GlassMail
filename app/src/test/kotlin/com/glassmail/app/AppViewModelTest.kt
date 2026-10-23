@@ -148,7 +148,7 @@ class AppViewModelTest {
         viewModel.setSearchQuery("hello")
         advanceUntilIdle()
 
-        assertEquals("hello", viewModel.uiState.value.searchQuery)
+        assertEquals("hello", viewModel.searchUiState.value.query)
     }
 
     @Test
@@ -181,8 +181,8 @@ class AppViewModelTest {
         viewModel.updateCredential("account1", password)
         advanceUntilIdle()
         
-        coVerify(exactly = 1) { credentialStore.putCredential("account1", password) }
-        verify(exactly = 1) { syncScheduler.scheduleSynchronize("account1") }
+        coVerify(exactly = 1) { credentialStore.store("account1", password) }
+        verify(exactly = 1) { repository.synchronize("account1") }
     }
 
 }
