@@ -664,6 +664,18 @@ class GlassMailDatabase extends _$GlassMailDatabase {
 
         final mergedMemberships = <MailboxMessagesCompanion>[];
         final labelsByMessage = <String, Set<String>>{};
+
+        // Fetch all active mutations for the messages in this transaction at once
+        final allPendingMutations = await (select(pendingMutations)
+              ..where((row) =>
+                  row.messageId.isIn(ids) &
+                  row.state.isIn(const ['PENDING', 'IN_FLIGHT']))
+              ..orderBy([
+                (row) => OrderingTerm.asc(row.createdAtEpochMillis),
+                (row) => OrderingTerm.asc(row.mutationId)
+              ]))
+            .get();
+
         for (final membership in memberships) {
           final mailboxId = membership.mailboxId.value;
           final messageId = membership.messageId.value;
@@ -676,7 +688,9 @@ class GlassMailDatabase extends _$GlassMailDatabase {
               .where((label) => label.isNotEmpty)
               .toSet();
           var hiddenByPendingRemoval = false;
-          final pending = await activeMutationsForMessage(messageId);
+          final pending = allPendingMutations
+              .where((mutation) => mutation.messageId == messageId);
+
           for (final mutation in pending.where((mutation) =>
               mutation.mailboxId == null || mutation.mailboxId == mailboxId)) {
             switch (mutation.type) {
