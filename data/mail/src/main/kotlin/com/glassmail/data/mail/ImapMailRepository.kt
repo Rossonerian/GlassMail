@@ -369,10 +369,17 @@ class ImapMailRepository(
             // Prefetch recent message bodies (up to 12) so inbox list immediately displays rich previews
             val cacheSettings = database.cacheConfigDao().get(accountId)?.toSettings() ?: MailCacheSettings()
             val recentToPrefetch = if (cacheSettings.prefetchUnreadBodies) snapshot.messages.filter { "\\Seen" !in it.flags }.take(12) else emptyList()
+            val prefetchIds = recentToPrefetch.map { it.canonicalId(accountId, snapshot.inbox.uidValidity) }
+            val existingBodyStates = if (prefetchIds.isNotEmpty()) {
+                database.mailDao().existingBodyStates(prefetchIds).associateBy { it.messageId }
+            } else {
+                emptyMap()
+            }
             credentialStore.withCredential(accountId) { password ->
                 for (meta in recentToPrefetch) {
                     val mId = meta.canonicalId(accountId, snapshot.inbox.uidValidity)
-                    if (database.mailDao().bodyDownloadState(mId) != com.glassmail.core.database.DownloadState.AVAILABLE) {
+                    val existingState = existingBodyStates[mId]?.bodyDownloadState ?: com.glassmail.core.database.DownloadState.NOT_FETCHED
+                    if (existingState != com.glassmail.core.database.DownloadState.AVAILABLE) {
                         runCatching {
                             val parsed = imapClient.fetchMessageBody(account.email, password, "INBOX", meta.uid)
                             val bodyToStore = parsed.plainText ?: parsed.htmlText.orEmpty()
