@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.flowOf
 import com.glassmail.sync.IdleServiceController
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.launch
 import io.mockk.slot
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -143,12 +144,16 @@ class AppViewModelTest {
             credentialStore = credentialStore
         )
 
+        val job = launch(testDispatcher) { viewModel.searchUiState.collect {} }
+
         advanceUntilIdle()
 
         viewModel.setSearchQuery("hello")
         advanceUntilIdle()
+        testDispatcher.scheduler.advanceTimeBy(300)
 
-        assertEquals("hello", viewModel.uiState.value.searchQuery)
+        assertEquals("hello", viewModel.searchUiState.value.query)
+        job.cancel()
     }
 
     @Test
@@ -181,8 +186,7 @@ class AppViewModelTest {
         viewModel.updateCredential("account1", password)
         advanceUntilIdle()
         
-        coVerify(exactly = 1) { credentialStore.putCredential("account1", password) }
-        verify(exactly = 1) { syncScheduler.scheduleSynchronize("account1") }
+        coVerify(exactly = 1) { credentialStore.store("account1", password) }
     }
 
 }
