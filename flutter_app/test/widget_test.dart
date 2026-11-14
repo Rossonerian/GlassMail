@@ -442,13 +442,12 @@ void main() {
   });
 }
 
-String? _dockState(WidgetTester tester) =>
-    tester
-        .widget<Semantics>(
-          find.byKey(const ValueKey('mail-dock-navigation-semantics')),
-        )
-        .properties
-        .value;
+String? _dockState(WidgetTester tester) => tester
+    .widget<Semantics>(
+      find.byKey(const ValueKey('mail-dock-navigation-semantics')),
+    )
+    .properties
+    .value;
 
 MailListItem _listItem(String id, String subject) => MailListItem(
   messageId: id,
