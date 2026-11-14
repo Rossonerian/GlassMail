@@ -26,7 +26,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      # The runner includes API 36 and Build Tools 36.0.0 for Flutter's AGP 9.1.
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'cmdline-tools;latest,platform-tools,platforms;android-36,build-tools;36.0.0'
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.5'
