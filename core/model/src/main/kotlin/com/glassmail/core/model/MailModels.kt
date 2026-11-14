@@ -68,6 +68,7 @@ sealed interface MailSyncResult {
 sealed interface MailSyncError {
     data object Authentication : MailSyncError
     data object Network : MailSyncError
+    data object Storage : MailSyncError
     data object Protocol : MailSyncError
     data object MissingCredential : MailSyncError
     data object Cancelled : MailSyncError

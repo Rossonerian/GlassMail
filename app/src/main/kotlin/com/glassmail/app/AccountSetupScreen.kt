@@ -372,6 +372,7 @@ class AccountSetupViewModel(
 private fun com.glassmail.core.model.MailSyncError.toUserMessage(): String = when (this) {
     com.glassmail.core.model.MailSyncError.Authentication -> "Gmail rejected the account or App Password."
     com.glassmail.core.model.MailSyncError.Network -> "Could not reach Gmail securely. Check network access and try again."
+    com.glassmail.core.model.MailSyncError.Storage -> "Could not update the local mail cache. Check available device storage and try again."
     com.glassmail.core.model.MailSyncError.Protocol -> "Gmail returned an unexpected IMAP response."
     com.glassmail.core.model.MailSyncError.MissingCredential -> "No credential is stored for this account."
     com.glassmail.core.model.MailSyncError.Cancelled -> "Connection cancelled."

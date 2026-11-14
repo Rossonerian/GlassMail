@@ -198,7 +198,7 @@ class RepositoryMutationBehaviorTest {
         val archive = rows.values.single()
         rows[archive.mutationId] = archive.copy(state = MutationState.FAILED_PERMANENT, lastErrorCode = "SERVER_REJECTED")
         now += 1_000
-        repository.applyMutation(MailMutation.MarkRead("a", "gmail:a:1", null, false))
+        repository.applyMutation(MailMutation.MarkRead("a", "gmail:a:1", null, false, "123"))
         repository.dismissFailedMutations("a")
         assertEquals("", memberships["gmail:a:1"]?.flags)
         assertEquals("MARK_UNREAD", rows.values.single().type)

@@ -204,6 +204,7 @@ class AccountSyncWorker(
                 MailSyncError.Authentication,
                 MailSyncError.MissingCredential,
                 MailSyncError.Protocol,
+                MailSyncError.Storage,
                 -> Result.failure()
                 // Do not turn cooperative cancellation into terminal work failure.
                 MailSyncError.Cancelled -> throw CancellationException("Account sync cancelled")

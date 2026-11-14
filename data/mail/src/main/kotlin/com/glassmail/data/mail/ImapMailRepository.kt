@@ -1,5 +1,6 @@
 package com.glassmail.data.mail
 
+import android.database.sqlite.SQLiteException
 import androidx.room.withTransaction
 import com.glassmail.core.database.AccountEntity
 import com.glassmail.core.database.AttachmentEntity
@@ -362,7 +363,7 @@ class ImapMailRepository(
             }
         }
 
-    private suspend fun applyMutationInternal(mutation: MailMutation, actionId: String) {
+    private suspend fun applyMutationInternal(mutation: MailMutation, actionId: String): Boolean {
         val inboxId = "${mutation.accountId}:INBOX"
         val hasGmailThreadRoute = mutation.gmailThreadId?.matches(Regex("[0-9]+")) == true
         val targetMailboxId = mutation.mailboxId
@@ -373,7 +374,7 @@ class ImapMailRepository(
             !hasGmailThreadRoute &&
             (targetMailboxId != inboxId || previousMembership?.uid == null)
         ) {
-            return
+            return false
         }
         val targetUid = previousMembership?.uid
         when (mutation) {
@@ -407,6 +408,7 @@ class ImapMailRepository(
                 previousLabels = previousMembership?.labels.orEmpty(),
             ),
         )
+        return true
     }
 
     override suspend fun applyMutation(mutation: MailMutation) {
@@ -415,9 +417,14 @@ class ImapMailRepository(
 
     override suspend fun applyMutations(mutations: List<MailMutation>) {
         val actionId = UUID.randomUUID().toString()
-        database.withTransaction { mutations.forEach { applyMutationInternal(it, actionId) } }
-        mutations.map { it.accountId }.distinct().forEach { id ->
-            scheduleMutationFlush(id)
+        val queuedAccounts = mutableSetOf<String>()
+        database.withTransaction {
+            mutations.forEach { mutation ->
+                if (applyMutationInternal(mutation, actionId)) queuedAccounts.add(mutation.accountId)
+            }
+        }
+        queuedAccounts.forEach { accountId ->
+            scheduleMutationFlush(accountId)
         }
     }
 
@@ -482,9 +489,9 @@ class ImapMailRepository(
     private suspend fun synchronizeLocked(accountId: String): MailSyncResult {
         val account = database.accountDao().account(accountId)
             ?: return MailSyncResult.Failure(MailSyncError.Protocol)
-        database.accountDao().setSyncState(accountId, "SYNCING")
-        runCatching { database.mailDao().invalidateTextStoredAsHtml() }
         return try {
+            database.accountDao().setSyncState(accountId, "SYNCING")
+            database.mailDao().invalidateTextStoredAsHtml()
             val inboxId = "$accountId:INBOX"
             val checkpoint = database.syncDao().checkpoint(inboxId)
             // Keep this even when re-seeding deletes the checkpoint below. A mailbox
@@ -582,6 +589,8 @@ class ImapMailRepository(
             fail(accountId, MailSyncError.Protocol)
         } catch (_: ImapException.Protocol) {
             fail(accountId, MailSyncError.Protocol)
+        } catch (_: SQLiteException) {
+            fail(accountId, MailSyncError.Storage)
         }
     }
 

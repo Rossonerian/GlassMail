@@ -53,6 +53,33 @@ class GlassMailDatabaseInstrumentedTest {
         assertEquals(listOf("m1", "m2"), db.mailDao().observeThread("m1").first().map { it.messageId })
     }
 
+    @Test fun messageAndThreadQueriesPreferInboxFlagsForMultipleMemberships() = runBlocking {
+        db.accountDao().upsert(AccountEntity("a", "a@example.test", 1, "READY"))
+        db.mailDao().upsertMailboxes(
+            listOf(
+                MailboxEntity("a:INBOX", "a", "INBOX", 7, 3, 2),
+                MailboxEntity("a:Archive", "a", "Archive", 8, 2, 1),
+            ),
+        )
+        db.mailDao().upsertMessages(
+            listOf(MessageEntity("m1", "a", "1", "thread", "First", "Sender", 1, 1)),
+        )
+        db.mailDao().upsertMailboxMessages(
+            listOf(
+                MailboxMessageEntity("a:Archive", 1, "m1", "\\Seen \\Flagged", "Archive"),
+                MailboxMessageEntity("a:INBOX", 2, "m1", "", "INBOX"),
+            ),
+        )
+
+        val message = db.mailDao().observeThread("m1").first().single()
+        val detail = db.mailDao().observeMessage("m1").first()
+
+        assertEquals("", message.flags)
+        assertEquals("INBOX", message.labels)
+        assertEquals(message.flags, detail?.flags)
+        assertEquals(message.labels, detail?.labels)
+    }
+
     @Test fun checkpointAndPendingMutationPersist() = runBlocking {
         db.accountDao().upsert(AccountEntity("a", "a@example.test", 1, "READY"))
         db.mailDao().upsertMailboxes(listOf(MailboxEntity("a:INBOX", "a", "INBOX", 7, 2, 1)))
