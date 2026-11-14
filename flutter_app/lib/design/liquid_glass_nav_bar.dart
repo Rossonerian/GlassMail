@@ -231,6 +231,7 @@ class LiquidGlassNavBar extends StatelessWidget {
             container: true,
             label: 'Main navigation',
             value: visibilityController.isCollapsed ? 'Collapsed' : 'Expanded',
+            hint: '${_destinations[_selectedIndex].label} selected',
             child: navigation,
           );
         },

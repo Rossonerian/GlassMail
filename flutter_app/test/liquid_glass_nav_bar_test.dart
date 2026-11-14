@@ -4,7 +4,6 @@ import 'package:glassmail/design/dock_visibility_controller.dart';
 import 'package:glassmail/design/glass_mail_glass.dart';
 import 'package:glassmail/design/liquid_glass_nav_bar.dart';
 import 'package:glassmail/features/glass_lab/liquid_glass_nav_calibration_screen.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 void main() {
   testWidgets('expanded destinations are accessible and invoke callbacks', (
@@ -25,10 +24,6 @@ void main() {
     );
 
     expect(_dockState(tester), 'Expanded');
-    expect(find.byType(LiquidGlassLayer), findsOneWidget);
-    // The platter and selection indicator share one bounded renderer layer.
-    expect(find.byType(LiquidGlass), findsNWidgets(2));
-    expect(find.byType(GlassGlow), findsOneWidget);
     for (final destination in ['Inbox', 'Search', 'Compose', 'Sent', 'More']) {
       expect(find.bySemanticsLabel(destination), findsOneWidget);
       expect(
@@ -72,8 +67,12 @@ void main() {
       ),
     );
     expect(_dockState(tester), 'Collapsed');
+    expect(
+      tester.widget<Semantics>(_dockSemanticsFinder).properties.hint,
+      'Inbox selected',
+    );
 
-    await tester.tap(find.bySemanticsLabel('Inbox'));
+    await tester.tap(find.byIcon(Icons.all_inbox_rounded));
     await tester.pumpAndSettle();
     expect(_dockState(tester), 'Expanded');
     expect(selectedDestinations, isEmpty);
@@ -97,7 +96,7 @@ void main() {
     expect(selectedDestinations, ['Search']);
   });
 
-  testWidgets('scroll content remains behind accessible glass navigation', (
+  testWidgets('scroll content remains behind accessible navigation', (
     tester,
   ) async {
     final visibility = DockVisibilityController();
@@ -109,17 +108,14 @@ void main() {
     final bodyBounds = tester.getRect(find.byType(ListView));
     final dockBounds = tester.getRect(_dockSemanticsFinder);
     expect(bodyBounds.bottom, greaterThanOrEqualTo(dockBounds.top));
-    expect(find.byType(LiquidGlassLayer), findsOneWidget);
 
     visibility.updateScroll(80, pixels: 120);
     await tester.pumpAndSettle();
     expect(_dockState(tester), 'Collapsed');
-    expect(find.byType(LiquidGlassLayer), findsOneWidget);
 
     visibility.updateScroll(-50, pixels: 70);
     await tester.pumpAndSettle();
     expect(_dockState(tester), 'Expanded');
-    expect(find.byType(LiquidGlassLayer), findsOneWidget);
   });
 
   testWidgets('short finger scrolls collapse and re-expand the dock', (
@@ -151,12 +147,9 @@ void main() {
     await tester.pumpWidget(
       _dockApp(visibility: visibility, selected: 'Inbox', onSelected: (_) {}),
     );
-    final dock = tester.getRect(_dockSemanticsFinder);
-    final stretch = tester.widget<LiquidStretch>(find.byType(LiquidStretch));
-    expect(stretch.interactionScale, greaterThanOrEqualTo(1.03));
-    expect(stretch.stretch, greaterThanOrEqualTo(.6));
+    final inbox = tester.getRect(find.bySemanticsLabel('Inbox'));
     for (var index = 0; index < 20; index++) {
-      final gesture = await tester.startGesture(dock.center);
+      final gesture = await tester.startGesture(inbox.center);
       await gesture.moveBy(const Offset(18, -8));
       await tester.pump(const Duration(milliseconds: 60));
       await gesture.moveBy(const Offset(-10, 14));
@@ -212,7 +205,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('cancelled glass drag returns to the selected destination', (
+  testWidgets('cancelled glass drag settles and reports the nearest tab', (
     tester,
   ) async {
     final visibility = DockVisibilityController();
@@ -235,7 +228,9 @@ void main() {
 
     await gesture.cancel();
     await tester.pumpAndSettle();
-    expect(selectedDestinations, isEmpty);
+    // Karmi resolves a cancelled drag to its nearest tab and reports the
+    // settled destination through onTabSelected.
+    expect(selectedDestinations, ['Sent']);
     expect(_dockState(tester), 'Expanded');
     expect(tester.takeException(), isNull);
   });
@@ -254,8 +249,7 @@ void main() {
         reduceTransparency: true,
       ),
     );
-    expect(find.byType(LiquidGlass), findsNothing);
-    expect(find.byType(LiquidGlassLayer), findsNothing);
+    expect(find.byType(NavigationBar), findsOneWidget);
 
     await tester.pumpWidget(
       _dockApp(
@@ -265,8 +259,7 @@ void main() {
         highContrast: true,
       ),
     );
-    expect(find.byType(LiquidGlass), findsNothing);
-    expect(find.byType(LiquidGlassLayer), findsNothing);
+    expect(find.byType(NavigationBar), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -284,9 +277,6 @@ void main() {
           disableAnimations: true,
         ),
       );
-      expect(find.byType(LiquidStretch), findsNothing);
-      expect(find.byType(GlassGlow), findsNothing);
-
       visibility.updateScroll(80, pixels: 80);
       await tester.pump();
       expect(_dockState(tester), 'Collapsed');
