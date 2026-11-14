@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.app.Activity
 import android.widget.Toast
-import androidx.core.content.FileProvider
 import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement

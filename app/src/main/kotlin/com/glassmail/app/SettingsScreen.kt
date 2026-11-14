@@ -441,43 +441,6 @@ fun SettingsScreen(
                 }
             }
 
-            // Debug Fixtures (Debug Only)
-            if (BuildConfig.DEBUG) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(GlassRadius.card))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.20f))
-                            .padding(GlassSpacing.md),
-                        verticalArrangement = Arrangement.spacedBy(GlassSpacing.sm),
-                    ) {
-                        Text("Seed Debug Mailbox", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(GlassSpacing.xs),
-                        ) {
-                            listOf(10, 100, 1000).forEach { count ->
-                                Button(
-                                    onClick = { vm.seed(count) },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(GlassRadius.innerLens),
-                                ) {
-                                    Text("$count")
-                                }
-                            }
-                        }
-                        Button(
-                            onClick = { vm.clear() },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(GlassRadius.innerLens),
-                            colors = ButtonDefaults.filledTonalButtonColors(),
-                        ) {
-                            Text("Clear Debug Mailbox")
-                        }
-                    }
-                }
-            }
         }
     }
 
