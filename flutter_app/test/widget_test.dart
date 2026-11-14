@@ -39,6 +39,28 @@ void main() {
     expect(find.textContaining('Raster ·'), findsOneWidget);
   });
 
+  testWidgets('Inbox dock collapses and re-expands with list scrolling', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const GlassMailFlutterApp());
+    await tester.pumpAndSettle();
+    expect(_dockState(tester), 'Expanded');
+
+    final inbox = find.byKey(const PageStorageKey('inbox-preview-list'));
+    await tester.drag(inbox, const Offset(0, -72));
+    await tester.pumpAndSettle();
+    expect(_dockState(tester), 'Collapsed');
+
+    await tester.drag(inbox, const Offset(0, 48));
+    await tester.pumpAndSettle();
+    expect(_dockState(tester), 'Expanded');
+  });
+
   testWidgets('launcher Search shortcut opens the Search destination', (
     WidgetTester tester,
   ) async {
@@ -419,6 +441,14 @@ void main() {
     expect(find.text('Fetching limited page metadata…'), findsNothing);
   });
 }
+
+String? _dockState(WidgetTester tester) =>
+    tester
+        .widget<Semantics>(
+          find.byKey(const ValueKey('mail-dock-navigation-semantics')),
+        )
+        .properties
+        .value;
 
 MailListItem _listItem(String id, String subject) => MailListItem(
   messageId: id,

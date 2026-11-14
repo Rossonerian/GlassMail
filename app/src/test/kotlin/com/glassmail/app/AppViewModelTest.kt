@@ -258,7 +258,10 @@ class AppViewModelTest {
         assertEquals(emptyList<MailMutation>(), sent)
         viewModel.selectReaderMessage(message.messageId)
         runCurrent()
-        assertEquals(listOf(MailMutation.MarkRead("account1", message.messageId, null, true)), sent)
+        assertEquals(
+            listOf(MailMutation.MarkRead("account1", message.messageId, null, true, "123")),
+            sent,
+        )
         viewModel.openReaderMessage(message.messageId)
         runCurrent()
         assertEquals(1, sent.size)

@@ -18,7 +18,6 @@ class DockVisibilityController extends ChangeNotifier {
   int get scrollDirection => _scrollDirection;
   double get scrollTravel => _scrollTravel;
   bool get isCollapsed =>
-      _collapseProgress >= .5 ||
       _state == DockVisibilityState.collapsing ||
       _state == DockVisibilityState.collapsed;
 

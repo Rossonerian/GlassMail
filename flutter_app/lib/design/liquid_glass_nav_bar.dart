@@ -158,35 +158,32 @@ class LiquidGlassNavBar extends StatelessWidget {
     final useOpaqueNavigation = reduceTransparency || tier == GlassMailTier.off;
     final theme = Theme.of(context);
 
-    return Semantics(
-      container: true,
-      label: 'Main navigation',
-      child: SafeArea(
-        top: false,
-        left: false,
-        right: false,
-        child: AnimatedBuilder(
-          animation: visibilityController,
-          builder: (context, _) {
-            if (useOpaqueNavigation) {
-              return NavigationBar(
-                height: mailDockContentHeight(context),
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: _select,
-                destinations: [
-                  for (final destination in _destinations)
-                    NavigationDestination(
-                      icon: Icon(destination.icon),
-                      selectedIcon: Icon(
-                        destination.activeIcon ?? destination.icon,
-                      ),
-                      label: destination.label,
-                      tooltip: destination.label,
+    return SafeArea(
+      top: false,
+      left: false,
+      right: false,
+      child: AnimatedBuilder(
+        animation: visibilityController,
+        builder: (context, _) {
+          final Widget navigation;
+          if (useOpaqueNavigation) {
+            navigation = NavigationBar(
+              height: mailDockContentHeight(context),
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: _select,
+              destinations: [
+                for (final destination in _destinations)
+                  NavigationDestination(
+                    icon: Icon(destination.icon),
+                    selectedIcon: Icon(
+                      destination.activeIcon ?? destination.icon,
                     ),
-                ],
-              );
-            }
-
+                    label: destination.label,
+                    tooltip: destination.label,
+                  ),
+              ],
+            );
+          } else {
             final quality = switch (tier) {
               GlassMailTier.full => karmi_glass.GlassQuality.premium,
               GlassMailTier.balanced => karmi_glass.GlassQuality.standard,
@@ -196,7 +193,7 @@ class LiquidGlassNavBar extends StatelessWidget {
             final settings = material.toSettings(theme.brightness, tier);
             final reduceMotion = mediaQuery.disableAnimations;
 
-            return karmi_glass.GlassTabBar.minimizable(
+            navigation = karmi_glass.GlassTabBar.minimizable(
               minimized: visibilityController.isCollapsed,
               onMinimizedTabTap: visibilityController.setExpanded,
               selectedIndex: _selectedIndex,
@@ -227,8 +224,16 @@ class LiquidGlassNavBar extends StatelessWidget {
               unselectedIconColor: theme.colorScheme.onSurfaceVariant,
               unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
             );
-          },
-        ),
+          }
+
+          return Semantics(
+            key: const ValueKey('mail-dock-navigation-semantics'),
+            container: true,
+            label: 'Main navigation',
+            value: visibilityController.isCollapsed ? 'Collapsed' : 'Expanded',
+            child: navigation,
+          );
+        },
       ),
     );
   }

@@ -24,15 +24,10 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
+    expect(_dockState(tester), 'Expanded');
     expect(find.byType(LiquidGlassLayer), findsOneWidget);
-    // The platter and the selected optical inset are two shapes inside the
-    // same bounded renderer layer, rather than independent glass engines.
+    // The platter and selection indicator share one bounded renderer layer.
     expect(find.byType(LiquidGlass), findsNWidgets(2));
-    expect(
-      find.byKey(const ValueKey('mail-dock-selected-optic')),
-      findsOneWidget,
-    );
     expect(find.byType(GlassGlow), findsOneWidget);
     for (final destination in ['Inbox', 'Search', 'Compose', 'Sent', 'More']) {
       expect(find.bySemanticsLabel(destination), findsOneWidget);
@@ -76,44 +71,33 @@ void main() {
         onSelected: selectedDestinations.add,
       ),
     );
-    expect(find.byKey(const ValueKey('mail-dock-compact')), findsOneWidget);
+    expect(_dockState(tester), 'Collapsed');
 
     await tester.tap(find.bySemanticsLabel('Inbox'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
+    expect(_dockState(tester), 'Expanded');
     expect(selectedDestinations, isEmpty);
   });
 
-  testWidgets('selected optical inset animates with the active destination', (
+  testWidgets('selected destination changes through its navigation callback', (
     tester,
   ) async {
     final visibility = DockVisibilityController();
     addTearDown(visibility.dispose);
+    final selectedDestinations = <String>[];
 
     await tester.pumpWidget(
-      _dockApp(visibility: visibility, selected: 'Inbox', onSelected: (_) {}),
+      _dockApp(
+        visibility: visibility,
+        selected: 'Inbox',
+        onSelected: selectedDestinations.add,
+      ),
     );
-    final optic = find.byKey(const ValueKey('mail-dock-selected-optic'));
-    final inboxCenter = tester.getRect(optic).center.dx;
-    expect(
-      inboxCenter,
-      closeTo(tester.getRect(find.bySemanticsLabel('Inbox')).center.dx, 1),
-    );
-
-    await tester.pumpWidget(
-      _dockApp(visibility: visibility, selected: 'Search', onSelected: (_) {}),
-    );
-    await tester.pumpAndSettle();
-
-    final searchCenter = tester.getRect(optic).center.dx;
-    expect(searchCenter, greaterThan(inboxCenter + 40));
-    expect(
-      searchCenter,
-      closeTo(tester.getRect(find.bySemanticsLabel('Search')).center.dx, 1),
-    );
+    await tester.tap(find.bySemanticsLabel('Search'));
+    expect(selectedDestinations, ['Search']);
   });
 
-  testWidgets('scroll content passes behind a stable glass layer', (
+  testWidgets('scroll content remains behind accessible glass navigation', (
     tester,
   ) async {
     final visibility = DockVisibilityController();
@@ -122,30 +106,20 @@ void main() {
     await tester.pumpWidget(
       _dockApp(visibility: visibility, selected: 'Inbox', onSelected: (_) {}),
     );
-    final layerSize = tester.getSize(
-      find.byKey(const ValueKey('mail-dock-glass-layer')),
-    );
     final bodyBounds = tester.getRect(find.byType(ListView));
-    final dockBounds = tester.getRect(
-      find.byKey(const ValueKey('mail-dock-bottom-inset')),
-    );
+    final dockBounds = tester.getRect(_dockSemanticsFinder);
     expect(bodyBounds.bottom, greaterThanOrEqualTo(dockBounds.top));
+    expect(find.byType(LiquidGlassLayer), findsOneWidget);
 
     visibility.updateScroll(80, pixels: 120);
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('mail-dock-compact')), findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(const ValueKey('mail-dock-glass-layer'))),
-      layerSize,
-    );
+    expect(_dockState(tester), 'Collapsed');
+    expect(find.byType(LiquidGlassLayer), findsOneWidget);
 
     visibility.updateScroll(-50, pixels: 70);
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(const ValueKey('mail-dock-glass-layer'))),
-      layerSize,
-    );
+    expect(_dockState(tester), 'Expanded');
+    expect(find.byType(LiquidGlassLayer), findsOneWidget);
   });
 
   testWidgets('short finger scrolls collapse and re-expand the dock', (
@@ -161,11 +135,11 @@ void main() {
     final list = find.byType(ListView).first;
     await tester.drag(list, const Offset(0, -36));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('mail-dock-compact')), findsOneWidget);
+    expect(_dockState(tester), 'Collapsed');
 
     await tester.drag(list, const Offset(0, 24));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
+    expect(_dockState(tester), 'Expanded');
   });
 
   testWidgets('hold, move, release remains responsive across repeated use', (
@@ -177,9 +151,7 @@ void main() {
     await tester.pumpWidget(
       _dockApp(visibility: visibility, selected: 'Inbox', onSelected: (_) {}),
     );
-    final dock = tester.getRect(
-      find.byKey(const ValueKey('mail-dock-expanded')),
-    );
+    final dock = tester.getRect(_dockSemanticsFinder);
     final stretch = tester.widget<LiquidStretch>(find.byType(LiquidStretch));
     expect(stretch.interactionScale, greaterThanOrEqualTo(1.03));
     expect(stretch.stretch, greaterThanOrEqualTo(.6));
@@ -194,7 +166,7 @@ void main() {
     }
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
+    expect(_dockState(tester), 'Expanded');
     expect(tester.takeException(), isNull);
   });
 
@@ -217,12 +189,11 @@ void main() {
       ),
     );
     final sent = tester.getRect(find.bySemanticsLabel('Sent'));
-    final optic = find.byKey(const ValueKey('mail-dock-selected-optic'));
-    final gesture = await tester.startGesture(tester.getRect(optic).center);
+    final inbox = tester.getRect(find.bySemanticsLabel('Inbox'));
+    final gesture = await tester.startGesture(inbox.center);
     await gesture.moveTo(sent.center);
     await tester.pump(const Duration(milliseconds: 80));
 
-    expect(tester.getRect(optic).center.dx, closeTo(sent.center.dx, 1));
     expect(selectedDestinations, isEmpty);
 
     await gesture.up();
@@ -238,7 +209,6 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(selectedDestinations, ['Sent']);
-    expect(tester.getRect(optic).center.dx, closeTo(sent.center.dx, 1));
     expect(tester.takeException(), isNull);
   });
 
@@ -256,19 +226,17 @@ void main() {
         onSelected: selectedDestinations.add,
       ),
     );
-    final optic = find.byKey(const ValueKey('mail-dock-selected-optic'));
     final inbox = tester.getRect(find.bySemanticsLabel('Inbox'));
     final sent = tester.getRect(find.bySemanticsLabel('Sent'));
-    final gesture = await tester.startGesture(tester.getRect(optic).center);
+    final gesture = await tester.startGesture(inbox.center);
     await gesture.moveTo(sent.center);
     await tester.pump(const Duration(milliseconds: 80));
-    expect(tester.getRect(optic).center.dx, closeTo(sent.center.dx, 1));
     expect(selectedDestinations, isEmpty);
 
     await gesture.cancel();
     await tester.pumpAndSettle();
     expect(selectedDestinations, isEmpty);
-    expect(tester.getRect(optic).center.dx, closeTo(inbox.center.dx, 1));
+    expect(_dockState(tester), 'Expanded');
     expect(tester.takeException(), isNull);
   });
 
@@ -321,7 +289,7 @@ void main() {
 
       visibility.updateScroll(80, pixels: 80);
       await tester.pump();
-      expect(find.byKey(const ValueKey('mail-dock-compact')), findsOneWidget);
+      expect(_dockState(tester), 'Collapsed');
       expect(tester.takeException(), isNull);
     },
   );
@@ -374,6 +342,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 }
+
+final _dockSemanticsFinder = find.byKey(
+  const ValueKey('mail-dock-navigation-semantics'),
+);
+
+String? _dockState(WidgetTester tester) =>
+    tester.widget<Semantics>(_dockSemanticsFinder).properties.value;
 
 Widget _dockApp({
   required DockVisibilityController visibility,

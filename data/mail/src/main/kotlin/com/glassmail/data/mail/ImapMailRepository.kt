@@ -363,8 +363,18 @@ class ImapMailRepository(
         }
 
     private suspend fun applyMutationInternal(mutation: MailMutation, actionId: String) {
+        val inboxId = "${mutation.accountId}:INBOX"
+        val hasGmailThreadRoute = mutation.gmailThreadId?.matches(Regex("[0-9]+")) == true
+        val targetMailboxId = mutation.mailboxId
+            ?: if (mutation is MailMutation.MarkRead && !hasGmailThreadRoute) inboxId else null
         val previousMembership = database.mailDao().membershipsForMessage(mutation.messageId)
-            .firstOrNull { mutation.mailboxId == null || it.mailboxId == mutation.mailboxId }
+            .firstOrNull { targetMailboxId == null || it.mailboxId == targetMailboxId }
+        if (mutation is MailMutation.MarkRead &&
+            !hasGmailThreadRoute &&
+            (targetMailboxId != inboxId || previousMembership?.uid == null)
+        ) {
+            return
+        }
         val targetUid = previousMembership?.uid
         when (mutation) {
             is MailMutation.MarkRead -> updateFlags(mutation.messageId, mutation.mailboxId) { it.withFlag("\\Seen", mutation.read) }

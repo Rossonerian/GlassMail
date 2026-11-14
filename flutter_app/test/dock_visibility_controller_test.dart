@@ -33,6 +33,10 @@ void main() {
     final controller = DockVisibilityController()..setCollapsed();
     addTearDown(controller.dispose);
 
+    controller.setExpanded();
+    expect(controller.isCollapsed, isFalse);
+    controller.setCollapsed();
+
     controller.updateScroll(-10, pixels: 160);
     controller.updateScroll(20, pixels: 180);
     controller.updateScroll(-10, pixels: 170);

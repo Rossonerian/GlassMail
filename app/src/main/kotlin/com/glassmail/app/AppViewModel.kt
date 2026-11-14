@@ -283,7 +283,15 @@ class AppViewModel(
         viewModelScope.launch {
             val message = repository.observeMessage(messageId).first() ?: return@launch
             if (message.unread) accountForMessage(messageId)?.let { account ->
-                repository.applyMutation(MailMutation.MarkRead(account.accountId, messageId, null, true))
+                repository.applyMutation(
+                    MailMutation.MarkRead(
+                        account.accountId,
+                        messageId,
+                        null,
+                        true,
+                        message.threadId,
+                    ),
+                )
             }
         }
         loadMessageBody(messageId)

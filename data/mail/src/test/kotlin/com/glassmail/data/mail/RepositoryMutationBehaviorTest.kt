@@ -126,6 +126,26 @@ class RepositoryMutationBehaviorTest {
         assertEquals("a" to 5_500L, scheduled.last())
     }
 
+    @Test fun `read of archived message without inbox UID is not queued`() = runTest {
+        memberships.remove("gmail:a:1")
+
+        repository.applyMutation(MailMutation.MarkRead("a", "gmail:a:1", null, true))
+
+        assertTrue(rows.isEmpty())
+        assertTrue(scheduled.isEmpty())
+    }
+
+    @Test fun `archived message read can still use its Gmail thread`() = runTest {
+        memberships.remove("gmail:a:1")
+
+        repository.applyMutation(MailMutation.MarkRead("a", "gmail:a:1", null, true, "123"))
+
+        val mutation = rows.values.single()
+        assertEquals(null, mutation.targetUid)
+        assertTrue(mutation.payload!!.startsWith("gmail-thread:123:"))
+        assertEquals(listOf("a" to 500L), scheduled)
+    }
+
     @Test fun `failure while enqueuing second member rolls back every optimistic change and queued row`() = runTest {
         val original = memberships.toMap()
         rejectInsertFor = "gmail:a:2"
