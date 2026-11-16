@@ -29,4 +29,7 @@ dependencies {
     implementation(project(":domain:mail"))
     implementation(libs.androidx.room.runtime)
     implementation(libs.kotlinx.coroutines.android)
+    testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("io.mockk:mockk:1.13.8")
 }

@@ -1,6 +1,7 @@
 package com.glassmail.domain.mail
 
 import com.glassmail.core.model.MailSyncResult
+import com.glassmail.core.model.MailSyncError
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.combine
@@ -34,12 +35,22 @@ interface MailRepository {
     suspend fun createAccount(accountId: String, email: String, syncState: String = "READY")
     suspend fun removeAccount(accountId: String)
     suspend fun synchronize(accountId: String): MailSyncResult
+    suspend fun loadOlder(accountId: String): OlderMailResult = OlderMailResult.Failure(MailSyncError.Protocol)
     suspend fun applyMutation(mutation: MailMutation)
     suspend fun applyMutations(mutations: List<MailMutation>) { mutations.forEach { applyMutation(it) } }
     suspend fun undoPendingArchive(messageId: String): Boolean = false
+    suspend fun undoPendingArchives(messageIds: List<String>): Boolean = messageIds.distinct().all { undoPendingArchive(it) }
+    fun observeFailedMutationCount(accountId: String): Flow<Int> = flowOf(0)
+    suspend fun retryFailedMutations(accountId: String) = Unit
+    suspend fun dismissFailedMutations(accountId: String) = Unit
     suspend fun seedDebugMailbox(count: Int)
     suspend fun clearDebugMailbox()
     suspend fun loadMessageBody(messageId: String): Result<MailMessage>
+}
+
+sealed interface OlderMailResult {
+    data class Success(val messageCount: Int, val hasMoreOlder: Boolean, val cacheLimitReached: Boolean = false) : OlderMailResult
+    data class Failure(val error: MailSyncError) : OlderMailResult
 }
 
 data class DownloadedAttachment(val filePath: String, val fileName: String, val mimeType: String)
@@ -78,15 +89,18 @@ data class MailListItem(
 data class MailAttachment(val attachmentId: String, val fileName: String?, val mimeType: String?, val sizeBytes: Long?, val downloadState: String)
 data class MailMessage(val messageId: String, val threadId: String?, val sender: String, val subject: String, val preview: String, val body: String?, val html: Boolean, val sentAtEpochMillis: Long?, val unread: Boolean, val starred: Boolean, val labels: List<String>, val attachments: List<MailAttachment> = emptyList(), val listUnsubscribe: String? = null, val listUnsubscribePost: String? = null)
 
+const val ARCHIVE_UNDO_MILLIS = 6_000L
+
 sealed interface MailMutation {
     val accountId: String
     val messageId: String
     val mailboxId: String?
+    val gmailThreadId: String? get() = null
 
-    data class MarkRead(override val accountId: String, override val messageId: String, override val mailboxId: String?, val read: Boolean) : MailMutation
-    data class Star(override val accountId: String, override val messageId: String, override val mailboxId: String?, val starred: Boolean) : MailMutation
-    data class Archive(override val accountId: String, override val messageId: String, override val mailboxId: String) : MailMutation
-    data class Delete(override val accountId: String, override val messageId: String, override val mailboxId: String?) : MailMutation
+    data class MarkRead(override val accountId: String, override val messageId: String, override val mailboxId: String?, val read: Boolean, override val gmailThreadId: String? = null) : MailMutation
+    data class Star(override val accountId: String, override val messageId: String, override val mailboxId: String?, val starred: Boolean, override val gmailThreadId: String? = null) : MailMutation
+    data class Archive(override val accountId: String, override val messageId: String, override val mailboxId: String, override val gmailThreadId: String? = null) : MailMutation
+    data class Delete(override val accountId: String, override val messageId: String, override val mailboxId: String?, override val gmailThreadId: String? = null) : MailMutation
     data class Label(override val accountId: String, override val messageId: String, override val mailboxId: String?, val label: String, val add: Boolean) : MailMutation
 }
 

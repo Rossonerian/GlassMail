@@ -2,7 +2,10 @@ package com.glassmail.app
 
 import android.content.Context
 import android.net.Uri
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.NetworkType
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -11,6 +14,7 @@ import androidx.work.workDataOf
 import com.glassmail.domain.mail.DraftStatus
 import com.glassmail.domain.mail.OutgoingAttachment
 import com.glassmail.domain.mail.OutgoingMail
+import com.glassmail.domain.mail.SendMailError
 import com.glassmail.domain.mail.SendMailResult
 import com.glassmail.domain.mail.validateAddresses
 import kotlinx.coroutines.flow.first
@@ -59,12 +63,21 @@ class DelayedSendWorker(context: Context, parameters: WorkerParameters) : Corout
             references = draft.references,
             attachments = attachments,
         )
-        return when (graph.mailSender.send(account, outgoing)) {
+        return when (val result = graph.mailSender.send(account, outgoing)) {
             SendMailResult.Sent -> {
                 graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.SENT, updatedAtEpochMillis = System.currentTimeMillis()))
                 Result.success()
             }
-            is SendMailResult.Failed -> {
+            // The server may already have accepted it. Never retry automatically: the user checks Sent first.
+            SendMailResult.Uncertain -> {
+                graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.UNCERTAIN, updatedAtEpochMillis = System.currentTimeMillis()))
+                Result.failure()
+            }
+            is SendMailResult.Failed -> if (result.error == SendMailError.Network && runAttemptCount < MAX_NETWORK_ATTEMPTS) {
+                // Nothing was submitted: keep the draft queued and let WorkManager retry when a network is available.
+                graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.QUEUED, updatedAtEpochMillis = System.currentTimeMillis()))
+                Result.retry()
+            } else {
                 graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.FAILED, updatedAtEpochMillis = System.currentTimeMillis()))
                 Result.failure()
             }
@@ -73,11 +86,14 @@ class DelayedSendWorker(context: Context, parameters: WorkerParameters) : Corout
 
     companion object {
         const val KEY_DRAFT_ID = "draft_id"
+        private const val MAX_NETWORK_ATTEMPTS = 8
         fun uniqueName(draftId: String) = "glassmail.outgoing.$draftId"
 
         fun enqueue(context: Context, draftId: String, delaySeconds: Int) {
             val request = OneTimeWorkRequestBuilder<DelayedSendWorker>()
                 .setInitialDelay(delaySeconds.toLong(), TimeUnit.SECONDS)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .setInputData(workDataOf(KEY_DRAFT_ID to draftId))
                 .build()
             WorkManager.getInstance(context.applicationContext)

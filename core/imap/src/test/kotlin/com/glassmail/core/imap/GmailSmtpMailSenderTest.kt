@@ -15,6 +15,26 @@ class GmailSmtpMailSenderTest {
         override suspend fun <T> withCredential(accountId: String, block: suspend (CharArray) -> T): T? = block(charArrayOf('x'))
     }
 
+    @Test fun `Gmail SMTP deletes remote draft without appending a second Sent copy`() = runBlocking {
+        for (host in listOf("smtp.gmail.com", "smtp.googlemail.com", "SMTP.GMAIL.COM.", "relay.gmail.com")) {
+            var deleted = 0
+            var appended = 0
+            fileAcceptedSmtpMessage(host, deleteDraft = { deleted++ }, appendSent = { appended++ })
+            assertEquals("draft deletion for $host", 1, deleted)
+            assertEquals("Sent APPEND for $host", 0, appended)
+        }
+    }
+
+    @Test fun `non Gmail SMTP still appends Sent even if draft deletion fails`() = runBlocking {
+        var appended = 0
+        fileAcceptedSmtpMessage("smtp.example.com", deleteDraft = { error("draft deletion failed") }, appendSent = { appended++ })
+        assertEquals(1, appended)
+    }
+
+    @Test fun `accepted SMTP filing failures remain best effort`() = runBlocking {
+        fileAcceptedSmtpMessage("smtp.example.com", deleteDraft = {}, appendSent = { error("APPEND failed") })
+    }
+
     @Test fun `invalid outgoing recipient is rejected before transport`() = runBlocking {
         val result = GmailSmtpMailSender(provider).send(account, OutgoingMail("op", "a", account.email, listOf("bad"), subject = "x", body = "x"))
         assertEquals(SendMailResult.Failed(SendMailError.InvalidMessage), result)

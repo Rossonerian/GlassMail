@@ -9,3 +9,6 @@ keystore.properties
 signing.properties
 .idea/
 *.iml
+
+# local audit screenshots (large PNGs, evidence lives in release-evidence docs)
+flutter_app/artifacts/

@@ -115,7 +115,10 @@ fun ReaderScreen(
     var expandedMessageKeys by rememberSaveable(id) { mutableStateOf("") }
     val expandedMessageIds = remember(expandedMessageKeys) { expandedMessageKeys.split('\n').filter(String::isNotBlank).toSet() }
     LaunchedEffect(messages.lastOrNull()?.messageId) {
-        if (expandedMessageKeys.isBlank()) messages.lastOrNull()?.messageId?.let { expandedMessageKeys = it }
+        if (expandedMessageKeys.isBlank()) messages.lastOrNull()?.messageId?.let {
+            expandedMessageKeys = it
+            if (it != id) vm.openReaderMessage(it)
+        }
     }
     val participantCount = remember(messages) { messages.map { it.sender.lowercase() }.distinct().size.coerceAtLeast(1) }
     val collapsed by remember {
@@ -161,8 +164,7 @@ fun ReaderScreen(
                         }
                         DropdownMenu(expanded = threadActionsOpen, onDismissRequest = { threadActionsOpen = false }) {
                             DropdownMenuItem(text = { Text("Archive conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "archive") })
-                            DropdownMenuItem(text = { Text("Mute conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "archive") })
-                            DropdownMenuItem(text = { Text(if (messages.any { it.starred }) "Unstar conversation" else "Star conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "star") })
+                            DropdownMenuItem(text = { Text(if (messages.any { it.starred }) "Unstar conversation" else "Star conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "star", desiredStarred = !messages.any { it.starred }) })
                             DropdownMenuItem(text = { Text("Delete conversation", color = MaterialTheme.colorScheme.error) }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "delete") })
                             DropdownMenuItem(text = { Text("Command palette") }, onClick = { threadActionsOpen = false; openPalette() })
                         }
@@ -260,7 +262,7 @@ fun ReaderScreen(
                                 indication = null,
                             ) {
                                 expandedMessageKeys = (if (expanded) expandedMessageIds - item.messageId else expandedMessageIds + item.messageId).joinToString("\n")
-                                if (!expanded && item.body == null) vm.loadMessageBody(item.messageId)
+                                if (!expanded) vm.openReaderMessage(item.messageId)
                             }
                             .padding(vertical = GlassSpacing.xs),
                         verticalAlignment = Alignment.CenterVertically,
@@ -361,13 +363,19 @@ fun ReaderScreen(
                             modifier = Modifier.padding(vertical = GlassSpacing.xs),
                         )
                         if (item.body == null) {
-                            Text(
-                                text = "Loading complete message…",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = GlassSpacing.xs),
-                            )
+                            if (item.messageId in state.failedBodyIds) {
+                                BodyLoadFailed { vm.loadMessageBody(item.messageId) }
+                            } else {
+                                Text(
+                                    text = "Loading complete message…",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = GlassSpacing.xs),
+                                )
+                            }
                         }
+                    } else if (item.messageId in state.failedBodyIds) {
+                        BodyLoadFailed { vm.loadMessageBody(item.messageId) }
                     } else {
                         Row(
                             modifier = Modifier
@@ -546,7 +554,10 @@ private fun HtmlMessageBody(
                 settings.domStorageEnabled = false
                 settings.setSupportMultipleWindows(false)
                 webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        openMailLink(view.context, request.url)
+                        return true
+                    }
 
                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): android.webkit.WebResourceResponse? =
                         if (request.url.scheme == "data" || request.url.scheme == "about") null
@@ -650,5 +661,32 @@ private fun ReaderAttachmentRow(
         ) {
             Text(if (attachment.downloadState == "AVAILABLE") "Open" else "Download")
         }
+    }
+}
+
+/**
+ * Opens a link tapped inside an HTML message. Only web, mail and phone links are honored; every other scheme
+ * (javascript:, file:, content:, intent:, data:) is ignored. Returns whether an activity was launched.
+ */
+internal fun openMailLink(context: android.content.Context, uri: android.net.Uri): Boolean {
+    val intent = when (uri.scheme?.lowercase()) {
+        "http", "https" -> android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+            .addCategory(android.content.Intent.CATEGORY_BROWSABLE)
+        "mailto" -> android.content.Intent(android.content.Intent.ACTION_SENDTO, uri)
+        "tel" -> android.content.Intent(android.content.Intent.ACTION_DIAL, uri)
+        else -> return false
+    }.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    return runCatching { context.startActivity(intent) }.isSuccess
+}
+
+@Composable
+private fun BodyLoadFailed(onRetry: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = GlassSpacing.md)) {
+        Text(
+            text = "This message couldn't be downloaded. Check your connection and try again.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        androidx.compose.material3.TextButton(onClick = onRetry) { Text("Retry") }
     }
 }

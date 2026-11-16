@@ -1,0 +1,28 @@
+# Release checklist
+
+- [ ] canonical v1 app explicitly chosen
+- [ ] version 1.0.0
+- [ ] no blocker bugs
+- [ ] no high-severity known data-loss bugs
+- [ ] native CI green
+- [ ] release workflow green
+- [ ] tests green
+- [ ] lint green
+- [ ] release build succeeds
+- [ ] signing verified
+- [ ] migrations verified
+- [ ] authorized Gmail acceptance performed
+- [ ] send/receive verified
+- [ ] offline reconciliation verified
+- [ ] notification path verified
+- [ ] process restart verified
+- [ ] security audit acceptable
+- [ ] licenses updated
+- [ ] privacy docs accurate
+- [ ] README accurate
+- [ ] changelog complete
+- [ ] native APK and AAB SHA-256 checksums generated and verified from the artifact directory
+- [ ] downloaded APK and AAB checksums verified by the publish job
+- [ ] GitHub release notes prepared
+- [ ] draft GitHub release contains the native APK, AAB, and both checksum files
+- [ ] release owner completes device/Gmail acceptance checks above, then manually publishes the draft GitHub release

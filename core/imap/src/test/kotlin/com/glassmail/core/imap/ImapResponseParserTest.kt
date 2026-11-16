@@ -25,6 +25,30 @@ class ImapResponseParserTest {
     }
 
     @Test
+    fun `maps flags and labels only UID FETCH with quoted multiword label`() {
+        val response = ImapResponseParser.parse(
+            "* 42 FETCH (UID 900 FLAGS (\\Seen \\Flagged) X-GM-LABELS (\\Inbox \"Project work\"))",
+            emptyList(),
+        )
+        val metadata = GmailFetchMapper.map(response)!!
+        assertEquals(900L, metadata.uid)
+        assertEquals(setOf("\\Seen", "\\Flagged"), metadata.flags)
+        assertEquals(setOf("\\Inbox", "Project work"), metadata.labels)
+        assertEquals(null, metadata.subject)
+        assertEquals(null, metadata.gmailMessageId)
+    }
+
+    @Test
+    fun `maps empty flags and labels in reconciliation response`() {
+        val metadata = GmailFetchMapper.map(ImapResponseParser.parse(
+            "* 1 FETCH (FLAGS () X-GM-LABELS () UID 7)", emptyList(),
+        ))!!
+        assertEquals(7L, metadata.uid)
+        assertTrue(metadata.flags.isEmpty())
+        assertTrue(metadata.labels.isEmpty())
+    }
+
+    @Test
     fun `parses a literal without treating it as an atom`() {
         val response = ImapResponseParser.parse(
             "* 1 FETCH (BODY[] \u0000L0\u0000)",

@@ -32,21 +32,33 @@ void main() {
     expect(find.byTooltip('Glass Lab'), findsOneWidget);
     expect(find.bySemanticsLabel('Inbox').last, findsOneWidget);
     expect(find.text('More'), findsOneWidget);
-    // Navigation bar expects are removed because karmi liquid glass doesn't use the same keys natively
-
-    await tester.dragFrom(const Offset(200, 200), const Offset(0, -180));
-    await tester.pumpAndSettle();
-    // expect(find.byKey(const ValueKey('mail-dock-compact')), findsOneWidget);
-
-    await tester.dragFrom(const Offset(200, 200), const Offset(0, 90));
-    await tester.pumpAndSettle();
-    // expect(find.byKey(const ValueKey('mail-dock-expanded')), findsOneWidget);
-
     await tester.tap(find.byTooltip('Glass Lab'));
     await tester.pumpAndSettle();
     expect(find.text('A small, bounded glass preview'), findsOneWidget);
     expect(find.text('Reduce transparency'), findsOneWidget);
     expect(find.textContaining('Raster ·'), findsOneWidget);
+  });
+
+  testWidgets('Inbox dock collapses and re-expands with list scrolling', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const GlassMailFlutterApp());
+    await tester.pumpAndSettle();
+    expect(_dockState(tester), 'Expanded');
+
+    final inbox = find.byKey(const PageStorageKey('inbox-preview-list'));
+    await tester.drag(inbox, const Offset(0, -72));
+    await tester.pumpAndSettle();
+    expect(_dockState(tester), 'Collapsed');
+
+    await tester.drag(inbox, const Offset(0, 48));
+    await tester.pumpAndSettle();
+    expect(_dockState(tester), 'Expanded');
   });
 
   testWidgets('launcher Search shortcut opens the Search destination', (
@@ -429,6 +441,13 @@ void main() {
     expect(find.text('Fetching limited page metadata…'), findsNothing);
   });
 }
+
+String? _dockState(WidgetTester tester) => tester
+    .widget<Semantics>(
+      find.byKey(const ValueKey('mail-dock-navigation-semantics')),
+    )
+    .properties
+    .value;
 
 MailListItem _listItem(String id, String subject) => MailListItem(
   messageId: id,
