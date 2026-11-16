@@ -189,6 +189,17 @@ class AppViewModelTest {
     }
 
     @Test
+    fun `searchUiState clears results and loading on whitespace blank query`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        viewModel.setSearchQuery("   ")
+        runCurrent()
+        advanceTimeBy(250)
+        runCurrent()
+        assertEquals(SearchUiState(), viewModel.searchUiState.value)
+        verify(exactly = 0) { repository.search(any(), any()) }
+    }
+
+    @Test
     fun `refresh resets isRefreshing even if repository synchronize throws`() = runTest(testDispatcher) {
         coEvery { repository.synchronize("account1") } throws IllegalStateException("Network failed")
         advanceUntilIdle()
