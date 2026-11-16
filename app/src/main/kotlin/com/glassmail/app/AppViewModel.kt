@@ -257,9 +257,11 @@ class AppViewModel(
         try {
             val selected = if (_appearance.value.unifiedInbox) accounts.value else listOfNotNull(accounts.value.firstOrNull { it.accountId == accountId.value })
             selected.forEach { account ->
-                val result = repository.synchronize(account.accountId)
-                // Membership changes or a namespace reset can make older mail available.
-                if (result is com.glassmail.core.model.MailSyncResult.Success) invalidateOlderMail(account.accountId)
+                runCatching {
+                    val result = repository.synchronize(account.accountId)
+                    // Membership changes or a namespace reset can make older mail available.
+                    if (result is com.glassmail.core.model.MailSyncResult.Success) invalidateOlderMail(account.accountId)
+                }
             }
         } finally {
             _isRefreshing.value = false
