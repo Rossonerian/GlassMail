@@ -304,6 +304,9 @@ interface MailDao {
     @Query("SELECT bodyDownloadState FROM messages WHERE messageId = :messageId")
     suspend fun bodyDownloadState(messageId: String): String?
 
+    @Query("SELECT messageId, bodyDownloadState FROM messages WHERE messageId IN (:messageIds)")
+    suspend fun existingBodyDownloadStates(messageIds: List<String>): List<MessageDownloadStateRow>
+
     @Query("SELECT messageId, preview, body, contentKind, bodyDownloadState FROM messages WHERE messageId IN (:messageIds)")
     suspend fun existingBodyStates(messageIds: List<String>): List<MessageBodyStateRow>
 
@@ -417,6 +420,7 @@ interface CacheConfigDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveQuota(quota: StorageQuotaEntity)
 }
+data class MessageDownloadStateRow(val messageId: String, val bodyDownloadState: String)
 data class MessageBodyStateRow(val messageId: String, val preview: String?, val body: String?, val contentKind: String, val bodyDownloadState: String)
 
 @Dao
