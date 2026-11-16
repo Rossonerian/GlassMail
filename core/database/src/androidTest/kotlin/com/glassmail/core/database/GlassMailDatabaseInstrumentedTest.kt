@@ -53,6 +53,25 @@ class GlassMailDatabaseInstrumentedTest {
         assertEquals(listOf("m1", "m2"), db.mailDao().observeThread("m1").first().map { it.messageId })
     }
 
+    @Test fun bodyDownloadStatesCanBeFetchedInOneBatch() = runBlocking {
+        db.accountDao().upsert(AccountEntity("a", "a@example.test", 1, "READY"))
+        db.mailDao().upsertMessages(
+            listOf(
+                MessageEntity("cached", "a", null, null, null, null, null, null, body = "cached body", bodyDownloadState = DownloadState.AVAILABLE),
+                MessageEntity("missing", "a", null, null, null, null, null, null),
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                MessageDownloadStateRow("cached", DownloadState.AVAILABLE),
+                MessageDownloadStateRow("missing", DownloadState.NOT_FETCHED),
+            ),
+            db.mailDao().existingBodyDownloadStates(listOf("cached", "missing", "unknown")).sortedBy { it.messageId },
+        )
+        assertEquals(emptyList<MessageDownloadStateRow>(), db.mailDao().existingBodyDownloadStates(emptyList()))
+    }
+
     @Test fun messageAndThreadQueriesPreferInboxFlagsForMultipleMemberships() = runBlocking {
         db.accountDao().upsert(AccountEntity("a", "a@example.test", 1, "READY"))
         db.mailDao().upsertMailboxes(
