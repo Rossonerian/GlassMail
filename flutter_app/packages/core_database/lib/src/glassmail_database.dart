@@ -364,6 +364,21 @@ class GlassMailDatabase extends _$GlassMailDatabase {
               .getSingleOrNull())
           ?.read(messages.bodyDownloadState);
 
+  Future<Map<String, String>> bodyDownloadStates(
+    Iterable<String> messageIds,
+  ) async {
+    final ids = messageIds.toList();
+    if (ids.isEmpty) return const {};
+    final rows = await (selectOnly(messages)
+          ..addColumns([messages.messageId, messages.bodyDownloadState])
+          ..where(messages.messageId.isIn(ids)))
+        .get();
+    return {
+      for (final row in rows)
+        row.read(messages.messageId)!: row.read(messages.bodyDownloadState)!,
+    };
+  }
+
   Future<List<MessageBodyStateRow>> existingBodyStates(
     Iterable<String> messageIds,
   ) async {
