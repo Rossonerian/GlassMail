@@ -189,6 +189,18 @@ class AppViewModelTest {
     }
 
     @Test
+    fun `refresh resets isRefreshing even if repository synchronize throws`() = runTest(testDispatcher) {
+        coEvery { repository.synchronize("account1") } throws IllegalStateException("Network failed")
+        advanceUntilIdle()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.isRefreshing.value)
+        coVerify(exactly = 1) { repository.synchronize("account1") }
+    }
+
+    @Test
     fun `updateCredential stores original credential before refresh and wipes input`() = runTest(testDispatcher) {
         var storedCredential: CharArray? = null
         coEvery { credentialStore.store("account1", any()) } coAnswers {
