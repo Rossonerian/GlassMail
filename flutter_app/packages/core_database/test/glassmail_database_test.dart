@@ -817,6 +817,37 @@ void main() {
     expect(await database.bodyDownloadState('cache-unread'), 'AVAILABLE');
     expect(await database.bodyDownloadState('cache-starred'), 'AVAILABLE');
   });
+
+  test('batch body state lookup returns only ids and download states',
+      () async {
+    await insertAccountAndMessage(
+      database,
+      messageId: 'body-state-available',
+      subject: 'available',
+      body: 'cached body',
+    );
+    await database.customStatement(
+      "UPDATE messages SET bodyDownloadState = 'AVAILABLE' "
+      "WHERE messageId = 'body-state-available'",
+    );
+    await database.customStatement('''
+      INSERT INTO messages(messageId, accountId, contentKind, bodyDownloadState)
+      VALUES ('body-state-missing', 'account-1', 'PLAIN', 'NOT_FETCHED')
+    ''');
+
+    expect(
+      await database.bodyDownloadStates([
+        'body-state-available',
+        'body-state-missing',
+        'body-state-absent',
+      ]),
+      {
+        'body-state-available': 'AVAILABLE',
+        'body-state-missing': 'NOT_FETCHED',
+      },
+    );
+    expect(await database.bodyDownloadStates([]), isEmpty);
+  });
 }
 
 Future<int> ftsCount(GlassMailDatabase database, String term) async {
