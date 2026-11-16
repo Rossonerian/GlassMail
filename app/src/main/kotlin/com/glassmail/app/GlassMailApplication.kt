@@ -41,6 +41,20 @@ class GlassMailApplication : Application() {
             }
         }
     }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (::graph.isInitialized) {
+            graph.onTrimMemory(level)
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        if (::graph.isInitialized) {
+            graph.onLowMemory()
+        }
+    }
 }
 
 class AppGraph(application: Application) {
@@ -49,6 +63,33 @@ class AppGraph(application: Application) {
     val appearancePreferences = AppearancePreferences(application)
     private val notificationCoordinator = NotificationCoordinator(application, appearancePreferences)
     private val database = GlassMailDatabase.create(application)
+
+    @Suppress("DEPRECATION")
+    fun onTrimMemory(level: Int) {
+        database.shrinkMemory()
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching {
+                    mailRepository.observeAccounts().first().forEach { account ->
+                        mailRepository.enforceCacheLimits(account.accountId)
+                    }
+                }
+                System.gc()
+            }
+        }
+    }
+
+    fun onLowMemory() {
+        database.shrinkMemory()
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching {
+                mailRepository.observeAccounts().first().forEach { account ->
+                    mailRepository.enforceCacheLimits(account.accountId)
+                }
+            }
+            System.gc()
+        }
+    }
     val credentialStore = AndroidKeystoreCredentialStore(application)
     private val imapClient = GmailImapClient()
     val syncScheduler = AccountSyncScheduler(application)

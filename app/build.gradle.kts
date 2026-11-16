@@ -48,6 +48,7 @@ android {
         targetSdk = 35
         versionCode = 10000
         versionName = "1.0.0"
+        buildConfigField("boolean", "RESTRICTED_RAM_MODE", "true")
     }
 
     compileOptions {

@@ -114,9 +114,9 @@ data class AccountSyncSummary(
 )
 
 data class MailCacheSettings(
-    val offlineMessageCount: Int = 200,
-    val attachmentCacheLimitMb: Int = 500,
-    val autoEvictReadOlderThanDays: Int = 60,
+    val offlineMessageCount: Int = 100,
+    val attachmentCacheLimitMb: Int = 100,
+    val autoEvictReadOlderThanDays: Int = 30,
     val prefetchUnreadBodies: Boolean = true,
 )
 

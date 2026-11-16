@@ -28,7 +28,7 @@ kotlin {
 
 dependencies {
     implementation(project(":core:model"))
-    implementation(libs.androidx.room.runtime)
+    api(libs.androidx.room.runtime)
     implementation(libs.kotlinx.coroutines.android)
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.test.runner)
