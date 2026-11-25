@@ -200,10 +200,23 @@ class ImapMailRepository(
         val account = database.accountDao().account(accountId)
             ?: error("Account unavailable for message $messageId")
         val mailboxName = membership.mailboxId.substringAfter(':', "INBOX")
+        val expectedUidValidity = database.mailDao().mailboxUidValidity(membership.mailboxId)
 
-        val parsed = credentialStore.withCredential(accountId) { password ->
-            imapClient.fetchMessageBody(account.email, password, mailboxName, membership.uid)
-        } ?: error("Authentication required to fetch message body")
+        val parsed = try {
+            credentialStore.withCredential(accountId) { password ->
+                imapClient.fetchMessageBody(
+                    account.email,
+                    password,
+                    mailboxName,
+                    membership.uid,
+                    expectedUidValidity = expectedUidValidity,
+                )
+            } ?: error("Authentication required to fetch message body")
+        } catch (error: ImapException.UidValidityChanged) {
+            database.syncDao().deleteCheckpoint(membership.mailboxId)
+            onMutationsQueued(accountId, 0L)
+            throw error
+        }
 
         val bodyToStore = parsed.htmlText?.takeIf { it.isNotBlank() } ?: parsed.plainText.orEmpty()
         database.mailDao().updateMessageBody(
@@ -256,12 +269,26 @@ class ImapMailRepository(
                 }
                 val membership = database.mailDao().membershipsForMessage(attachment.messageId).firstOrNull()
                     ?: error("Mailbox mapping is unavailable")
+                val expectedUidValidity = database.mailDao().mailboxUidValidity(membership.mailboxId)
                 tempFile = temp
                 database.mailDao().setAttachmentState(attachmentId, com.glassmail.core.database.DownloadState.FETCHING)
                 fetchStarted = true
-                val payload = credentialStore.withCredential(accountId) { password ->
-                    imapClient.fetchAttachment(account.email, password, membership.mailboxId.substringAfter(':', "INBOX"), membership.uid, attachment.partId)
-                } ?: error("Authentication required")
+                val payload = try {
+                    credentialStore.withCredential(accountId) { password ->
+                        imapClient.fetchAttachment(
+                            account.email,
+                            password,
+                            membership.mailboxId.substringAfter(':', "INBOX"),
+                            membership.uid,
+                            attachment.partId,
+                            expectedUidValidity = expectedUidValidity,
+                        )
+                    } ?: error("Authentication required")
+                } catch (error: ImapException.UidValidityChanged) {
+                    database.syncDao().deleteCheckpoint(membership.mailboxId)
+                    onMutationsQueued(accountId, 0L)
+                    throw error
+                }
                 check(accountDir.isDirectory || accountDir.mkdirs()) { "Could not create attachment directory" }
                 temp.outputStream().use { it.write(payload) }
                 check(temp.renameTo(target)) { "Could not store attachment" }
@@ -596,7 +623,13 @@ class ImapMailRepository(
                         ?: com.glassmail.core.database.DownloadState.NOT_FETCHED
                     if (existingState != com.glassmail.core.database.DownloadState.AVAILABLE) {
                         runCatching {
-                            val parsed = imapClient.fetchMessageBody(account.email, password, "INBOX", meta.uid)
+                            val parsed = imapClient.fetchMessageBody(
+                                account.email,
+                                password,
+                                "INBOX",
+                                meta.uid,
+                                expectedUidValidity = snapshot.inbox.uidValidity,
+                            )
                             val bodyToStore = parsed.htmlText?.takeIf { it.isNotBlank() } ?: parsed.plainText.orEmpty()
                             database.mailDao().updateMessageBody(
                                 messageId = mId,
@@ -606,7 +639,9 @@ class ImapMailRepository(
                                 downloadState = com.glassmail.core.database.DownloadState.AVAILABLE,
                             )
                             persistParsedAttachments(mId, parsed)
-                        }.onFailure { if (it is CancellationException) throw it }
+                        }.onFailure {
+                            if (it is CancellationException || it is ImapException.UidValidityChanged) throw it
+                        }
                     }
                 }
             }

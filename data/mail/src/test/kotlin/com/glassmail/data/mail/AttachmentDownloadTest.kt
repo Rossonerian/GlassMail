@@ -59,6 +59,7 @@ class AttachmentDownloadTest {
         coEvery { mailDao.evictExcessBodies(any(), any()) } returns Unit
         coEvery { mailDao.evictOldReadBodies(any(), any()) } returns Unit
         coEvery { mailDao.cachedAttachments(any()) } returns emptyList()
+        coEvery { mailDao.mailboxUidValidity(any()) } returns null
         coEvery { cacheConfigDao.get(any()) } returns null
     }
 
@@ -105,7 +106,7 @@ class AttachmentDownloadTest {
         assertEquals(target.canonicalPath, downloaded.filePath)
         assertEquals("report.pdf", downloaded.fileName)
         assertEquals("application/pdf", downloaded.mimeType)
-        coVerify(exactly = 0) { imapClient.fetchAttachment(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { imapClient.fetchAttachment(any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { mailDao.setAttachmentState(any(), any()) }
         coVerify(exactly = 1) { mailDao.markAttachmentAccessed(attachmentId, 5_000L) }
     }
@@ -154,7 +155,7 @@ class AttachmentDownloadTest {
         assertTrue(crossResult.isFailure)
         assertFalse(File(root, "attachments/$otherAccountId").exists())
         coVerify(exactly = 0) { mailDao.setAttachmentState(any(), any()) }
-        coVerify(exactly = 0) { imapClient.fetchAttachment(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { imapClient.fetchAttachment(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -185,7 +186,7 @@ class AttachmentDownloadTest {
         )
 
         val fetchEntered = CompletableDeferred<Unit>()
-        coEvery { imapClient.fetchAttachment("me@example.com", any(), "INBOX", 42L, "1") } coAnswers {
+        coEvery { imapClient.fetchAttachment("me@example.com", any(), "INBOX", 42L, "1", isNull()) } coAnswers {
             fetchEntered.complete(Unit)
             awaitCancellation()
         }
@@ -241,7 +242,7 @@ class AttachmentDownloadTest {
         coEvery { mailDao.membershipsForMessage(newAttachment.messageId) } returns listOf(
             MailboxMessageEntity("$accountId:INBOX", 99L, newAttachment.messageId, "", ""),
         )
-        coEvery { imapClient.fetchAttachment("me@example.com", any(), "INBOX", 99L, "1") } returns "new-content".encodeToByteArray()
+        coEvery { imapClient.fetchAttachment("me@example.com", any(), "INBOX", 99L, "1", isNull()) } returns "new-content".encodeToByteArray()
         coEvery { cacheConfigDao.get(accountId) } returns CacheConfigEntity(
             accountId = accountId,
             offlineMessageCount = 100,

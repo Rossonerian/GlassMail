@@ -225,10 +225,7 @@ class GmailImapClient(
             client.requireGreeting()
             client.login(email, password)
             val capabilities = client.capability()
-            val inbox = client.selectInbox()
-            if (inbox.uidValidity != expectedUidValidity) {
-                throw ImapException.UidValidityChanged(expectedUidValidity, inbox.uidValidity)
-            }
+            client.selectInbox(expectedUidValidity)
             val fields = if ("X-GM-EXT-1" in capabilities) "FLAGS X-GM-LABELS INTERNALDATE" else "FLAGS INTERNALDATE"
             buildList {
                 uidRanges.asSequence().flatMap { it.asSequence() }.chunked(500).forEach { uids ->
@@ -253,10 +250,7 @@ class GmailImapClient(
             client.requireGreeting()
             client.login(email, password)
             val capabilities = client.capability()
-            val inbox = client.selectInbox()
-            if (inbox.uidValidity != expectedUidValidity) {
-                throw ImapException.UidValidityChanged(expectedUidValidity, inbox.uidValidity)
-            }
+            val inbox = client.selectInbox(expectedUidValidity)
             val uids = client.searchOlderUids(beforeUid)
             val selected = uids.takeLast(limit)
             coroutineContext.ensureActive()
@@ -272,14 +266,21 @@ class GmailImapClient(
         }
     }
 
-    suspend fun fetchAttachment(email: String, password: CharArray, mailbox: String, uid: Long, partId: String): ByteArray =
+    suspend fun fetchAttachment(
+        email: String,
+        password: CharArray,
+        mailbox: String,
+        uid: Long,
+        partId: String,
+        expectedUidValidity: Long? = null,
+    ): ByteArray =
         withContext(Dispatchers.IO.limitedParallelism(1)) {
             require(uid > 0 && partId.matches(Regex("[0-9.]+"))) { "Invalid attachment reference" }
             TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 client.login(email, password)
-                client.selectMailbox(mailbox)
+                client.selectMailbox(mailbox, expectedUidValidity)
                 client.fetchBodyPart(uid, partId)
             }
         }
@@ -289,13 +290,14 @@ class GmailImapClient(
         password: CharArray,
         mailbox: String,
         uid: Long,
+        expectedUidValidity: Long? = null,
     ): ParsedMessageBody = withContext(Dispatchers.IO.limitedParallelism(1)) {
         require(uid > 0) { "Invalid message UID" }
         TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
             val client = ImapCommandClient(connection)
             client.requireGreeting()
             client.login(email, password)
-            client.selectMailbox(mailbox)
+            client.selectMailbox(mailbox, expectedUidValidity)
             client.fetchMessageBody(uid)
         }
     }
@@ -570,9 +572,7 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
     fun deleteDraft(draftId: String, capabilities: Set<String>) {
         val messageId = "<$draftId@glassmail.local>"
         val search = execute("UID SEARCH HEADER MESSAGE-ID ${quote(messageId)}")
-            .filterIsInstance<ImapResponse.Untagged>()
-            .firstOrNull { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
-            ?.values.orEmpty().drop(1).mapNotNull { it.atomValue()?.toLongOrNull() }
+            .searchResponses()
         if (search.isEmpty()) return
         if (capabilities.none { it.equals("UIDPLUS", ignoreCase = true) }) {
             throw ImapException.Protocol("Server does not support safe draft replacement")
@@ -584,9 +584,7 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
 
     fun fetchDrafts(limit: Int): List<ImapRemoteDraft> {
         val search = execute("UID SEARCH ALL")
-            .filterIsInstance<ImapResponse.Untagged>()
-            .firstOrNull { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
-            ?.values.orEmpty().drop(1).mapNotNull { it.atomValue()?.toLongOrNull() }
+            .searchResponses()
             .takeLast(limit)
         if (search.isEmpty()) return emptyList()
         return execute("UID FETCH ${search.joinToString(",")} (UID INTERNALDATE BODY.PEEK[])")
@@ -648,15 +646,18 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
         }
     }
 
-    fun selectInbox(): ImapSelectedMailbox {
-        return selectMailbox("INBOX")
+    fun selectInbox(expectedUidValidity: Long? = null): ImapSelectedMailbox {
+        return selectMailbox("INBOX", expectedUidValidity)
     }
 
-    fun selectMailbox(mailbox: String): ImapSelectedMailbox {
+    fun selectMailbox(mailbox: String, expectedUidValidity: Long? = null): ImapSelectedMailbox {
         val responses = execute("SELECT ${quote(mailbox)}")
         val uidValidity = responses.firstNotNullOfOrNull { response ->
             (response as? ImapResponse.Untagged)?.values?.uidResponse("UIDVALIDITY")
         }?.toLongOrNull() ?: throw ImapException.Protocol("SELECT response missing UIDVALIDITY")
+        if (expectedUidValidity != null && uidValidity != expectedUidValidity) {
+            throw ImapException.UidValidityChanged(expectedUidValidity, uidValidity)
+        }
         val uidNext = responses.firstNotNullOfOrNull { response ->
             (response as? ImapResponse.Untagged)?.values?.uidResponse("UIDNEXT")
         }?.toLongOrNull() ?: throw ImapException.Protocol("SELECT response missing UIDNEXT")
@@ -695,17 +696,27 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
         execute("UID FETCH $uidSet ($fields)").mapNotNull(GmailFetchMapper::map)
 
     fun searchOlderUids(beforeUid: Long): List<Long> {
-        val search = execute("UID SEARCH UID 1:${beforeUid - 1}")
-            .filterIsInstance<ImapResponse.Untagged>()
-            .firstOrNull { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
-            ?: throw ImapException.Protocol("Missing UID SEARCH response")
-        return search.values.drop(1).mapNotNull { it.atomValue()?.toLongOrNull() }
+        val responses = execute("UID SEARCH UID 1:${beforeUid - 1}")
+        if (responses.searchLines().isEmpty()) {
+            throw ImapException.Protocol("Missing UID SEARCH response")
+        }
+        return responses.searchResponses()
             .filter { it in 1 until beforeUid }.distinct().sorted()
     }
 
     /** Returns the DECODED bytes of one MIME part (base64 / quoted-printable undone). */
     fun fetchBodyPart(uid: Long, partId: String): ByteArray {
-        val encoding = fetchLiteral(uid, "$partId.MIME")
+        val mimeHeaders = if (partId == "1") {
+            try {
+                fetchLiteral(uid, "1.MIME")
+            } catch (_: ImapException.Protocol) {
+                null
+            }?.takeIf { it.isNotEmpty() }
+                ?: fetchLiteral(uid, "HEADER.FIELDS (CONTENT-TRANSFER-ENCODING)")
+        } else {
+            fetchLiteral(uid, "$partId.MIME")
+        }
+        val encoding = mimeHeaders
             ?.toString(StandardCharsets.ISO_8859_1)
             ?.let { Regex("(?im)^content-transfer-encoding:\\s*([A-Za-z0-9-]+)").find(it)?.groupValues?.get(1) }
             ?.lowercase() ?: "7bit"
@@ -713,25 +724,41 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
         return decodeTransferEncoding(raw, encoding)
     }
 
-    private fun fetchLiteral(uid: Long, section: String): ByteArray? {
-        val response = execute("UID FETCH $uid (BODY.PEEK[$section])")
-            .asSequence().filterIsInstance<ImapResponse.Untagged>().firstOrNull { item ->
-                item.values.getOrNull(1)?.atomValue()?.equals("FETCH", ignoreCase = true) == true
-            } ?: throw ImapException.Protocol("Attachment response missing")
-        val fields = response.values.getOrNull(2)?.listValue().orEmpty()
-        return fields.firstNotNullOfOrNull { it.literalValue() }
-    }
+    private fun fetchLiteral(uid: Long, section: String): ByteArray? =
+        execute("UID FETCH $uid (UID BODY.PEEK[$section])").firstFetchBodyBytes(uid)
 
     fun fetchMessageBody(uid: Long): ParsedMessageBody {
-        val responses = execute("UID FETCH $uid (BODY.PEEK[])")
-        val fetch = responses.asSequence().filterIsInstance<ImapResponse.Untagged>().firstOrNull { item ->
-            item.values.getOrNull(1)?.atomValue()?.equals("FETCH", ignoreCase = true) == true
-        } ?: throw ImapException.Protocol("Fetch body response missing")
-        val fields = fetch.values.getOrNull(2)?.listValue().orEmpty()
-        val rawBytes = fields.firstNotNullOfOrNull { it.literalValue() }
+        val rawBytes = execute("UID FETCH $uid (UID BODY.PEEK[])").firstFetchBodyBytes(uid)
             ?: throw ImapException.Protocol("Message body payload missing")
         return MimeDecoder.parseRfc822(rawBytes)
     }
+
+    private fun List<ImapResponse>.firstFetchBodyBytes(uid: Long): ByteArray? =
+        asSequence()
+            .filterIsInstance<ImapResponse.Untagged>()
+            .filter { it.values.getOrNull(1)?.atomValue()?.equals("FETCH", ignoreCase = true) == true }
+            .firstNotNullOfOrNull { item ->
+                val fields = item.values.getOrNull(2)?.listValue().orEmpty()
+                val frameUid = fields.attribute("UID")?.atomValue()?.toLongOrNull()
+                if (frameUid != null && frameUid != uid) return@firstNotNullOfOrNull null
+                (0 until fields.size - 1 step 2).firstNotNullOfOrNull { index ->
+                    val key = fields[index].atomValue()
+                    if (key != null && key.startsWith("BODY[", ignoreCase = true)) {
+                        fields[index + 1].bodyBytes()
+                    } else {
+                        null
+                    }
+                }
+            }
+
+    private fun List<ImapResponse>.searchLines(): List<ImapResponse.Untagged> =
+        filterIsInstance<ImapResponse.Untagged>()
+            .filter { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
+
+    private fun List<ImapResponse>.searchResponses(): List<Long> =
+        searchLines()
+            .flatMap { it.values.drop(1) }
+            .mapNotNull { it.atomValue()?.toLongOrNull() }
 
     fun applyThreadMutation(gmailThreadId: String, type: String) {
         if (!gmailThreadId.matches(Regex("[0-9]+"))) throw ImapException.Protocol("Invalid Gmail thread ID")
@@ -743,14 +770,16 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
             ?: listOf("[Gmail]/All Mail", "[Google Mail]/All Mail").firstOrNull { name -> folders.any { it.name.equals(name, true) } }
             ?: throw ImapException.Protocol("Server did not advertise All Mail")
         selectMailbox(allMail)
-        val search = execute("UID SEARCH X-GM-THRID $gmailThreadId")
-            .filterIsInstance<ImapResponse.Untagged>()
-            .firstOrNull { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
-            ?: throw ImapException.Protocol("Missing thread SEARCH response")
-        val uids = search.values.drop(1).map { value ->
-            value.atomValue()?.toLongOrNull()?.takeIf { it > 0 }
-                ?: throw ImapException.Protocol("Invalid thread SEARCH UID")
-        }.distinct()
+        val responses = execute("UID SEARCH X-GM-THRID $gmailThreadId")
+        val searchLines = responses.searchLines()
+        if (searchLines.isEmpty()) throw ImapException.Protocol("Missing thread SEARCH response")
+        searchLines.forEach { line ->
+            line.values.drop(1).forEach { value ->
+                value.atomValue()?.toLongOrNull()?.takeIf { it > 0 }
+                    ?: throw ImapException.Protocol("Invalid thread SEARCH UID")
+            }
+        }
+        val uids = responses.searchResponses().distinct()
         // Commands are idempotent; a retry safely resolves UIDs again after transport loss.
         uids.forEach { uid -> applyMutation(ImapMutation(uid, type)) }
     }
