@@ -261,7 +261,7 @@ class AppViewModel(
                     val result = repository.synchronize(account.accountId)
                     // Membership changes or a namespace reset can make older mail available.
                     if (result is com.glassmail.core.model.MailSyncResult.Success) invalidateOlderMail(account.accountId)
-                }
+                }.onFailure { if (it is CancellationException) throw it }
             }
         } finally {
             _isRefreshing.value = false
