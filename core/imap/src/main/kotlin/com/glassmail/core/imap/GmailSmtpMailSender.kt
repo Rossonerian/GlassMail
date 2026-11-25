@@ -46,16 +46,7 @@ class GmailSmtpMailSender(
             credentialProvider.withCredential(account.accountId) { password ->
                 withContext(Dispatchers.IO) {
                     coroutineContext.ensureActive()
-                    val properties = Properties().apply {
-                        put("mail.smtp.host", host)
-                        put("mail.smtp.port", port.toString())
-                        put("mail.smtp.auth", "true")
-                        put("mail.smtp.starttls.enable", "true")
-                        put("mail.smtp.starttls.required", "true")
-                        put("mail.smtp.connectiontimeout", TIMEOUT_MILLIS.toString())
-                        put("mail.smtp.timeout", TIMEOUT_MILLIS.toString())
-                        put("mail.smtp.writetimeout", TIMEOUT_MILLIS.toString())
-                    }
+                    val properties = smtpProperties(host, port, TIMEOUT_MILLIS)
                     val session = Session.getInstance(properties)
                     if (estimatedOutgoingMessageBytes(mail) > MAX_ESTIMATED_MESSAGE_BYTES) {
                         return@withContext SendMailResult.Failed(SendMailError.InvalidMessage)
@@ -121,6 +112,19 @@ class GmailSmtpMailSender(
     }
 }
 
+internal fun smtpProperties(host: String, port: Int, timeoutMillis: Int = 30_000): Properties = Properties().apply {
+    put("mail.smtp.host", host)
+    put("mail.smtp.port", port.toString())
+    put("mail.smtp.auth", "true")
+    put("mail.smtp.starttls.enable", "true")
+    put("mail.smtp.starttls.required", "true")
+    put("mail.smtp.ssl.checkserveridentity", "true")
+    put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3")
+    put("mail.smtp.connectiontimeout", timeoutMillis.toString())
+    put("mail.smtp.timeout", timeoutMillis.toString())
+    put("mail.smtp.writetimeout", timeoutMillis.toString())
+}
+
 /** Gmail SMTP already files Sent mail; other configurable SMTP hosts still need APPEND. */
 internal suspend fun fileAcceptedSmtpMessage(
     host: String,
@@ -144,39 +148,48 @@ object Rfc822MessageEncoder {
     }
 }
 
-private fun createMimeMessage(session: Session, mail: OutgoingMail): MimeMessage = object : MimeMessage(session) {
-    // saveChanges() would otherwise replace the stable id that remote draft replace/delete searches for.
-    override fun updateMessageID() {
+private val HEADER_CONTROL_CHARS = Regex("[\\r\\n\\u0000]")
+
+private fun createMimeMessage(session: Session, mail: OutgoingMail): MimeMessage {
+    require(!HEADER_CONTROL_CHARS.containsMatchIn(mail.operationId)) { "Invalid operationId" }
+    mail.inReplyTo?.let { require(!HEADER_CONTROL_CHARS.containsMatchIn(it)) { "Invalid inReplyTo" } }
+    mail.references.forEach { require(!HEADER_CONTROL_CHARS.containsMatchIn(it)) { "Invalid reference" } }
+    return object : MimeMessage(session) {
+        // saveChanges() would otherwise replace the stable id that remote draft replace/delete searches for.
+        override fun updateMessageID() {
+            setHeader("Message-ID", "<${mail.operationId}@glassmail.local>")
+        }
+    }.apply {
+        sentDate = java.util.Date()
+        setFrom(InternetAddress(mail.from, true))
+        if (mail.to.isNotEmpty()) setRecipients(Message.RecipientType.TO, mail.to.map(::InternetAddress).toTypedArray())
+        if (mail.cc.isNotEmpty()) setRecipients(Message.RecipientType.CC, mail.cc.map(::InternetAddress).toTypedArray())
+        if (mail.bcc.isNotEmpty()) setRecipients(Message.RecipientType.BCC, mail.bcc.map(::InternetAddress).toTypedArray())
+        subject = mail.subject
+        if (mail.attachments.isEmpty()) {
+            setText(mail.body, Charsets.UTF_8.name())
+        } else {
+            val body = MimeBodyPart().apply { setText(mail.body, Charsets.UTF_8.name()) }
+            val multipart: Multipart = javax.mail.internet.MimeMultipart().apply { addBodyPart(body) }
+            mail.attachments.forEach { attachment ->
+                val part = MimeBodyPart()
+                val safeMimeType = attachment.mimeType.takeIf { it.isNotBlank() && !HEADER_CONTROL_CHARS.containsMatchIn(it) }
+                    ?: "application/octet-stream"
+                part.dataHandler = DataHandler(object : javax.activation.DataSource {
+                    override fun getInputStream() = attachment.openStream()
+                    override fun getOutputStream() = throw UnsupportedOperationException("read-only attachment")
+                    override fun getContentType() = safeMimeType
+                    override fun getName() = attachment.fileName
+                })
+                part.fileName = attachment.fileName.replace(HEADER_CONTROL_CHARS, "_")
+                multipart.addBodyPart(part)
+            }
+            setContent(multipart)
+        }
+        mail.inReplyTo?.let { setHeader("In-Reply-To", it) }
+        if (mail.references.isNotEmpty()) setHeader("References", mail.references.joinToString(" "))
         setHeader("Message-ID", "<${mail.operationId}@glassmail.local>")
     }
-}.apply {
-    sentDate = java.util.Date()
-    setFrom(InternetAddress(mail.from, true))
-    if (mail.to.isNotEmpty()) setRecipients(Message.RecipientType.TO, mail.to.map(::InternetAddress).toTypedArray())
-    if (mail.cc.isNotEmpty()) setRecipients(Message.RecipientType.CC, mail.cc.map(::InternetAddress).toTypedArray())
-    if (mail.bcc.isNotEmpty()) setRecipients(Message.RecipientType.BCC, mail.bcc.map(::InternetAddress).toTypedArray())
-    subject = mail.subject
-    if (mail.attachments.isEmpty()) {
-        setText(mail.body, Charsets.UTF_8.name())
-    } else {
-        val body = MimeBodyPart().apply { setText(mail.body, Charsets.UTF_8.name()) }
-        val multipart: Multipart = javax.mail.internet.MimeMultipart().apply { addBodyPart(body) }
-        mail.attachments.forEach { attachment ->
-            val part = MimeBodyPart()
-            part.dataHandler = DataHandler(object : javax.activation.DataSource {
-                override fun getInputStream() = attachment.openStream()
-                override fun getOutputStream() = throw UnsupportedOperationException("read-only attachment")
-                override fun getContentType() = attachment.mimeType.ifBlank { "application/octet-stream" }
-                override fun getName() = attachment.fileName
-            })
-            part.fileName = attachment.fileName.replace(Regex("[\\r\\n\\u0000]"), "_")
-            multipart.addBodyPart(part)
-        }
-        setContent(multipart)
-    }
-    mail.inReplyTo?.let { setHeader("In-Reply-To", it) }
-    if (mail.references.isNotEmpty()) setHeader("References", mail.references.joinToString(" "))
-    setHeader("Message-ID", "<${mail.operationId}@glassmail.local>")
 }
 
 internal fun MessagingException.hasIoCause(): Boolean =

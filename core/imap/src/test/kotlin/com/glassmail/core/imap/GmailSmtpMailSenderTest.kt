@@ -7,6 +7,8 @@ import com.glassmail.domain.mail.SendMailError
 import com.glassmail.domain.mail.SendMailResult
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GmailSmtpMailSenderTest {
@@ -67,5 +69,61 @@ class GmailSmtpMailSenderTest {
         )
         val result = GmailSmtpMailSender(provider).send(account, oversizedMail)
         assertEquals(SendMailResult.Failed(SendMailError.InvalidMessage), result)
+    }
+
+    @Test fun `smtpProperties enables STARTTLS hostname verification and TLS 1_2 plus floor`() {
+        val props = smtpProperties("smtp.gmail.com", 587)
+        assertEquals("true", props.getProperty("mail.smtp.ssl.checkserveridentity"))
+        assertEquals("TLSv1.2 TLSv1.3", props.getProperty("mail.smtp.ssl.protocols"))
+    }
+
+    @Test fun `Rfc822MessageEncoder rejects CRLF and NUL in header fields`() {
+        for (bad in listOf("id\r\nBcc: evil@example.com", "id\n", "id\u0000")) {
+            assertThrows(IllegalArgumentException::class.java) {
+                Rfc822MessageEncoder.encode(
+                    OutgoingMail(bad, "a", account.email, listOf("to@example.com"), subject = "x", body = "x")
+                )
+            }
+            assertThrows(IllegalArgumentException::class.java) {
+                Rfc822MessageEncoder.encode(
+                    OutgoingMail("op", "a", account.email, listOf("to@example.com"), subject = "x", body = "x", inReplyTo = bad)
+                )
+            }
+            assertThrows(IllegalArgumentException::class.java) {
+                Rfc822MessageEncoder.encode(
+                    OutgoingMail("op", "a", account.email, listOf("to@example.com"), subject = "x", body = "x", references = listOf(bad))
+                )
+            }
+        }
+    }
+
+    @Test fun `send returns InvalidMessage when header fields contain CRLF`() = runBlocking {
+        val result = GmailSmtpMailSender(provider).send(
+            account,
+            OutgoingMail("op", "a", account.email, listOf("to@example.com"), subject = "x", body = "x", inReplyTo = "<id>\r\nBcc: evil@example.com")
+        )
+        assertEquals(SendMailResult.Failed(SendMailError.InvalidMessage), result)
+    }
+
+    @Test fun `Rfc822MessageEncoder sanitizes CRLF in attachment mimeType`() {
+        val mail = OutgoingMail(
+            operationId = "op",
+            accountId = "a",
+            from = account.email,
+            to = listOf("to@example.com"),
+            subject = "x",
+            body = "x",
+            attachments = listOf(
+                OutgoingAttachment(
+                    fileName = "file.txt",
+                    mimeType = "text/plain\r\nX-Injected: bad",
+                    sizeBytes = 3L,
+                    openStream = { java.io.ByteArrayInputStream(byteArrayOf(1, 2, 3)) }
+                )
+            )
+        )
+        val encoded = Rfc822MessageEncoder.encode(mail).toString(Charsets.UTF_8)
+        assertTrue(encoded.contains("application/octet-stream"))
+        assertTrue(!encoded.contains("X-Injected"))
     }
 }
