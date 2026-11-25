@@ -21,8 +21,23 @@ data class ParsedAttachmentInfo(
 
 object MimeDecoder {
 
-    private val ENCODED_WORD_REGEX = Regex("=\\?([A-Za-z0-9_-]+)\\?([BbQq])\\?([^?]+)\\?=")
-    private val ADJACENT_ENCODED_WORDS_REGEX = Regex("(\\?=\\s*=\\?)")
+    private val ENCODED_WORD_REGEX = Regex("=\\?([A-Za-z0-9_-]+)(?:\\*[A-Za-z0-9_-]+)?\\?([BbQq])\\?([^?\\s]+)\\?=")
+    internal const val MAX_TOTAL_INLINE_DATA_URI_CHARS = 6 * 1024 * 1024
+    private const val MAX_MIME_DEPTH = 32
+
+    init {
+        System.setProperty("mail.mime.decodefilename", "true")
+        System.setProperty("mail.mime.decodeparameters", "true")
+    }
+    private val SAFE_INLINE_IMAGE_TYPES = setOf(
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/gif",
+        "image/webp",
+        "image/bmp",
+        "image/avif",
+    )
 
     /**
      * Decodes RFC 2047 encoded-words in headers (Subject, From, To, etc.).
@@ -32,31 +47,61 @@ object MimeDecoder {
         if (input.isNullOrBlank()) return input.orEmpty()
         if (!input.contains("=?")) return input
 
-        // RFC 2047: White space between adjacent encoded words MUST be ignored.
-        // We temporarily replace adjacent words with a direct concatenation marker
-        var normalized = input
-        // Replace whitespace between ?= and =?
-        normalized = normalized.replace(Regex("(\\?=\\s+=\\?)")) { match ->
-            "?==?"
+        val result = StringBuilder()
+        val pendingBytes = ByteArrayOutputStream()
+        var pendingCharset: Charset? = null
+        var lastEnd = 0
+
+        fun flushPending() {
+            val charset = pendingCharset ?: return
+            if (pendingBytes.size() > 0) {
+                result.append(pendingBytes.toByteArray().toString(charset))
+                pendingBytes.reset()
+            }
+            pendingCharset = null
         }
 
-        return ENCODED_WORD_REGEX.replace(normalized) { match ->
+        for (match in ENCODED_WORD_REGEX.findAll(input)) {
+            val between = input.substring(lastEnd, match.range.first)
+            if (pendingCharset != null && between.isBlank()) {
+                // RFC 2047: whitespace between adjacent encoded-words is ignored.
+            } else {
+                flushPending()
+                result.append(between)
+            }
+
             val charsetName = match.groupValues[1]
             val encoding = match.groupValues[2].uppercase()
             val encodedText = match.groupValues[3]
-
             val charset = runCatching { Charset.forName(charsetName) }.getOrElse { StandardCharsets.UTF_8 }
 
-            try {
+            val decodedBytes = runCatching {
                 when (encoding) {
-                    "B" -> decodeBase64(encodedText, charset)
-                    "Q" -> decodeQuotedPrintable(encodedText, charset, isHeader = true)
-                    else -> match.value
+                    "B" -> decodeBase64Bytes(encodedText)
+                    "Q" -> decodeQuotedPrintableBytes(encodedText, charset, isHeader = true)
+                    else -> null
                 }
-            } catch (_: Exception) {
-                match.value
+            }.getOrNull()
+
+            if (decodedBytes == null) {
+                flushPending()
+                result.append(match.value)
+            } else {
+                if (pendingCharset != null && pendingCharset != charset) {
+                    flushPending()
+                }
+                pendingCharset = charset
+                pendingBytes.write(decodedBytes)
             }
+
+            lastEnd = match.range.last + 1
         }
+
+        flushPending()
+        if (lastEnd < input.length) {
+            result.append(input.substring(lastEnd))
+        }
+        return result.toString()
     }
 
     /**
@@ -64,6 +109,10 @@ object MimeDecoder {
      * In headers (RFC 2047), '_' represents space (0x20).
      */
     fun decodeQuotedPrintable(input: String, charset: Charset = StandardCharsets.UTF_8, isHeader: Boolean = false): String {
+        return decodeQuotedPrintableBytes(input, charset, isHeader).toString(charset)
+    }
+
+    private fun decodeQuotedPrintableBytes(input: String, charset: Charset, isHeader: Boolean): ByteArray {
         val out = ByteArrayOutputStream()
         var i = 0
         val len = input.length
@@ -95,19 +144,22 @@ object MimeDecoder {
                         i++
                     }
                 }
+                c.code > 0x7F -> {
+                    out.write(c.toString().toByteArray(charset))
+                    i++
+                }
                 else -> {
                     out.write(c.code)
                     i++
                 }
             }
         }
-        return out.toByteArray().toString(charset)
+        return out.toByteArray()
     }
 
-    private fun decodeBase64(input: String, charset: Charset): String {
+    private fun decodeBase64Bytes(input: String): ByteArray {
         val clean = input.filterNot { it.isWhitespace() }
-        val decoded = Base64.getDecoder().decode(clean)
-        return String(decoded, charset)
+        return Base64.getDecoder().decode(clean)
     }
 
     /**
@@ -139,10 +191,19 @@ object MimeDecoder {
         walkPart(message, "", collector)
         var html = collector.html
         if (html != null && collector.inlineImages.isNotEmpty()) {
+            val encodedCache = HashMap<String, String>(collector.inlineImages.size)
+            var totalDataUriChars = 0
             html = Regex("(?i)cid:([^\"'\\s>)]+)").replace(html) { match ->
                 val key = match.groupValues[1].trim('<', '>').lowercase()
                 val image = collector.inlineImages[key] ?: return@replace match.value
-                "data:${image.first};base64,${Base64.getEncoder().encodeToString(image.second)}"
+                val dataUri = encodedCache.getOrPut(key) {
+                    "data:${image.first};base64,${Base64.getEncoder().encodeToString(image.second)}"
+                }
+                if (totalDataUriChars + dataUri.length > MAX_TOTAL_INLINE_DATA_URI_CHARS) {
+                    return@replace match.value
+                }
+                totalDataUriChars += dataUri.length
+                dataUri
             }
         }
         val cleanPlain = collector.plain?.let { normalizeWhitespace(it) }
@@ -156,21 +217,22 @@ object MimeDecoder {
         )
     }
 
-    private fun walkPart(part: javax.mail.Part, id: String, collector: PartCollector) {
+    private fun walkPart(part: javax.mail.Part, id: String, collector: PartCollector, depth: Int = 0) {
+        if (depth > MAX_MIME_DEPTH) return
         if (part.isMimeType("multipart/*")) {
             val multipart = part.content as javax.mail.Multipart
             for (index in 0 until multipart.count) {
-                walkPart(multipart.getBodyPart(index), if (id.isEmpty()) "${index + 1}" else "$id.${index + 1}", collector)
+                walkPart(multipart.getBodyPart(index), if (id.isEmpty()) "${index + 1}" else "$id.${index + 1}", collector, depth + 1)
             }
             return
         }
         val partId = id.ifEmpty { "1" }
         val mimeType = part.contentType.substringBefore(';').trim().lowercase().ifBlank { "text/plain" }
         val disposition = part.disposition?.lowercase()
-        val fileName = runCatching { part.fileName }.getOrNull()?.takeIf { it.isNotBlank() }
+        val fileName = runCatching { part.fileName }.getOrNull()?.let(::decodeMimeWords)?.takeIf { it.isNotBlank() }
         val contentId = (part as? javax.mail.internet.MimePart)?.contentID?.trim('<', '>', ' ')?.lowercase()
         val isText = mimeType == "text/plain" || mimeType == "text/html"
-        val inlineImage = mimeType.startsWith("image/") && contentId != null && disposition != "attachment"
+        val inlineImage = mimeType in SAFE_INLINE_IMAGE_TYPES && contentId != null && disposition != "attachment"
         when {
             inlineImage -> {
                 val bytes = runCatching { part.inputStream.use { it.readNBytes(MAX_INLINE_IMAGE_BYTES + 1) } }.getOrNull()
@@ -286,13 +348,15 @@ object MimeDecoder {
         contentType: String,
         transferEncoding: String,
         rawBody: String,
+        depth: Int = 0,
     ): Pair<String?, String?> {
+        if (depth > MAX_MIME_DEPTH) return Pair(null, null)
         val mimeType = contentType.substringBefore(';').trim().lowercase()
 
         if (mimeType.startsWith("multipart/")) {
             val boundary = extractParameter(contentType, "boundary")
             if (!boundary.isNullOrBlank()) {
-                return parseMultipart(rawBody, boundary)
+                return parseMultipart(rawBody, boundary, depth + 1)
             }
         }
 
@@ -307,7 +371,8 @@ object MimeDecoder {
         }
     }
 
-    private fun parseMultipart(body: String, boundary: String): Pair<String?, String?> {
+    private fun parseMultipart(body: String, boundary: String, depth: Int = 0): Pair<String?, String?> {
+        if (depth > MAX_MIME_DEPTH) return Pair(null, null)
         val marker = "--$boundary"
         val parts = body.split(marker)
         var bestPlain: String? = null
@@ -325,7 +390,7 @@ object MimeDecoder {
             val partType = partHeaders["content-type"] ?: "text/plain"
             val partEncoding = partHeaders["content-transfer-encoding"]?.lowercase()?.trim() ?: "7bit"
 
-            val (subPlain, subHtml) = parseBodyParts(partType, partEncoding, bodySection)
+            val (subPlain, subHtml) = parseBodyParts(partType, partEncoding, bodySection, depth + 1)
             if (subPlain != null && bestPlain == null) bestPlain = subPlain
             if (subHtml != null && bestHtml == null) bestHtml = subHtml
         }
@@ -374,6 +439,8 @@ object MimeDecoder {
         // Replace paragraph and break tags with newlines
         text = text.replace(Regex("(?i)<br\\s*/?>"), "\n")
         text = text.replace(Regex("(?i)</?(p|div|tr|h[1-6]|li)[^>]*>"), "\n")
+        // Strip HTML comments before tags (e.g. MSO conditional comments)
+        text = text.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
         // Strip remaining tags
         text = text.replace(Regex("<[^>]+>"), "")
         // Decode HTML entities
@@ -381,24 +448,39 @@ object MimeDecoder {
         return normalizeWhitespace(text)
     }
 
+    private val HTML_ENTITY_REGEX = Regex("&(#x[0-9a-fA-F]+|#\\d+|[A-Za-z]+);", RegexOption.IGNORE_CASE)
+
     private fun decodeHtmlEntities(input: String): String {
-        var res = input
-        res = res.replace("&nbsp;", " ")
-        res = res.replace("&amp;", "&")
-        res = res.replace("&lt;", "<")
-        res = res.replace("&gt;", ">")
-        res = res.replace("&quot;", "\"")
-        res = res.replace("&#39;", "'")
-        res = res.replace("&apos;", "'")
-        res = res.replace(Regex("&#(\\d+);")) { match ->
-            val code = match.groupValues[1].toIntOrNull()
-            if (code != null && code in 0..0x10FFFF) String(Character.toChars(code)) else match.value
+        return HTML_ENTITY_REGEX.replace(input) { match ->
+            val token = match.groupValues[1]
+            when {
+                token.startsWith("#x", ignoreCase = true) -> {
+                    val code = token.substring(2).toIntOrNull(16)
+                    if (code != null && code in 1..0x10FFFF && code !in 0xD800..0xDFFF) {
+                        String(Character.toChars(code))
+                    } else {
+                        match.value
+                    }
+                }
+                token.startsWith("#") -> {
+                    val code = token.substring(1).toIntOrNull()
+                    if (code != null && code in 1..0x10FFFF && code !in 0xD800..0xDFFF) {
+                        String(Character.toChars(code))
+                    } else {
+                        match.value
+                    }
+                }
+                else -> when (token.lowercase()) {
+                    "nbsp" -> " "
+                    "amp" -> "&"
+                    "lt" -> "<"
+                    "gt" -> ">"
+                    "quot" -> "\""
+                    "apos" -> "'"
+                    else -> match.value
+                }
+            }
         }
-        res = res.replace(Regex("&#x([0-9a-fA-F]+);")) { match ->
-            val code = match.groupValues[1].toIntOrNull(16)
-            if (code != null && code in 0..0x10FFFF) String(Character.toChars(code)) else match.value
-        }
-        return res
     }
 
     private fun normalizeWhitespace(text: String): String {

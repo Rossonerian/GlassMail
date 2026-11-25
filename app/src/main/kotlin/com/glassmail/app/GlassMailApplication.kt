@@ -124,7 +124,11 @@ class AppGraph(application: Application) {
         val attachments = draft.attachments.map { attachment ->
             val uri = android.net.Uri.parse(attachment.uri)
             OutgoingAttachment(attachment.fileName, attachment.mimeType, attachment.sizeBytes) {
-                contentResolver.openInputStream(uri) ?: error("Draft attachment is unavailable")
+                try {
+                    contentResolver.openInputStream(uri) ?: throw java.io.IOException("Draft attachment is unavailable")
+                } catch (error: SecurityException) {
+                    throw java.io.IOException("Draft attachment permission revoked", error)
+                }
             }
         }
         val outgoing = OutgoingMail(
@@ -145,7 +149,7 @@ class AppGraph(application: Application) {
         credentialStore.withCredential(account.accountId) { password ->
             imapClient.replaceRemoteDraft(account.email, password, draft.draftId, raw)
         } ?: error("IMAP credentials are unavailable")
-    }
+    }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
 
     init {
         SyncRuntime.install(mailRepository)

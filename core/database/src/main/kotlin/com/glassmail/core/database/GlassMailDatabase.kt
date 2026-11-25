@@ -395,6 +395,9 @@ interface MailDao {
     @Query("SELECT * FROM attachments WHERE messageId = :messageId ORDER BY partId")
     fun observeAttachments(messageId: String): Flow<List<AttachmentEntity>>
 
+    @Query("SELECT * FROM attachments WHERE messageId IN (:messageIds) ORDER BY partId")
+    fun observeAttachmentsForMessages(messageIds: List<String>): Flow<List<AttachmentEntity>>
+
     @Query("WITH matched_threads AS (SELECT DISTINCT m.accountId, m.gmailThreadId FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid WHERE messages_fts MATCH :ftsQuery AND m.gmailThreadId IS NOT NULL AND m.gmailThreadId != ''), matched_messages AS (SELECT m.messageId FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid WHERE messages_fts MATCH :ftsQuery) SELECT m.messageId, m.gmailThreadId, m.sender, m.subject, m.preview, m.sentAtEpochMillis, mm.flags, mm.labels, EXISTS(SELECT 1 FROM attachments a WHERE a.messageId = m.messageId) AS hasAttachment, m.category FROM messages m JOIN mailbox_messages mm ON mm.messageId = m.messageId WHERE mm.mailboxId = :mailboxId AND (m.messageId IN matched_messages OR EXISTS (SELECT 1 FROM matched_threads matched WHERE matched.accountId = m.accountId AND matched.gmailThreadId = m.gmailThreadId)) ORDER BY m.sentAtEpochMillis DESC LIMIT 500")
     fun search(mailboxId: String, ftsQuery: String): Flow<List<MailboxMessageRow>>
 }

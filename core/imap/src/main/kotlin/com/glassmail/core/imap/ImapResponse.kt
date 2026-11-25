@@ -22,6 +22,9 @@ fun ImapValue.atomValue(): String? = when (this) {
 
 fun ImapValue.literalValue(): ByteArray? = (this as? ImapValue.Literal)?.bytes
 
+fun ImapValue.bodyBytes(): ByteArray? =
+    literalValue() ?: (this as? ImapValue.Quoted)?.value?.toByteArray(java.nio.charset.StandardCharsets.ISO_8859_1)
+
 fun ImapValue.listValue(): List<ImapValue> = (this as? ImapValue.List)?.values.orEmpty()
 
 fun List<ImapValue>.attribute(name: String): ImapValue? {

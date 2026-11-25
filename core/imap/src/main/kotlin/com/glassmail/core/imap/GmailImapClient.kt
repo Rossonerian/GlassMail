@@ -52,7 +52,7 @@ class GmailImapClient(
         withContext(Dispatchers.IO.limitedParallelism(1)) {
             require(draftId.matches(Regex("[A-Za-z0-9._-]{1,128}"))) { "Invalid draft identifier" }
             require(rawMessage.isNotEmpty() && rawMessage.size <= MAX_APPEND_BYTES) { "Draft exceeds IMAP APPEND limit" }
-            TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+            TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 val capabilities = client.capability()
@@ -70,7 +70,7 @@ class GmailImapClient(
     suspend fun deleteRemoteDraft(email: String, password: CharArray, draftId: String) =
         withContext(Dispatchers.IO.limitedParallelism(1)) {
             if (!draftId.matches(Regex("[A-Za-z0-9._-]{1,128}"))) return@withContext
-            TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+            TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 val capabilities = client.capability()
@@ -78,7 +78,7 @@ class GmailImapClient(
                 val folders = client.listMailboxes()
                 val folder = folders.firstOrNull { box -> box.attributes.any { it.equals("\\Drafts", ignoreCase = true) } }?.name
                     ?: listOf("[Gmail]/Drafts", "Drafts", "Draft").firstOrNull { name -> folders.any { it.name.equals(name, true) } }
-                    ?: return@withContext
+                    ?: return@withConnection
                 client.selectMailbox(folder)
                 client.deleteDraft(draftId, capabilities)
             }
@@ -87,14 +87,14 @@ class GmailImapClient(
     suspend fun fetchRemoteDrafts(email: String, password: CharArray, limit: Int = 100): List<ImapRemoteDraft> =
         withContext(Dispatchers.IO.limitedParallelism(1)) {
             require(limit in 1..250)
-            TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+            TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 client.login(email, password)
                 val folders = client.listMailboxes()
                 val folder = folders.firstOrNull { box -> box.attributes.any { it.equals("\\Drafts", ignoreCase = true) } }?.name
                     ?: listOf("[Gmail]/Drafts", "Drafts", "Draft").firstOrNull { name -> folders.any { it.name.equals(name, true) } }
-                    ?: return@withContext emptyList()
+                    ?: return@withConnection emptyList()
                 client.selectMailbox(folder)
                 client.fetchDrafts(limit)
             }
@@ -109,7 +109,7 @@ class GmailImapClient(
         flag: String,
     ) = withContext(Dispatchers.IO.limitedParallelism(1)) {
         require(rawMessage.isNotEmpty() && rawMessage.size <= MAX_APPEND_BYTES) { "Message exceeds IMAP APPEND limit" }
-        TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+        TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
             val client = ImapCommandClient(connection)
             client.requireGreeting()
             client.login(email, password)
@@ -129,7 +129,7 @@ class GmailImapClient(
     ) {
         if (operations.isEmpty()) return
         withContext(Dispatchers.IO.limitedParallelism(1)) {
-            TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+            TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 client.login(email, password)
@@ -142,7 +142,7 @@ class GmailImapClient(
     /** Resolve the complete Gmail conversation in the server's All Mail namespace. */
     suspend fun applyThreadMutation(email: String, password: CharArray, gmailThreadId: String, type: String) =
         withContext(Dispatchers.IO.limitedParallelism(1)) {
-            TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+            TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 client.login(email, password)
@@ -153,7 +153,7 @@ class GmailImapClient(
     suspend fun fetchLatestInbox(email: String, password: CharArray, limit: Int = 50): GmailInboxSnapshot =
         withContext(Dispatchers.IO.limitedParallelism(1)) {
             coroutineContext.ensureActive()
-            TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+            TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 val capabilities = client.capability()
@@ -188,7 +188,7 @@ class GmailImapClient(
     ): GmailInboxSnapshot = withContext(Dispatchers.IO.limitedParallelism(1)) {
         require(limit in 1..250) { "IMAP page limit must be bounded" }
         coroutineContext.ensureActive()
-        TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+        TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
             val client = ImapCommandClient(connection)
             client.requireGreeting()
             val capabilities = client.capability()
@@ -220,15 +220,12 @@ class GmailImapClient(
         expectedUidValidity: Long,
     ): List<ImapMessageMetadata> = withContext(Dispatchers.IO.limitedParallelism(1)) {
         require(uidRanges.all { !it.isEmpty() && it.first > 0 })
-        TlsImapConnection.withIdleConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
+        TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
             val client = ImapCommandClient(connection)
             client.requireGreeting()
             client.login(email, password)
             val capabilities = client.capability()
-            val inbox = client.selectInbox()
-            if (inbox.uidValidity != expectedUidValidity) {
-                throw ImapException.UidValidityChanged(expectedUidValidity, inbox.uidValidity)
-            }
+            client.selectInbox(expectedUidValidity)
             val fields = if ("X-GM-EXT-1" in capabilities) "FLAGS X-GM-LABELS INTERNALDATE" else "FLAGS INTERNALDATE"
             buildList {
                 uidRanges.asSequence().flatMap { it.asSequence() }.chunked(500).forEach { uids ->
@@ -248,15 +245,12 @@ class GmailImapClient(
         limit: Int = 50,
     ): OlderInboxPage = withContext(Dispatchers.IO.limitedParallelism(1)) {
         require(beforeUid > 1 && limit in 1..200)
-        TlsImapConnection.withIdleConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
+        TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
             val client = ImapCommandClient(connection)
             client.requireGreeting()
             client.login(email, password)
             val capabilities = client.capability()
-            val inbox = client.selectInbox()
-            if (inbox.uidValidity != expectedUidValidity) {
-                throw ImapException.UidValidityChanged(expectedUidValidity, inbox.uidValidity)
-            }
+            val inbox = client.selectInbox(expectedUidValidity)
             val uids = client.searchOlderUids(beforeUid)
             val selected = uids.takeLast(limit)
             coroutineContext.ensureActive()
@@ -272,14 +266,21 @@ class GmailImapClient(
         }
     }
 
-    suspend fun fetchAttachment(email: String, password: CharArray, mailbox: String, uid: Long, partId: String): ByteArray =
+    suspend fun fetchAttachment(
+        email: String,
+        password: CharArray,
+        mailbox: String,
+        uid: Long,
+        partId: String,
+        expectedUidValidity: Long? = null,
+    ): ByteArray =
         withContext(Dispatchers.IO.limitedParallelism(1)) {
             require(uid > 0 && partId.matches(Regex("[0-9.]+"))) { "Invalid attachment reference" }
-            TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+            TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 client.login(email, password)
-                client.selectMailbox(mailbox)
+                client.selectMailbox(mailbox, expectedUidValidity)
                 client.fetchBodyPart(uid, partId)
             }
         }
@@ -289,20 +290,21 @@ class GmailImapClient(
         password: CharArray,
         mailbox: String,
         uid: Long,
+        expectedUidValidity: Long? = null,
     ): ParsedMessageBody = withContext(Dispatchers.IO.limitedParallelism(1)) {
         require(uid > 0) { "Invalid message UID" }
-        TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+        TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
             val client = ImapCommandClient(connection)
             client.requireGreeting()
             client.login(email, password)
-            client.selectMailbox(mailbox)
+            client.selectMailbox(mailbox, expectedUidValidity)
             client.fetchMessageBody(uid)
         }
     }
 
     suspend fun fetchStorageQuota(email: String, password: CharArray): ImapStorageQuota? =
         withContext(Dispatchers.IO.limitedParallelism(1)) {
-            TlsImapConnection.open(host, port, connectTimeoutMillis, readTimeoutMillis).use { connection ->
+            TlsImapConnection.withConnection(host, port, connectTimeoutMillis, readTimeoutMillis) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 client.login(email, password)
@@ -313,7 +315,7 @@ class GmailImapClient(
     /** Stay in IMAP IDLE for a bounded interval and return when the server ends it. */
     suspend fun idle(email: String, password: CharArray, onMailboxChanged: suspend () -> Unit) =
         withContext(Dispatchers.IO.limitedParallelism(1)) {
-            TlsImapConnection.withIdleConnection(host, port, connectTimeoutMillis, IDLE_WINDOW_MILLIS.toInt() + 60_000) { connection ->
+            TlsImapConnection.withConnection(host, port, connectTimeoutMillis, IDLE_WINDOW_MILLIS.toInt() + 60_000) { connection ->
                 val client = ImapCommandClient(connection)
                 client.requireGreeting()
                 client.login(email, password)
@@ -457,45 +459,32 @@ private class TlsImapConnection private constructor(private val socket: SSLSocke
         // Gmail delivers messages up to 25 MiB of content; base64 transfer encoding adds roughly one third.
         private const val MAX_LITERAL_BYTES = 36 * 1024 * 1024
 
-        fun open(host: String, port: Int, connectTimeoutMillis: Int, readTimeoutMillis: Int): TlsImapConnection = try {
-            val socket = SSLSocketFactory.getDefault().createSocket() as SSLSocket
-            try {
-                initializeSocket(socket, host, port, connectTimeoutMillis, readTimeoutMillis)
-                TlsImapConnection(socket)
-            } catch (error: Exception) {
-                runCatching { socket.close() }
-                throw error
-            }
-        } catch (error: ImapException) {
-            throw error
-        } catch (error: Exception) {
-            throw ImapException.Transport(error)
-        }
-
-        suspend fun <T> withIdleConnection(
+        suspend fun <T> withConnection(
             host: String,
             port: Int,
             connectTimeoutMillis: Int,
             readTimeoutMillis: Int,
             block: suspend (TlsImapConnection) -> T,
-        ): T {
+        ): T = try {
             val socket = SSLSocketFactory.getDefault().createSocket() as SSLSocket
-            return try {
-                socket.use {
-                    withConnectionCancellation(socket) {
-                        // Register before connecting/handshaking: these can also block.
-                        initializeSocket(socket, host, port, connectTimeoutMillis, readTimeoutMillis)
-                        block(TlsImapConnection(socket))
-                    }
+            socket.use {
+                withConnectionCancellation(socket) {
+                    // Register before connecting/handshaking: these can also block.
+                    initializeSocket(socket, host, port, connectTimeoutMillis, readTimeoutMillis)
+                    block(TlsImapConnection(socket))
                 }
-            } catch (error: IOException) {
-                coroutineContext.ensureActive()
-                throw ImapException.Transport(error)
             }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: ImapException) {
+            throw error
+        } catch (error: Exception) {
+            coroutineContext.ensureActive()
+            throw ImapException.Transport(error)
         }
 
         private fun initializeSocket(socket: SSLSocket, host: String, port: Int, connectTimeoutMillis: Int, readTimeoutMillis: Int) {
-            socket.sslParameters = SSLParameters().apply { endpointIdentificationAlgorithm = "HTTPS" }
+            socket.sslParameters = configureImapTlsParameters(socket.sslParameters, socket.supportedProtocols)
             socket.keepAlive = true
             socket.soTimeout = readTimeoutMillis
             socket.connect(InetSocketAddress(host, port), connectTimeoutMillis)
@@ -503,6 +492,12 @@ private class TlsImapConnection private constructor(private val socket: SSLSocke
         }
     }
 }
+
+internal fun configureImapTlsParameters(params: SSLParameters, supportedProtocols: Array<String>): SSLParameters =
+    params.apply {
+        endpointIdentificationAlgorithm = "HTTPS"
+        protocols = supportedProtocols.filter { it == "TLSv1.2" || it == "TLSv1.3" }.toTypedArray()
+    }
 
 internal class ImapCommandClient(private val connection: ImapCommandConnection) {
     private var commandNumber = 1
@@ -577,9 +572,7 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
     fun deleteDraft(draftId: String, capabilities: Set<String>) {
         val messageId = "<$draftId@glassmail.local>"
         val search = execute("UID SEARCH HEADER MESSAGE-ID ${quote(messageId)}")
-            .filterIsInstance<ImapResponse.Untagged>()
-            .firstOrNull { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
-            ?.values.orEmpty().drop(1).mapNotNull { it.atomValue()?.toLongOrNull() }
+            .searchResponses()
         if (search.isEmpty()) return
         if (capabilities.none { it.equals("UIDPLUS", ignoreCase = true) }) {
             throw ImapException.Protocol("Server does not support safe draft replacement")
@@ -591,9 +584,7 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
 
     fun fetchDrafts(limit: Int): List<ImapRemoteDraft> {
         val search = execute("UID SEARCH ALL")
-            .filterIsInstance<ImapResponse.Untagged>()
-            .firstOrNull { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
-            ?.values.orEmpty().drop(1).mapNotNull { it.atomValue()?.toLongOrNull() }
+            .searchResponses()
             .takeLast(limit)
         if (search.isEmpty()) return emptyList()
         return execute("UID FETCH ${search.joinToString(",")} (UID INTERNALDATE BODY.PEEK[])")
@@ -655,15 +646,18 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
         }
     }
 
-    fun selectInbox(): ImapSelectedMailbox {
-        return selectMailbox("INBOX")
+    fun selectInbox(expectedUidValidity: Long? = null): ImapSelectedMailbox {
+        return selectMailbox("INBOX", expectedUidValidity)
     }
 
-    fun selectMailbox(mailbox: String): ImapSelectedMailbox {
+    fun selectMailbox(mailbox: String, expectedUidValidity: Long? = null): ImapSelectedMailbox {
         val responses = execute("SELECT ${quote(mailbox)}")
         val uidValidity = responses.firstNotNullOfOrNull { response ->
             (response as? ImapResponse.Untagged)?.values?.uidResponse("UIDVALIDITY")
         }?.toLongOrNull() ?: throw ImapException.Protocol("SELECT response missing UIDVALIDITY")
+        if (expectedUidValidity != null && uidValidity != expectedUidValidity) {
+            throw ImapException.UidValidityChanged(expectedUidValidity, uidValidity)
+        }
         val uidNext = responses.firstNotNullOfOrNull { response ->
             (response as? ImapResponse.Untagged)?.values?.uidResponse("UIDNEXT")
         }?.toLongOrNull() ?: throw ImapException.Protocol("SELECT response missing UIDNEXT")
@@ -702,17 +696,27 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
         execute("UID FETCH $uidSet ($fields)").mapNotNull(GmailFetchMapper::map)
 
     fun searchOlderUids(beforeUid: Long): List<Long> {
-        val search = execute("UID SEARCH UID 1:${beforeUid - 1}")
-            .filterIsInstance<ImapResponse.Untagged>()
-            .firstOrNull { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
-            ?: throw ImapException.Protocol("Missing UID SEARCH response")
-        return search.values.drop(1).mapNotNull { it.atomValue()?.toLongOrNull() }
+        val responses = execute("UID SEARCH UID 1:${beforeUid - 1}")
+        if (responses.searchLines().isEmpty()) {
+            throw ImapException.Protocol("Missing UID SEARCH response")
+        }
+        return responses.searchResponses()
             .filter { it in 1 until beforeUid }.distinct().sorted()
     }
 
     /** Returns the DECODED bytes of one MIME part (base64 / quoted-printable undone). */
     fun fetchBodyPart(uid: Long, partId: String): ByteArray {
-        val encoding = fetchLiteral(uid, "$partId.MIME")
+        val mimeHeaders = if (partId == "1") {
+            try {
+                fetchLiteral(uid, "1.MIME")
+            } catch (_: ImapException.Protocol) {
+                null
+            }?.takeIf { it.isNotEmpty() }
+                ?: fetchLiteral(uid, "HEADER.FIELDS (CONTENT-TRANSFER-ENCODING)")
+        } else {
+            fetchLiteral(uid, "$partId.MIME")
+        }
+        val encoding = mimeHeaders
             ?.toString(StandardCharsets.ISO_8859_1)
             ?.let { Regex("(?im)^content-transfer-encoding:\\s*([A-Za-z0-9-]+)").find(it)?.groupValues?.get(1) }
             ?.lowercase() ?: "7bit"
@@ -720,25 +724,41 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
         return decodeTransferEncoding(raw, encoding)
     }
 
-    private fun fetchLiteral(uid: Long, section: String): ByteArray? {
-        val response = execute("UID FETCH $uid (BODY.PEEK[$section])")
-            .asSequence().filterIsInstance<ImapResponse.Untagged>().firstOrNull { item ->
-                item.values.getOrNull(1)?.atomValue()?.equals("FETCH", ignoreCase = true) == true
-            } ?: throw ImapException.Protocol("Attachment response missing")
-        val fields = response.values.getOrNull(2)?.listValue().orEmpty()
-        return fields.firstNotNullOfOrNull { it.literalValue() }
-    }
+    private fun fetchLiteral(uid: Long, section: String): ByteArray? =
+        execute("UID FETCH $uid (UID BODY.PEEK[$section])").firstFetchBodyBytes(uid)
 
     fun fetchMessageBody(uid: Long): ParsedMessageBody {
-        val responses = execute("UID FETCH $uid (BODY.PEEK[])")
-        val fetch = responses.asSequence().filterIsInstance<ImapResponse.Untagged>().firstOrNull { item ->
-            item.values.getOrNull(1)?.atomValue()?.equals("FETCH", ignoreCase = true) == true
-        } ?: throw ImapException.Protocol("Fetch body response missing")
-        val fields = fetch.values.getOrNull(2)?.listValue().orEmpty()
-        val rawBytes = fields.firstNotNullOfOrNull { it.literalValue() }
+        val rawBytes = execute("UID FETCH $uid (UID BODY.PEEK[])").firstFetchBodyBytes(uid)
             ?: throw ImapException.Protocol("Message body payload missing")
         return MimeDecoder.parseRfc822(rawBytes)
     }
+
+    private fun List<ImapResponse>.firstFetchBodyBytes(uid: Long): ByteArray? =
+        asSequence()
+            .filterIsInstance<ImapResponse.Untagged>()
+            .filter { it.values.getOrNull(1)?.atomValue()?.equals("FETCH", ignoreCase = true) == true }
+            .firstNotNullOfOrNull { item ->
+                val fields = item.values.getOrNull(2)?.listValue().orEmpty()
+                val frameUid = fields.attribute("UID")?.atomValue()?.toLongOrNull()
+                if (frameUid != null && frameUid != uid) return@firstNotNullOfOrNull null
+                (0 until fields.size - 1 step 2).firstNotNullOfOrNull { index ->
+                    val key = fields[index].atomValue()
+                    if (key != null && key.startsWith("BODY[", ignoreCase = true)) {
+                        fields[index + 1].bodyBytes()
+                    } else {
+                        null
+                    }
+                }
+            }
+
+    private fun List<ImapResponse>.searchLines(): List<ImapResponse.Untagged> =
+        filterIsInstance<ImapResponse.Untagged>()
+            .filter { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
+
+    private fun List<ImapResponse>.searchResponses(): List<Long> =
+        searchLines()
+            .flatMap { it.values.drop(1) }
+            .mapNotNull { it.atomValue()?.toLongOrNull() }
 
     fun applyThreadMutation(gmailThreadId: String, type: String) {
         if (!gmailThreadId.matches(Regex("[0-9]+"))) throw ImapException.Protocol("Invalid Gmail thread ID")
@@ -750,14 +770,16 @@ internal class ImapCommandClient(private val connection: ImapCommandConnection) 
             ?: listOf("[Gmail]/All Mail", "[Google Mail]/All Mail").firstOrNull { name -> folders.any { it.name.equals(name, true) } }
             ?: throw ImapException.Protocol("Server did not advertise All Mail")
         selectMailbox(allMail)
-        val search = execute("UID SEARCH X-GM-THRID $gmailThreadId")
-            .filterIsInstance<ImapResponse.Untagged>()
-            .firstOrNull { it.values.firstOrNull()?.atomValue()?.equals("SEARCH", true) == true }
-            ?: throw ImapException.Protocol("Missing thread SEARCH response")
-        val uids = search.values.drop(1).map { value ->
-            value.atomValue()?.toLongOrNull()?.takeIf { it > 0 }
-                ?: throw ImapException.Protocol("Invalid thread SEARCH UID")
-        }.distinct()
+        val responses = execute("UID SEARCH X-GM-THRID $gmailThreadId")
+        val searchLines = responses.searchLines()
+        if (searchLines.isEmpty()) throw ImapException.Protocol("Missing thread SEARCH response")
+        searchLines.forEach { line ->
+            line.values.drop(1).forEach { value ->
+                value.atomValue()?.toLongOrNull()?.takeIf { it > 0 }
+                    ?: throw ImapException.Protocol("Invalid thread SEARCH UID")
+            }
+        }
+        val uids = responses.searchResponses().distinct()
         // Commands are idempotent; a retry safely resolves UIDs again after transport loss.
         uids.forEach { uid -> applyMutation(ImapMutation(uid, type)) }
     }
