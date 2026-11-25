@@ -1,6 +1,7 @@
 package com.glassmail.core.security
 
 import android.content.Context
+import android.util.Base64
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
@@ -97,5 +98,30 @@ class AndroidKeystoreCredentialStoreTest {
 
         // After the block has executed, the array should be zeroed out
         assertTrue("Array should be zeroed out", capturedArray!!.all { it == '\u0000' })
+    }
+
+    @Test
+    fun returnsNullOnTruncatedBase64() = runBlocking {
+        val prefs = context.getSharedPreferences("glassmail.credentials.v1", Context.MODE_PRIVATE)
+        prefs.edit().putString("credential.$accountId", "abc").commit()
+
+        val result = credentialStore.withCredential(accountId) {
+            "should_not_reach_here"
+        }
+
+        assertNull(result)
+    }
+
+    @Test
+    fun returnsNullOnTruncatedCiphertextBlob() = runBlocking {
+        val prefs = context.getSharedPreferences("glassmail.credentials.v1", Context.MODE_PRIVATE)
+        val truncatedBlob = Base64.encodeToString(ByteArray(28), Base64.NO_WRAP)
+        prefs.edit().putString("credential.$accountId", truncatedBlob).commit()
+
+        val result = credentialStore.withCredential(accountId) {
+            "should_not_reach_here"
+        }
+
+        assertNull(result)
     }
 }
