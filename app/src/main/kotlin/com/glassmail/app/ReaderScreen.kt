@@ -163,9 +163,9 @@ fun ReaderScreen(
                             Icon(Icons.Outlined.MoreHoriz, contentDescription = "Conversation actions")
                         }
                         DropdownMenu(expanded = threadActionsOpen, onDismissRequest = { threadActionsOpen = false }) {
-                            DropdownMenuItem(text = { Text("Archive conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "archive") })
+                            DropdownMenuItem(text = { Text("Archive conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "archive"); back() })
                             DropdownMenuItem(text = { Text(if (messages.any { it.starred }) "Unstar conversation" else "Star conversation") }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "star", desiredStarred = !messages.any { it.starred }) })
-                            DropdownMenuItem(text = { Text("Delete conversation", color = MaterialTheme.colorScheme.error) }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "delete") })
+                            DropdownMenuItem(text = { Text("Delete conversation", color = MaterialTheme.colorScheme.error) }, onClick = { threadActionsOpen = false; vm.threadMutation(messages.map { it.messageId }, "delete"); back() })
                             DropdownMenuItem(text = { Text("Command palette") }, onClick = { threadActionsOpen = false; openPalette() })
                         }
                     }

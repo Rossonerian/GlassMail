@@ -374,13 +374,20 @@ fun InboxScreen(
                     Text("No Account Connected", style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(GlassSpacing.xs))
                     Text(
-                        "Connect a Gmail account in Settings or seed debug mail.",
+                        if (BuildConfig.DEBUG) "Connect a Gmail account in Settings or seed debug mail."
+                        else "Connect a Gmail account to read your mail.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(GlassSpacing.base))
-                    Button(onClick = { vm.seed(100) }) {
-                        Text("Seed 100 debug messages")
+                    if (BuildConfig.DEBUG) {
+                        Button(onClick = { vm.seed(100) }) {
+                            Text("Seed 100 debug messages")
+                        }
+                    } else {
+                        Button(onClick = onAddAccount) {
+                            Text("Connect Gmail")
+                        }
                     }
                 }
             }

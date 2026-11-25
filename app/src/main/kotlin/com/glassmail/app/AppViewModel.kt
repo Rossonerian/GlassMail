@@ -212,6 +212,7 @@ class AppViewModel(
             }
         }
         repository.applyMutations(mutations)
+        if (type == "archive" && mutations.isNotEmpty()) _undoableArchive.value = UndoableArchive(UUID.randomUUID().toString(), mutations.map { it.messageId })
     }
 
     fun undoArchive(actionId: String) = viewModelScope.launch {

@@ -289,7 +289,9 @@ fun GlassMailApp(graph: AppGraph, notificationMessageId: StateFlow<String?> = Mu
                 val actions = buildList {
                     add(CommandPaletteAction("inbox", "Inbox", "Open cached mailbox") { paletteOpen = false; navController.navigate(ROUTE_INBOX) })
                     add(CommandPaletteAction("settings", "Settings", "Appearance and account") { paletteOpen = false; navController.navigate(ROUTE_SETTINGS) })
-                    add(CommandPaletteAction("lab", "Glass Optical Lab", "Interactive shader sandbox") { paletteOpen = false; navController.navigate(ROUTE_GLASS_LAB) })
+                    if (BuildConfig.DEBUG) {
+                        add(CommandPaletteAction("lab", "Glass Optical Lab", "Interactive shader sandbox") { paletteOpen = false; navController.navigate(ROUTE_GLASS_LAB) })
+                    }
                     add(CommandPaletteAction("refresh", "Refresh", "Synchronize the current account") { paletteOpen = false; vm.refresh() })
                     add(CommandPaletteAction("compose", "Compose", "Write a new message") { paletteOpen = false; openCompose() })
                     drafts.forEach { draft ->

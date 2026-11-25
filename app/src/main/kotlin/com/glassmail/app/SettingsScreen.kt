@@ -100,7 +100,7 @@ fun SettingsScreen(
         topBar = {
             GlassMailTopCapsule(
                 title = "Settings",
-                subtitle = "Preferences & Diagnostics",
+                subtitle = if (BuildConfig.DEBUG) "Preferences & Diagnostics" else "Preferences",
                 quality = appearance.glassQuality,
                 navigationIcon = {
                     IconButton(onClick = back) {
@@ -145,7 +145,7 @@ fun SettingsScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        account?.syncState ?: "Add an account to synchronize mail",
+                        account?.let { syncStatus(it.syncState) } ?: "Add an account to synchronize mail",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -278,7 +278,7 @@ fun SettingsScreen(
                                 .background(Color.Black.copy(alpha = 0.25f)),
                         )
                         Text(
-                            "OPTICAL GLASS TEST",
+                            if (BuildConfig.DEBUG) "OPTICAL GLASS TEST" else "GLASS PREVIEW",
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.5f),
                             modifier = Modifier.align(Alignment.Center),
@@ -400,44 +400,46 @@ fun SettingsScreen(
             }
 
             // Section 5: Advanced
-            item {
-                Spacer(Modifier.height(GlassSpacing.xs))
-                Text("Advanced", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            }
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(GlassRadius.card))
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
-                        .clickable(onClick = openLab)
-                        .padding(GlassSpacing.md),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Icons.Outlined.Science,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                    Spacer(Modifier.width(GlassSpacing.md))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Glass Optical Lab",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            if (BuildConfig.DEBUG) {
+                item {
+                    Spacer(Modifier.height(GlassSpacing.xs))
+                    Text("Advanced", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                }
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(GlassRadius.card))
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+                            .clickable(onClick = openLab)
+                            .padding(GlassSpacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Outlined.Science,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp),
                         )
-                        Text(
-                            "Interactive AGSL shader test sandbox & frame diagnostics",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        Spacer(Modifier.width(GlassSpacing.md))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Glass Optical Lab",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                            Text(
+                                "Interactive AGSL shader test sandbox & frame diagnostics",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                            )
+                        }
+                        Icon(
+                            Icons.Outlined.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    Icon(
-                        Icons.Outlined.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
                 }
             }
 

@@ -315,4 +315,17 @@ class AppViewModelTest {
         assertEquals("Project Alpha", labels.firstOrNull(::isUserLabelChip))
     }
 
+    @Test fun `threadMutation archive populates undoableArchive while delete does not`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        val id = "gmail:account1:1"
+        viewModel.threadMutation(listOf(id), "archive").join()
+        assertEquals(listOf(id), viewModel.undoableArchive.value?.messageIds)
+
+        viewModel.dismissUndoArchive(viewModel.undoableArchive.value!!.actionId)
+        assertEquals(null, viewModel.undoableArchive.value)
+
+        viewModel.threadMutation(listOf(id), "delete").join()
+        assertEquals(null, viewModel.undoableArchive.value)
+    }
+
 }
