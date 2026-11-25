@@ -149,7 +149,7 @@ class AppGraph(application: Application) {
         credentialStore.withCredential(account.accountId) { password ->
             imapClient.replaceRemoteDraft(account.email, password, draft.draftId, raw)
         } ?: error("IMAP credentials are unavailable")
-    }
+    }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
 
     init {
         SyncRuntime.install(mailRepository)

@@ -2,6 +2,7 @@ package com.glassmail.sync
 
 import android.content.Context
 import android.content.Intent
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -91,20 +92,47 @@ object IdleRuntime {
     }
 }
 
+internal fun handleIdleTimeout(
+    scope: CoroutineScope,
+    jobs: MutableMap<String, Job>,
+    stopForeground: () -> Unit,
+    stopSelf: () -> Unit,
+) {
+    scope.cancel()
+    jobs.values.forEach { it.cancel() }
+    jobs.clear()
+    stopForeground()
+    stopSelf()
+}
+
 class ImapIdleService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val accountJobs = ConcurrentHashMap<String, Job>()
     private val refreshMutex = Mutex()
+    @Volatile private var foregroundStarted = false
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
-        startForeground(NOTIFICATION_ID, foregroundNotification())
+        try {
+            startForeground(NOTIFICATION_ID, foregroundNotification())
+            foregroundStarted = true
+        } catch (_: ForegroundServiceStartNotAllowedException) {
+            foregroundStarted = false
+            stopSelf()
+        } catch (_: SecurityException) {
+            foregroundStarted = false
+            stopSelf()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!foregroundStarted) {
+            stopSelfResult(startId)
+            return START_NOT_STICKY
+        }
         serviceScope.launch { refreshMutex.withLock { refreshAccountJobs(startId) } }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private suspend fun refreshAccountJobs(startId: Int) {
@@ -113,7 +141,7 @@ class ImapIdleService : Service() {
         if (provider == null || accounts.isEmpty()) {
             accountJobs.values.forEach { it.cancel() }
             accountJobs.clear()
-            stopSelf(startId)
+            if (stopSelfResult(startId)) stopForeground(STOP_FOREGROUND_REMOVE)
             return
         }
         val ids = accounts.map { it.accountId }.toSet()
@@ -165,6 +193,10 @@ class ImapIdleService : Service() {
             .setOngoing(true)
             .build()
 
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        handleIdleTimeout(serviceScope, accountJobs, { stopForeground(STOP_FOREGROUND_REMOVE) }, ::stopSelf)
+    }
+
     override fun onDestroy() {
         accountJobs.values.forEach { it.cancel() }
         accountJobs.clear()
@@ -183,8 +215,14 @@ class ImapIdleService : Service() {
 object IdleServiceController {
     fun start(context: Context) {
         val intent = Intent(context.applicationContext, ImapIdleService::class.java)
-        if (Build.VERSION.SDK_INT >= 26) context.applicationContext.startForegroundService(intent)
-        else context.applicationContext.startService(intent)
+        try {
+            if (Build.VERSION.SDK_INT >= 26) context.applicationContext.startForegroundService(intent)
+            else context.applicationContext.startService(intent)
+        } catch (_: ForegroundServiceStartNotAllowedException) {
+            // Background FGS start disallowed; periodic AccountSyncWorker covers sync.
+        } catch (_: SecurityException) {
+            // Missing or revoked foreground service permission; periodic AccountSyncWorker covers sync.
+        }
     }
 }
 

@@ -10,6 +10,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.glassmail.core.imap.ImapException
 import com.glassmail.domain.mail.DraftStatus
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
@@ -17,15 +18,27 @@ import java.util.concurrent.TimeUnit
 class RemoteDraftSyncWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {
         val draftId = inputData.getString(KEY_DRAFT_ID) ?: return Result.failure()
-        val graph = (applicationContext as? GlassMailApplication)?.graph ?: return Result.retry()
+        val graph = (applicationContext as? GlassMailApplication)?.graph
+            ?: return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.failure()
         val draft = graph.draftRepository.observeDraft(draftId).first() ?: return Result.success()
         if (draft.status != DraftStatus.DRAFT) return Result.success()
-        return if (graph.syncRemoteDraft(draft).isSuccess) Result.success() else Result.retry()
+        return graph.syncRemoteDraft(draft).fold(
+            onSuccess = { Result.success() },
+            onFailure = { error -> classifyRemoteDraftFailure(error, runAttemptCount) },
+        )
     }
 
     companion object {
         const val KEY_DRAFT_ID = "draft_id"
+        private const val MAX_RETRY_ATTEMPTS = 5
         private fun uniqueName(draftId: String) = "glassmail.remote-draft.$draftId"
+
+        internal fun classifyRemoteDraftFailure(error: Throwable, runAttemptCount: Int): Result =
+            if (error is ImapException.Transport && runAttemptCount < MAX_RETRY_ATTEMPTS) {
+                Result.retry()
+            } else {
+                Result.failure()
+            }
 
         fun enqueue(context: Context, draftId: String) {
             val request = OneTimeWorkRequestBuilder<RemoteDraftSyncWorker>()
