@@ -1,6 +1,7 @@
 package com.glassmail.core.imap
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.charset.StandardCharsets
@@ -129,5 +130,47 @@ class MimeDecoderTest {
         val html = parsed.htmlText.orEmpty()
         assertTrue(html.length <= MimeDecoder.MAX_TOTAL_INLINE_DATA_URI_CHARS + 2048)
         assertTrue(html.contains("cid:img1"))
+    }
+
+    @Test
+    fun `htmlToPlainText decodes entities in single pass and rejects NUL or surrogate`() {
+        val html = "<p>&amp;lt; &#X27; &#0; &#xD800;</p>"
+        val plain = MimeDecoder.htmlToPlainText(html)
+        assertEquals("&lt; ' &#0; &#xD800;", plain)
+    }
+
+    @Test
+    fun `htmlToPlainText strips MSO conditional comments`() {
+        val html = "<div><!--[if mso]>noise<![endif]-->Hello</div>"
+        val plain = MimeDecoder.htmlToPlainText(html)
+        assertEquals("Hello", plain)
+    }
+
+    @Test
+    fun `decodes RFC 2231 language tag and split UTF-8 encoded words`() {
+        assertEquals("Hello World", MimeDecoder.decodeMimeWords("=?UTF-8*en?Q?Hello_World?="))
+        assertEquals("\uD83D\uDE00", MimeDecoder.decodeMimeWords("=?UTF-8?Q?=F0=9F?= =?UTF-8?Q?=98=80?="))
+    }
+
+    @Test
+    fun `deeply nested multiparts exceeding max depth do not StackOverflow`() {
+        val depth = 40
+        val sb = StringBuilder()
+        for (i in 1..depth) {
+            sb.append("Content-Type: multipart/mixed; boundary=\"b$i\"\r\n\r\n--b$i\r\n")
+        }
+        sb.append("Content-Type: text/plain; charset=utf-8\r\n\r\nDeep body\r\n")
+        for (i in depth downTo 1) {
+            sb.append("--b$i--\r\n")
+        }
+        val bytes = sb.toString().toByteArray(StandardCharsets.UTF_8)
+
+        val javaMailParsed = MimeDecoder.parseRfc822(bytes)
+        assertNotNull(javaMailParsed)
+
+        val legacyMethod = MimeDecoder::class.java.getDeclaredMethod("parseRfc822Legacy", ByteArray::class.java)
+        legacyMethod.isAccessible = true
+        val legacyParsed = legacyMethod.invoke(MimeDecoder, bytes) as ParsedMessageBody
+        assertNotNull(legacyParsed)
     }
 }
