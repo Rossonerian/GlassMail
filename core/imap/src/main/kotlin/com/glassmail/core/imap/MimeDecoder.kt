@@ -181,6 +181,8 @@ object MimeDecoder {
     }
 
     private fun parseWithJavaMail(rawBytes: ByteArray): ParsedMessageBody {
+        System.setProperty("mail.mime.decodefilename", "true")
+        System.setProperty("mail.mime.decodeparameters", "true")
         val message = javax.mail.internet.MimeMessage(
             javax.mail.Session.getInstance(java.util.Properties()),
             java.io.ByteArrayInputStream(rawBytes),
@@ -227,7 +229,7 @@ object MimeDecoder {
         val partId = id.ifEmpty { "1" }
         val mimeType = part.contentType.substringBefore(';').trim().lowercase().ifBlank { "text/plain" }
         val disposition = part.disposition?.lowercase()
-        val fileName = runCatching { part.fileName }.getOrNull()?.takeIf { it.isNotBlank() }
+        val fileName = runCatching { part.fileName }.getOrNull()?.let(::decodeMimeWords)?.takeIf { it.isNotBlank() }
         val contentId = (part as? javax.mail.internet.MimePart)?.contentID?.trim('<', '>', ' ')?.lowercase()
         val isText = mimeType == "text/plain" || mimeType == "text/html"
         val inlineImage = mimeType in SAFE_INLINE_IMAGE_TYPES && contentId != null && disposition != "attachment"
