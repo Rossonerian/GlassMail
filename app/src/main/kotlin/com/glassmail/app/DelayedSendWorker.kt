@@ -23,17 +23,26 @@ import java.util.concurrent.TimeUnit
 class DelayedSendWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {
         val draftId = inputData.getString(KEY_DRAFT_ID) ?: return Result.failure()
-        val graph = (applicationContext as? GlassMailApplication)?.graph ?: return Result.retry()
+        val graph = (applicationContext as? GlassMailApplication)?.graph
+            ?: return if (runAttemptCount < MAX_NETWORK_ATTEMPTS) Result.retry() else Result.failure()
         val draft = graph.draftRepository.observeDraft(draftId).first() ?: return Result.success()
         if (draft.status == DraftStatus.SENDING) {
-            graph.draftRepository.saveDraft(draft.copy(status = DraftStatus.UNCERTAIN, updatedAtEpochMillis = System.currentTimeMillis()))
+            try {
+                graph.draftRepository.saveDraft(draft.copy(status = DraftStatus.UNCERTAIN, updatedAtEpochMillis = System.currentTimeMillis()))
+            } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                return Result.success()
+            }
             return Result.failure()
         }
         if (draft.status != DraftStatus.QUEUED) return Result.success()
         val account = graph.mailRepository.observeAccounts().first().firstOrNull { it.accountId == draft.accountId }
             ?: return Result.failure()
         if (!validateAddresses(draft.to + draft.cc + draft.bcc)) {
-            graph.draftRepository.saveDraft(draft.copy(status = DraftStatus.FAILED, updatedAtEpochMillis = System.currentTimeMillis()))
+            try {
+                graph.draftRepository.saveDraft(draft.copy(status = DraftStatus.FAILED, updatedAtEpochMillis = System.currentTimeMillis()))
+            } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                return Result.success()
+            }
             return Result.failure()
         }
         val attachments = mutableListOf<OutgoingAttachment>()
@@ -41,15 +50,27 @@ class DelayedSendWorker(context: Context, parameters: WorkerParameters) : Corout
             val uri = Uri.parse(attachment.uri)
             val available = runCatching { applicationContext.contentResolver.openInputStream(uri)?.use { true } ?: false }.getOrDefault(false)
             if (!available) {
-                graph.draftRepository.saveDraft(draft.copy(status = DraftStatus.FAILED, updatedAtEpochMillis = System.currentTimeMillis()))
+                try {
+                    graph.draftRepository.saveDraft(draft.copy(status = DraftStatus.FAILED, updatedAtEpochMillis = System.currentTimeMillis()))
+                } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                    return Result.success()
+                }
                 return Result.failure()
             }
             attachments += OutgoingAttachment(attachment.fileName, attachment.mimeType, attachment.sizeBytes) {
-                applicationContext.contentResolver.openInputStream(uri) ?: error("Attachment is unavailable")
+                try {
+                    applicationContext.contentResolver.openInputStream(uri) ?: throw java.io.IOException("Attachment is unavailable")
+                } catch (error: SecurityException) {
+                    throw java.io.IOException("Attachment permission revoked", error)
+                }
             }
         }
         val sending = draft.copy(status = DraftStatus.SENDING, updatedAtEpochMillis = System.currentTimeMillis())
-        graph.draftRepository.saveDraft(sending)
+        try {
+            graph.draftRepository.saveDraft(sending)
+        } catch (_: android.database.sqlite.SQLiteConstraintException) {
+            return Result.success()
+        }
         val outgoing = OutgoingMail(
             operationId = draft.draftId,
             accountId = account.accountId,
@@ -65,21 +86,45 @@ class DelayedSendWorker(context: Context, parameters: WorkerParameters) : Corout
         )
         return when (val result = graph.mailSender.send(account, outgoing)) {
             SendMailResult.Sent -> {
-                graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.SENT, updatedAtEpochMillis = System.currentTimeMillis()))
-                Result.success()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    try {
+                        graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.SENT, updatedAtEpochMillis = System.currentTimeMillis()))
+                        Result.success()
+                    } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                        Result.success()
+                    }
+                }
             }
             // The server may already have accepted it. Never retry automatically: the user checks Sent first.
             SendMailResult.Uncertain -> {
-                graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.UNCERTAIN, updatedAtEpochMillis = System.currentTimeMillis()))
-                Result.failure()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    try {
+                        graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.UNCERTAIN, updatedAtEpochMillis = System.currentTimeMillis()))
+                        Result.failure()
+                    } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                        Result.success()
+                    }
+                }
             }
             is SendMailResult.Failed -> if (result.error == SendMailError.Network && runAttemptCount < MAX_NETWORK_ATTEMPTS) {
                 // Nothing was submitted: keep the draft queued and let WorkManager retry when a network is available.
-                graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.QUEUED, updatedAtEpochMillis = System.currentTimeMillis()))
-                Result.retry()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    try {
+                        graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.QUEUED, updatedAtEpochMillis = System.currentTimeMillis()))
+                        Result.retry()
+                    } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                        Result.success()
+                    }
+                }
             } else {
-                graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.FAILED, updatedAtEpochMillis = System.currentTimeMillis()))
-                Result.failure()
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    try {
+                        graph.draftRepository.saveDraft(sending.copy(status = DraftStatus.FAILED, updatedAtEpochMillis = System.currentTimeMillis()))
+                        Result.failure()
+                    } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                        Result.success()
+                    }
+                }
             }
         }
     }

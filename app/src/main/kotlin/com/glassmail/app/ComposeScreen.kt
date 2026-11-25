@@ -74,7 +74,10 @@ import com.glassmail.domain.mail.SendMailResult
 import com.glassmail.domain.mail.normalizeAddresses
 import com.glassmail.domain.mail.validateAddresses
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -367,6 +370,7 @@ class ComposeViewModel(
     val state: StateFlow<ComposeUiState> = _state.asStateFlow()
     private var saveJob: Job? = null
     private var countdownJob: Job? = null
+    private var sendJob: Job? = null
 
     init {
         if (draftId != null) viewModelScope.launch {
@@ -394,16 +398,19 @@ class ComposeViewModel(
     }
 
     fun updateTo(value: String) {
+        if (_state.value.status == DraftStatus.SENDING || _state.value.status == DraftStatus.SENT) return
         _state.value = _state.value.copy(rawTo = value)
         update { it.copy(to = normalizeAddresses(value), status = DraftStatus.DRAFT) }
     }
 
     fun updateCc(value: String) {
+        if (_state.value.status == DraftStatus.SENDING || _state.value.status == DraftStatus.SENT) return
         _state.value = _state.value.copy(rawCc = value)
         update { it.copy(cc = normalizeAddresses(value), status = DraftStatus.DRAFT) }
     }
 
     fun updateBcc(value: String) {
+        if (_state.value.status == DraftStatus.SENDING || _state.value.status == DraftStatus.SENT) return
         _state.value = _state.value.copy(rawBcc = value)
         update { it.copy(bcc = normalizeAddresses(value), status = DraftStatus.DRAFT) }
     }
@@ -414,6 +421,7 @@ class ComposeViewModel(
     fun removeAttachment(uri: String) = update { it.copy(attachments = it.attachments.filterNot { attachment -> attachment.uri == uri }, status = DraftStatus.DRAFT) }
 
     fun send() {
+        if (sendJob?.isActive == true) return
         val current = _state.value
         if (current.status == DraftStatus.QUEUED) return cancelQueuedSend()
         if (current.status == DraftStatus.SENDING || current.status == DraftStatus.SENT) return
@@ -421,18 +429,25 @@ class ComposeViewModel(
             _state.value = current.copy(error = "Enter at least one valid recipient.")
             return
         }
-        viewModelScope.launch {
+        val pendingSave = saveJob
+        pendingSave?.cancel()
+        sendJob = viewModelScope.launch {
+            pendingSave?.cancelAndJoin()
             val now = System.currentTimeMillis()
             val queued = current.draft.copy(status = DraftStatus.QUEUED, updatedAtEpochMillis = now)
             RemoteDraftSyncWorker.cancel(context, queued.draftId)
+            coroutineContext.ensureActive()
             drafts.saveDraft(queued)
+            coroutineContext.ensureActive()
             runCatching { DelayedSendWorker.enqueue(context, queued.draftId, sendDelaySeconds) }
-                .onFailure {
+                .onFailure { error ->
+                    if (error is CancellationException) throw error
                     val failed = queued.copy(status = DraftStatus.FAILED)
                     drafts.saveDraft(failed)
                     _state.value = current.copy(draft = failed, status = DraftStatus.FAILED, error = "Could not queue this email. Try again.")
                     return@launch
                 }
+            coroutineContext.ensureActive()
             _state.value = current.copy(draft = queued, status = DraftStatus.QUEUED, undoCountdownSeconds = sendDelaySeconds)
             startCountdown(now)
         }
@@ -440,13 +455,19 @@ class ComposeViewModel(
 
     fun cancelQueuedSend() {
         val current = _state.value
-        if (current.status != DraftStatus.QUEUED || current.undoCountdownSeconds <= 0) return
+        if (sendJob?.isActive != true && (current.status != DraftStatus.QUEUED || current.undoCountdownSeconds <= 0)) return
+        val activeSend = sendJob
+        activeSend?.cancel()
         countdownJob?.cancel()
+        saveJob?.cancel()
         DelayedSendWorker.cancel(context, current.draft.draftId)
         val restored = current.draft.copy(status = DraftStatus.DRAFT, updatedAtEpochMillis = System.currentTimeMillis())
         _state.value = current.copy(draft = restored, status = DraftStatus.DRAFT, undoCountdownSeconds = 0, error = null)
-        viewModelScope.launch { drafts.saveDraft(restored) }
-        RemoteDraftSyncWorker.enqueue(context, restored.draftId)
+        viewModelScope.launch {
+            activeSend?.cancelAndJoin()
+            drafts.saveDraft(restored)
+            RemoteDraftSyncWorker.enqueue(context, restored.draftId)
+        }
     }
 
     private fun startCountdown(queuedAt: Long) {
@@ -463,7 +484,11 @@ class ComposeViewModel(
 
     private fun update(transform: (MailDraft) -> MailDraft) {
         val current = _state.value
-        if (current.status == DraftStatus.QUEUED) {
+        if (current.status == DraftStatus.SENDING || current.status == DraftStatus.SENT) return
+        val activeSend = sendJob
+        val wasQueuedOrSending = current.status == DraftStatus.QUEUED || activeSend?.isActive == true
+        if (wasQueuedOrSending) {
+            activeSend?.cancel()
             countdownJob?.cancel()
             DelayedSendWorker.cancel(context, current.draft.draftId)
         }
@@ -471,8 +496,10 @@ class ComposeViewModel(
         _state.value = current.copy(draft = next, status = DraftStatus.DRAFT, error = null, undoCountdownSeconds = 0)
         saveJob?.cancel()
         saveJob = viewModelScope.launch {
+            if (wasQueuedOrSending) activeSend?.cancelAndJoin()
             delay(AUTOSAVE_DELAY_MILLIS)
             drafts.saveDraft(next)
+            coroutineContext.ensureActive()
             if (next.status == DraftStatus.DRAFT) RemoteDraftSyncWorker.enqueue(context, next.draftId)
         }
     }

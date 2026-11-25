@@ -37,11 +37,13 @@ class GmailSmtpMailSender(
     private val imapClient: GmailImapClient? = null,
     private val host: String = "smtp.gmail.com",
     private val port: Int = 587,
+    private val smtpSubmitOverride: (suspend (host: String, port: Int, email: String, password: CharArray, rawMessage: ByteArray) -> Unit)? = null,
 ) : MailSender {
     override suspend fun send(account: MailAccount, mail: OutgoingMail): SendMailResult {
         if (mail.accountId != account.accountId || mail.from != account.email || !validateAddresses(mail.to + mail.cc + mail.bcc)) {
             return SendMailResult.Failed(SendMailError.InvalidMessage)
         }
+        var smtpAccepted = false
         return try {
             credentialProvider.withCredential(account.accountId) { password ->
                 withContext(Dispatchers.IO) {
@@ -57,36 +59,43 @@ class GmailSmtpMailSender(
                         message.writeTo(output)
                         output.toByteArray()
                     }
-                    val transport = session.getTransport("smtp")
-                    try {
-                        transport.connect(host, port, account.email, String(password))
+                    if (smtpSubmitOverride != null) {
+                        smtpSubmitOverride.invoke(host, port, account.email, password, rawMessage)
+                        smtpAccepted = true
+                    } else {
+                        val transport = session.getTransport("smtp")
                         try {
-                            transport.sendMessage(message, message.allRecipients)
-                        } catch (error: SendFailedException) {
-                            throw error // the server answered with a definite rejection
-                        } catch (error: MessagingException) {
-                            // An I/O failure after the DATA phase may have started leaves the outcome unknown.
-                            if (error.hasIoCause()) return@withContext SendMailResult.Uncertain
-                            throw error
+                            transport.connect(host, port, account.email, String(password))
+                            try {
+                                transport.sendMessage(message, message.allRecipients)
+                                smtpAccepted = true
+                            } catch (error: SendFailedException) {
+                                throw error // the server answered with a definite rejection
+                            } catch (error: MessagingException) {
+                                // An I/O failure after the DATA phase may have started leaves the outcome unknown.
+                                if (error.hasIoCause()) return@withContext SendMailResult.Uncertain
+                                throw error
+                            }
+                        } finally {
+                            // A failing QUIT must never turn an accepted message into a failure (duplicate on retry).
+                            runCatching { transport.close() }
                         }
-                    } finally {
-                        // A failing QUIT must never turn an accepted message into a failure (duplicate on retry).
-                        runCatching { transport.close() }
                     }
                     // SMTP has accepted the message at this point. Filing is best-effort.
                     if (imapClient != null) {
-                        fileAcceptedSmtpMessage(
-                            host,
-                            deleteDraft = { imapClient.deleteRemoteDraft(account.email, password, mail.operationId) },
-                            appendSent = { imapClient.appendSent(account.email, password, rawMessage) },
-                        )
+                        withContext(kotlinx.coroutines.NonCancellable) {
+                            fileAcceptedSmtpMessage(
+                                host,
+                                deleteDraft = { imapClient.deleteRemoteDraft(account.email, password, mail.operationId) },
+                                appendSent = { imapClient.appendSent(account.email, password, rawMessage) },
+                            )
+                        }
                     }
-                    coroutineContext.ensureActive()
                     SendMailResult.Sent
                 }
             } ?: SendMailResult.Failed(SendMailError.Authentication)
-        } catch (_: CancellationException) {
-            throw CancellationException("Send cancelled")
+        } catch (error: CancellationException) {
+            if (smtpAccepted) SendMailResult.Sent else throw error
         } catch (_: AddressException) {
             SendMailResult.Failed(SendMailError.InvalidMessage)
         } catch (_: AuthenticationFailedException) {
