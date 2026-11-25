@@ -1,31 +1,33 @@
 # GlassMail functional status
 
-## Implemented
+Canonical v1 application: **Native Kotlin** (`com.glassmail.app`, `versionName "1.0.0"`, `versionCode 10000`, `minSdk 34`, `targetSdk 35`). The parallel `flutter_app/` host remains experimental.
 
-- Room-backed conversation inbox, latest-expanded thread reader, Gmail categories with header-based fallback, and offline FTS search.
-- Sandboxed HTML rendering with JavaScript, network loads, remote images, and link navigation disabled. Small or known tracking images are stripped and counted.
-- Configurable short/long swipe actions, thread archive/mute/star/delete, and a snackbar that can undo queued archive mutations.
-- SMTP submission with a configurable 5/10/15/30 second WorkManager undo window. A recovered send with uncertain delivery is surfaced for the user to check Sent before retrying.
-- IMAP APPEND to the advertised Sent folder, local-to-Gmail Drafts synchronization using stable Message-ID replacement, and import of remote drafts.
-- RFC 8058 HTTPS one-click unsubscribe and `mailto:` unsubscribe handoff.
-- Per-account body/attachment cache caps, read-body eviction, attachment LRU eviction, IMAP GETQUOTAROOT, and Settings quota display.
-- Up to two accounts, per-account switching, unified inbox/search, and independent periodic sync.
-- IMAP IDLE foreground service with an ongoing notification, reconnect backoff, and 15-minute WorkManager fallback.
-- Navigation, inbox search/category selection, reader expansion, and compose disclosure state use saveable UI state; drafts are persisted through Room autosave.
-- Apache-2.0 license, privacy policy, F-Droid text metadata, R8 rules, and a build-only GitHub Actions workflow.
+## Implemented & hardened (host JVM tested)
+
+- **Inbox, thread reader & per-message attachments/labels**: Room-backed conversation inbox, latest-expanded thread reader, Gmail categories with header-based fallback, and offline FTS search. `observeThread` populates attachments per message (read-only query, no schema change), Reader renders attachments and label editing on every expanded message in multi-message threads, bottom-bar Reply/Reply All/Forward actions track the latest expanded message, and Reader archive/delete navigates back with the archive undo snackbar.
+- **Debug-gated seed & lab surfaces**: Synthetic mailbox seeding (`10`/`100`/`1,000`/`10,000` fixtures) and the `Glass Optical Lab` / diagnostic copy are gated behind `BuildConfig.DEBUG` and hidden in release builds. Settings renders human-readable account sync status.
+- **Hardened HTML WebView reader**: JavaScript, network loads, remote images, file/content access, DOM storage, and multi-window are disabled. CSP includes `base-uri 'none'; form-action 'none';`. Zero-click, non-gesture, subframe, and redirect navigations are blocked while explicit user-tapped main-frame links hand off externally; `<meta>`, `<svg>` (including self-closing/stray tags), and non-allowlisted `data:` URIs are stripped without inflating tracking-pixel counts; inline `cid:` parts allow only raster image types (`png`, `jpeg`, `jpg`, `gif`, `webp`, `bmp`, `avif`) capped at 6 MiB total; and WebView instances are stopped and destroyed on compose dispose.
+- **Hardened IMAP/SMTP transport & MIME decoding**: IMAP over TLS and SMTP over STARTTLS both enforce TLS 1.2/1.3 and RFC 2818 hostname verification (`endpointIdentificationAlgorithm = "HTTPS"`, `mail.smtp.ssl.checkserveridentity = "true"`). SMTP submission rejects CR/LF/NUL header injection in `operationId`, `inReplyTo`, and `references` and sanitizes attachment MIME types. IMAP protocol handling unifies cancellable sockets, aggregates multi-line `SEARCH` responses, skips unsolicited `FETCH` frames, falls back to `HEADER.FIELDS (CONTENT-TRANSFER-ENCODING)` when `1.MIME` is absent, and enforces `UIDVALIDITY` guards across body/attachment/sync fetches. MIME/HTML decoding supports RFC 2231 language tags, split UTF-8 RFC 2047 encoded-words, single-pass HTML entity decoding (rejecting NUL/surrogates), and bounded MIME recursion depth (`MAX_MIME_DEPTH = 32`).
+- **Hardened `AndroidKeystoreCredentialStore`**: Process-wide companion `keyLock` prevents Keystore alias-overwrite races; decryption uses a read-only `existingKey()` lookup without creating keys; Keystore/SharedPreferences I/O runs on `Dispatchers.IO`; corrupt/truncated blobs and `ProviderException` return `null`; UTF-8 encoding/decoding slices exact buffer bounds and zeroes credential `CharArray`/`ByteArray` buffers in outer `finally` blocks (even on cancellation) without creating heap `String` copies.
+- **Compose send/autosave & worker reliability**: `ComposeViewModel` serializes `sendJob` with debounced Room autosave (`cancelAndJoin`/`ensureActive`), preventing double-tap, undo, and autosave races. Post-SMTP cancellation preserves `SendMailResult.Sent` instead of surfacing false uncertain-delivery state; `DelayedSendWorker` handles `SQLiteConstraintException` on deleted drafts/accounts and maps unreadable attachment streams to `IOException`; `RemoteDraftSyncWorker` caps transient transport retries at 5 attempts and stops retrying permanent errors.
+- **Android 15 `dataSync` FGS & background sync**: `ImapIdleService` implements `Service.onTimeout(startId, fgsType)`, guards `ForegroundServiceStartNotAllowedException`/`SecurityException`, uses `stopSelfResult` + `START_NOT_STICKY`, and falls back to 15-minute WorkManager periodic sync.
+- **Cached attachments & path confinement**: Cached attachments open offline without overwriting `AVAILABLE` with `FETCHING`, canonical path confinement is verified before `mkdirs()`, `.part` temp files are removed on failure/cancellation, active downloads are excluded from immediate cache eviction, and `CancellationException` propagates cleanly.
+- **Restricted RAM mode & memory trimming**: `BuildConfig.RESTRICTED_RAM_MODE` is enabled by default for v1; `GlassMailApplication` trims Room/SQLite memory in `onTrimMemory`/`onLowMemory` and enforces cache limits under low-memory pressure.
+- **Actions, unsubscribe & release engineering**: Configurable short/long swipe actions, archive undo, RFC 8058 HTTPS one-click unsubscribe and `mailto:` handoff, per-account body/attachment cache caps, IMAP `GETQUOTAROOT`, up to two accounts with unified inbox/search, Apache-2.0 license, privacy policy, F-Droid text metadata, R8 rules, strict release-signing gate (`GLASSMAIL_REQUIRE_RELEASE_SIGNING`), and GitHub Actions CI/release workflows.
 
 ## Partial / release-owner follow-up
 
 - Remote images remain blocked. A safe image proxy requires a trusted relay service; direct device fetch would expose the device IP to the image host, so the app does not offer a misleading “show images” action.
-- Mailto unsubscribe opens a mail app for confirmation; only compliant HTTPS one-click endpoints can be submitted directly.
-- A local draft can be imported without remote attachment parts when it was created on another client; local draft attachments remain supported.
-- Release signing is configurable through environment variables but no signing key is present. Without those values the release APK is unsigned.
+- `mailto:` unsubscribe opens a mail app for confirmation; only compliant HTTPS one-click endpoints can be submitted directly.
+- A remote draft created on another client can be imported without remote attachment parts; local draft attachments remain supported.
+- Release signing is configurable through environment variables or Gradle properties (`GLASSMAIL_RELEASE_*`), with no signing key stored in the repository. Without those values, `:app:assembleRelease` produces an unsigned APK unless `GLASSMAIL_REQUIRE_RELEASE_SIGNING=true` is set.
 - F-Droid screenshots and final listing assets are intentionally pending real-device manual verification.
 
-## Unverified
+## Unverified / pending device & live QA
 
-- Live Gmail Sent APPEND, remote Drafts replacement/import, one-click unsubscribe, quota responses, IDLE delivery timing, reconnect behavior, and two-account operation.
-- Room migration 8→9→10 on an existing user database, large-mailbox cache eviction, and actual phone layout/rotation/process-death behavior.
-- Macrobenchmark performance and F-Droid reproducible build review.
+- **Live Gmail acceptance (UNVERIFIED)**: Real Gmail IMAP/SMTP delivery, Sent APPEND, remote Drafts replacement/import, RFC 8058 one-click unsubscribe, IMAP quota responses, live `UIDVALIDITY` resets, IDLE delivery timing, reconnect behavior, and two-account live operation have not been executed (blocked on dedicated test credentials).
+- **Device WebView sizing/rendering (`INT-4`, UNVERIFIED)**: Dynamic WebView height measurement (`onPageFinished` / `evaluateJavascript` under `javaScriptEnabled = false`), HTML rendering fidelity, layout/rotation, and process-death recovery have not been verified on physical hardware.
+- **Pixel 9a connected/instrumented tests (UNVERIFIED)**: On-device instrumented test suites (`:core:security:connectedDebugAndroidTest`, `:core:database:connectedCheck`, `:sync:connectedCheck`), Room 8→9→10 migrations on an existing user database, large-mailbox cache eviction, and Macrobenchmark performance are pending device QA.
+- **Reproducible build review (UNVERIFIED)**: F-Droid reproducible build verification has not been run.
 
-The requested phone-based manual run has not been performed. See `MANUAL_TEST.md` for the v1 verification sequence.
+See `MANUAL_TEST.md` for the planned v1 phone and live-Gmail verification sequence.
