@@ -117,7 +117,7 @@ fun ReaderScreen(
     LaunchedEffect(messages.lastOrNull()?.messageId) {
         if (expandedMessageKeys.isBlank()) messages.lastOrNull()?.messageId?.let {
             expandedMessageKeys = it
-            if (it != id) vm.openReaderMessage(it)
+            if (it != id) vm.selectReaderMessage(it)
         }
     }
     val participantCount = remember(messages) { messages.map { it.sender.lowercase() }.distinct().size.coerceAtLeast(1) }
@@ -132,7 +132,7 @@ fun ReaderScreen(
         }
     }
     val readerTint = state.selected?.sender?.let(::senderAmbient) ?: Color.Transparent
-    var labelDialogOpen by remember { mutableStateOf(false) }
+    var labelTargetMessageId by remember { mutableStateOf<String?>(null) }
     var threadActionsOpen by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -262,7 +262,7 @@ fun ReaderScreen(
                                 indication = null,
                             ) {
                                 expandedMessageKeys = (if (expanded) expandedMessageIds - item.messageId else expandedMessageIds + item.messageId).joinToString("\n")
-                                if (!expanded) vm.openReaderMessage(item.messageId)
+                                if (!expanded) vm.selectReaderMessage(item.messageId)
                             }
                             .padding(vertical = GlassSpacing.xs),
                         verticalAlignment = Alignment.CenterVertically,
@@ -398,7 +398,7 @@ fun ReaderScreen(
                     }
 
                     // Attachments list
-                    if (item.messageId == state.selected?.messageId && item.attachments.isNotEmpty()) {
+                    if (item.attachments.isNotEmpty()) {
                         Spacer(Modifier.height(GlassSpacing.xs))
                         Text(
                             "Attachments (${item.attachments.size})",
@@ -411,31 +411,29 @@ fun ReaderScreen(
                     }
 
                     // Labels bar
-                    if (item.messageId == state.selected?.messageId) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 48.dp)
-                                .clip(RoundedCornerShape(GlassRadius.xs))
-                                .clickable(
-                                    role = androidx.compose.ui.semantics.Role.Button,
-                                    onClickLabel = "Edit labels",
-                                    onClick = { labelDialogOpen = true },
-                                )
-                                .padding(vertical = GlassSpacing.xs),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(GlassSpacing.xs),
-                        ) {
-                            Icon(Icons.AutoMirrored.Outlined.Label, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                            Text("Labels:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                item.labels.filterNot { it.equals("INBOX", true) }.ifEmpty { listOf("None") }.joinToString(" · "),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .clip(RoundedCornerShape(GlassRadius.xs))
+                            .clickable(
+                                role = androidx.compose.ui.semantics.Role.Button,
+                                onClickLabel = "Edit labels",
+                                onClick = { labelTargetMessageId = item.messageId },
                             )
-                        }
+                            .padding(vertical = GlassSpacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(GlassSpacing.xs),
+                    ) {
+                        Icon(Icons.AutoMirrored.Outlined.Label, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                        Text("Labels:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            item.labels.filterNot { it.equals("INBOX", true) }.ifEmpty { listOf("None") }.joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
 
                     }
@@ -445,20 +443,23 @@ fun ReaderScreen(
         }
     }
 
-    if (labelDialogOpen && state.selected != null) {
-        val choices = (state.selected!!.labels + listOf("Work", "Travel", "Personal", "Follow Up")).distinct()
+    val labelTargetMessage = labelTargetMessageId?.let { targetId ->
+        messages.firstOrNull { it.messageId == targetId }
+    }
+    if (labelTargetMessage != null) {
+        val choices = (labelTargetMessage.labels + listOf("Work", "Travel", "Personal", "Follow Up")).distinct()
         AlertDialog(
-            onDismissRequest = { labelDialogOpen = false },
+            onDismissRequest = { labelTargetMessageId = null },
             title = { Text("Message Labels") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(GlassSpacing.xs)) {
                     choices.forEach { label ->
-                        val applied = label in state.selected!!.labels
+                        val applied = label in labelTargetMessage.labels
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .clickable { vm.setLabel(state.selected!!.messageId, label, !applied) }
+                                .clickable { vm.setLabel(labelTargetMessage.messageId, label, !applied) }
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
@@ -474,7 +475,7 @@ fun ReaderScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { labelDialogOpen = false }) {
+                TextButton(onClick = { labelTargetMessageId = null }) {
                     Text("Done")
                 }
             },

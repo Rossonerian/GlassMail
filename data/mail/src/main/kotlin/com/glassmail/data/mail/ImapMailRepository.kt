@@ -45,6 +45,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +53,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -105,11 +107,26 @@ class ImapMailRepository(
 
     override fun observeMessage(messageId: String): Flow<MailMessage?> = database.mailDao().observeMessage(messageId)
         .combine(database.mailDao().observeAttachments(messageId)) { row, attachments ->
-            row?.let { MailMessage(it.messageId, it.gmailThreadId, it.sender.orEmpty(), it.subject.orEmpty(), it.preview.orEmpty(), it.body, it.contentKind == "HTML", it.sentAtEpochMillis, "\\Seen" !in it.flags.toFlagSet(), "\\Flagged" in it.flags.toFlagSet(), it.labels.toLabels(), attachments.map { attachment -> MailAttachment(attachment.attachmentId, attachment.fileName, attachment.mimeType, attachment.sizeBytes, attachment.downloadState) }, it.listUnsubscribe, it.listUnsubscribePost) }
+            row?.toMailMessage()?.copy(attachments = attachments.map(AttachmentEntity::toMailAttachment))
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeThread(messageId: String): Flow<List<MailMessage>> = database.mailDao().observeThread(messageId)
-        .map { rows -> rows.map { it.toMailMessage() } }
+        .flatMapLatest { rows ->
+            if (rows.isEmpty()) {
+                flowOf(emptyList())
+            } else {
+                database.mailDao().observeAttachmentsForMessages(rows.map { it.messageId })
+                    .map { attachments ->
+                        val byMessageId = attachments.groupBy { it.messageId }
+                        rows.map { row ->
+                            row.toMailMessage().copy(
+                                attachments = byMessageId[row.messageId].orEmpty().map(AttachmentEntity::toMailAttachment),
+                            )
+                        }
+                    }
+            }
+        }
 
     override fun observeDrafts(accountId: String): Flow<List<MailDraft>> = database.draftDao().observeDrafts(accountId).map { drafts -> drafts.map(DraftEntity::toDraft) }
 
@@ -872,6 +889,10 @@ private fun com.glassmail.core.database.MessageDetailRow.toMailMessage() = MailM
     messageId, gmailThreadId, sender.orEmpty(), subject.orEmpty(), preview.orEmpty(), body,
     contentKind == "HTML", sentAtEpochMillis, "\\Seen" !in flags.toFlagSet(),
     "\\Flagged" in flags.toFlagSet(), labels.toLabels(), listUnsubscribe = listUnsubscribe, listUnsubscribePost = listUnsubscribePost,
+)
+
+private fun AttachmentEntity.toMailAttachment() = MailAttachment(
+    attachmentId, fileName, mimeType, sizeBytes, downloadState,
 )
 
 private fun fixtureMessage(index: Int): MessageEntity {
