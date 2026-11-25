@@ -80,4 +80,54 @@ class MimeDecoderTest {
         assertTrue(plain.contains("Title"))
         assertTrue(plain.contains("Paragraph with & <brackets> \"quotes\" and spaces."))
     }
+
+    @Test
+    fun `svg cid inline image is not inlined into html`() {
+        val raw = """
+            Content-Type: multipart/related; boundary="rel1"
+
+            --rel1
+            Content-Type: text/html; charset=utf-8
+
+            <img src="cid:logo-svg">
+            --rel1
+            Content-Type: image/svg+xml
+            Content-ID: <logo-svg>
+
+            <svg xmlns="http://www.w3.org/2000/svg"></svg>
+            --rel1--
+        """.trimIndent()
+
+        val parsed = MimeDecoder.parseRfc822(raw.toByteArray(StandardCharsets.UTF_8))
+        val html = parsed.htmlText.orEmpty()
+        assertTrue(html.contains("cid:logo-svg"))
+        assertTrue(!html.contains("data:image/svg+xml"))
+    }
+
+    @Test
+    fun `repeated cid expansion is capped at MAX_TOTAL_INLINE_DATA_URI_CHARS`() {
+        val payload = ByteArray(100 * 1024) { 0x41 }
+        val base64Payload = java.util.Base64.getEncoder().encodeToString(payload)
+        val cidRefs = (1..60).joinToString(" ") { """<img src="cid:img1">""" }
+        val raw = """
+            Content-Type: multipart/related; boundary="rel2"
+
+            --rel2
+            Content-Type: text/html; charset=utf-8
+
+            $cidRefs
+            --rel2
+            Content-Type: image/png
+            Content-Transfer-Encoding: base64
+            Content-ID: <img1>
+
+            $base64Payload
+            --rel2--
+        """.trimIndent()
+
+        val parsed = MimeDecoder.parseRfc822(raw.toByteArray(StandardCharsets.UTF_8))
+        val html = parsed.htmlText.orEmpty()
+        assertTrue(html.length <= MimeDecoder.MAX_TOTAL_INLINE_DATA_URI_CHARS + 2048)
+        assertTrue(html.contains("cid:img1"))
+    }
 }

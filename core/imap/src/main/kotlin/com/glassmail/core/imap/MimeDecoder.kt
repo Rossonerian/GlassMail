@@ -23,6 +23,16 @@ object MimeDecoder {
 
     private val ENCODED_WORD_REGEX = Regex("=\\?([A-Za-z0-9_-]+)\\?([BbQq])\\?([^?]+)\\?=")
     private val ADJACENT_ENCODED_WORDS_REGEX = Regex("(\\?=\\s*=\\?)")
+    internal const val MAX_TOTAL_INLINE_DATA_URI_CHARS = 6 * 1024 * 1024
+    private val SAFE_INLINE_IMAGE_TYPES = setOf(
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/gif",
+        "image/webp",
+        "image/bmp",
+        "image/avif",
+    )
 
     /**
      * Decodes RFC 2047 encoded-words in headers (Subject, From, To, etc.).
@@ -139,10 +149,19 @@ object MimeDecoder {
         walkPart(message, "", collector)
         var html = collector.html
         if (html != null && collector.inlineImages.isNotEmpty()) {
+            val encodedCache = HashMap<String, String>(collector.inlineImages.size)
+            var totalDataUriChars = 0
             html = Regex("(?i)cid:([^\"'\\s>)]+)").replace(html) { match ->
                 val key = match.groupValues[1].trim('<', '>').lowercase()
                 val image = collector.inlineImages[key] ?: return@replace match.value
-                "data:${image.first};base64,${Base64.getEncoder().encodeToString(image.second)}"
+                val dataUri = encodedCache.getOrPut(key) {
+                    "data:${image.first};base64,${Base64.getEncoder().encodeToString(image.second)}"
+                }
+                if (totalDataUriChars + dataUri.length > MAX_TOTAL_INLINE_DATA_URI_CHARS) {
+                    return@replace match.value
+                }
+                totalDataUriChars += dataUri.length
+                dataUri
             }
         }
         val cleanPlain = collector.plain?.let { normalizeWhitespace(it) }
@@ -170,7 +189,7 @@ object MimeDecoder {
         val fileName = runCatching { part.fileName }.getOrNull()?.takeIf { it.isNotBlank() }
         val contentId = (part as? javax.mail.internet.MimePart)?.contentID?.trim('<', '>', ' ')?.lowercase()
         val isText = mimeType == "text/plain" || mimeType == "text/html"
-        val inlineImage = mimeType.startsWith("image/") && contentId != null && disposition != "attachment"
+        val inlineImage = mimeType in SAFE_INLINE_IMAGE_TYPES && contentId != null && disposition != "attachment"
         when {
             inlineImage -> {
                 val bytes = runCatching { part.inputStream.use { it.readNBytes(MAX_INLINE_IMAGE_BYTES + 1) } }.getOrNull()

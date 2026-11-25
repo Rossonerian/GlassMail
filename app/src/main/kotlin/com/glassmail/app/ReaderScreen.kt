@@ -531,7 +531,7 @@ private fun HtmlMessageBody(
         """
         <!doctype html>
         <html><head><meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:;">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; base-uri 'none'; form-action 'none';">
         <style>
           html, body { margin: 0; padding: 0; background: transparent; color: #${textColor.toUInt().toString(16).takeLast(6)}; }
           body { font: 16px/1.65 sans-serif; overflow-wrap: anywhere; }
@@ -555,13 +555,17 @@ private fun HtmlMessageBody(
                 settings.setSupportMultipleWindows(false)
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                        openMailLink(view.context, request.url)
+                        if (shouldOpenMailNavigation(request.isForMainFrame, request.hasGesture(), request.isRedirect)) {
+                            openMailLink(view.context, request.url)
+                        }
                         return true
                     }
 
-                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): android.webkit.WebResourceResponse? =
-                        if (request.url.scheme == "data" || request.url.scheme == "about") null
+                    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): android.webkit.WebResourceResponse? {
+                        val url = request.url.toString()
+                        return if (url == "about:blank" || isSafeInlineDataUri(url)) null
                         else android.webkit.WebResourceResponse("text/plain", "UTF-8", ByteArrayInputStream(ByteArray(0)))
+                    }
 
                     override fun onPageFinished(view: WebView, url: String?) {
                         view.evaluateJavascript("Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)") { result ->
@@ -581,6 +585,12 @@ private fun HtmlMessageBody(
                 webView.loadDataWithBaseURL("about:blank", document, "text/html", "UTF-8", null)
             }
         },
+        onRelease = { v ->
+            v.stopLoading()
+            v.webViewClient = WebViewClient()
+            v.loadUrl("about:blank")
+            v.destroy()
+        },
         modifier = Modifier
             .fillMaxWidth()
             .height((measuredHeightDp.takeIf { it > 0 } ?: 420).dp),
@@ -596,11 +606,23 @@ private fun HtmlMessageBody(
     }
 }
 
-private fun stripTrackingPixels(html: String): Pair<String, Int> {
+private val SAFE_INLINE_DATA_URI_REGEX =
+    Regex("^data:image/(png|jpeg|jpg|gif|webp|bmp|avif)[;,]", RegexOption.IGNORE_CASE)
+
+internal fun shouldOpenMailNavigation(
+    isForMainFrame: Boolean,
+    hasGesture: Boolean,
+    isRedirect: Boolean,
+): Boolean = isForMainFrame && hasGesture && !isRedirect
+
+internal fun isSafeInlineDataUri(uri: String): Boolean =
+    SAFE_INLINE_DATA_URI_REGEX.containsMatchIn(uri)
+
+internal fun stripTrackingPixels(html: String): Pair<String, Int> {
     var count = 0
     val imageTag = Regex("<img\\b[^>]*>", RegexOption.IGNORE_CASE)
     val trackers = listOf("mailtrack", "open-tracking", "email-tracker", "pixel.gif", "track.gif", "analytics")
-    val cleaned = imageTag.replace(html) { match ->
+    var cleaned = imageTag.replace(html) { match ->
         val tag = match.value
         val width = Regex("\\bwidth\\s*=\\s*['\"]?(\\d+)", RegexOption.IGNORE_CASE).find(tag)?.groupValues?.get(1)?.toIntOrNull()
         val height = Regex("\\bheight\\s*=\\s*['\"]?(\\d+)", RegexOption.IGNORE_CASE).find(tag)?.groupValues?.get(1)?.toIntOrNull()
@@ -612,6 +634,13 @@ private fun stripTrackingPixels(html: String): Pair<String, Int> {
             count++
             ""
         } else tag
+    }
+    cleaned = Regex("<meta\\b[^>]*>", RegexOption.IGNORE_CASE).replace(cleaned, "")
+    cleaned = Regex("<svg\\b[^>]*>[\\s\\S]*?</svg>", RegexOption.IGNORE_CASE).replace(cleaned, "")
+    cleaned = Regex("<svg\\b[^>]*/>", RegexOption.IGNORE_CASE).replace(cleaned, "")
+    cleaned = Regex("</?svg\\b[^>]*>", RegexOption.IGNORE_CASE).replace(cleaned, "")
+    cleaned = Regex("data:[^\"'\\s>]+", RegexOption.IGNORE_CASE).replace(cleaned) { match ->
+        if (isSafeInlineDataUri(match.value)) match.value else ""
     }
     return cleaned to count
 }
